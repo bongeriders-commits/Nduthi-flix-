@@ -36,8 +36,28 @@ The **Save** button on each veed fetches the video file directly so it can trigg
 
 Until this is set, tapping Save will fall back to opening the video in a new tab, where the person can long-press and save it manually — still works, just an extra step.
 
+## Step 3.6 — (Optional) Background music on seeded clips
+Pexels clips are silent stock footage. If you want seeded veeds to have a mood-matched background track instead of dead silence, set up Jamendo:
+
+1. Go to [devportal.jamendo.com](https://devportal.jamendo.com/) and sign up (free, instant).
+2. Click **Create a new application** — name it anything, e.g. "Nduthi Flix".
+3. Pick the free **Read only** plan.
+4. Copy the **Client ID** and paste it into `js/jamendo-config.js`, replacing the placeholder (or just paste it into the "Jamendo API key" field on the seed page itself — it's saved locally in your browser either way).
+
+The actual merging of music onto a clip happens server-side via `/api/merge-music` (see Step 4 below for what that needs) — the seed page just picks a matching track and calls that endpoint before posting. If you skip this setup entirely, seeding still works exactly as before, just silent.
+
 ## Step 4 — Host it
 Same as Bonge Riders: push this folder to a GitHub repo, connect it to Vercel, deploy. Free tier is fine to start.
+
+This project now includes one serverless function, `api/merge-music.js`, which needs the `ffmpeg-static` npm package. Before your first deploy (or if it's missing), run this in the project folder:
+```
+npm install ffmpeg-static
+```
+Commit the resulting `package.json` / `package-lock.json` so Vercel installs it automatically on deploy. If you never set up Jamendo (Step 3.6), this function simply never gets called — no extra cost or setup needed.
+
+**A couple of real limits to know about with this function**, since it's running on Vercel's free Hobby tier:
+- **Timeout**: `vercel.json` sets it to 60 seconds (the max Hobby allows). Slow downloads of the source clip/track could occasionally hit that ceiling and fail — if so, the seed page just falls back to posting that one clip silent.
+- **Function size**: `ffmpeg-static` bundles a real ffmpeg binary (tens of MB). This is a common thing to deploy on Vercel and usually fits fine, but if a deploy ever fails with a function-size error, that's why — worth knowing before you're stuck debugging it blind.
 
 ## Step 5 — Package as an Android APK
 1. Once it's live on Vercel, go to **pwabuilder.com**

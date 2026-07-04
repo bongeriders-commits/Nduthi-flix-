@@ -43,11 +43,24 @@
     Only use this for footage you're actually licensed to post. Pexels' license covers commercial use with no attribution required — good for generic filler (roads, riders, city life, nature). It won't have "funny viral" content; that's almost always copyrighted elsewhere and shouldn't go through this tool.
     <br><br>
     This page isn't linked from the app's nav — keep the URL to yourself, and consider deleting it (or password-gating it) before wider rollout.
+    <br><br>
+    <b>Background music</b>: Pexels clips are silent, so if a Jamendo key is set above, posting will send each clip to <code>/api/merge-music</code> first, which merges in a mood-matched track before the veed goes live. Merged clips get uploaded to your own Firebase Storage (not linked from Pexels' CDN anymore) — a bit more storage use per seeded clip. Leave the Jamendo key blank or untick the box to skip this and post silent, like before.
   </div>
+
 
   <div class="field">
     <label>Pexels API key</label>
     <input type="password" id="apiKeyInput" placeholder="Paste your free key from pexels.com/api">
+  </div>
+
+  <div class="field">
+    <label>Jamendo API key (optional — adds matching background music)</label>
+    <input type="password" id="jamendoKeyInput" placeholder="Paste your free key from devportal.jamendo.com">
+  </div>
+
+  <div class="field" style="display:flex; align-items:center; gap:8px;">
+    <input type="checkbox" id="musicToggle" checked style="width:auto;">
+    <label style="margin:0; text-transform:none; font-size:.85rem;" for="musicToggle">Add matching background music to posted clips (via Jamendo, merged server-side)</label>
   </div>
 
   <div class="field">
@@ -79,7 +92,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="js/firebase-config.js"></script>
+<script src="js/jamendo-config.js"></script>
 <script src="js/seed.js"></script>
 </body>
 </html>
