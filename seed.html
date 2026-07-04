@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nduthi Flix — Seed feed</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .seed-wrap { max-width: 720px; margin: 0 auto; padding: 24px 16px 80px; }
+  .seed-header { font-family: var(--display); font-size: 2rem; letter-spacing: .02em; margin-bottom: 4px; }
+  .seed-sub { color: var(--chalk-dim); font-size: .85rem; margin-bottom: 20px; }
+  .seed-note { background: var(--steel); border: 1px solid var(--steel-line); border-radius: var(--radius); padding: 12px 14px; font-size: .8rem; color: var(--chalk-dim); margin-bottom: 20px; line-height: 1.5; }
+  .seed-note b { color: var(--amber); }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: .75rem; color: var(--chalk-dim); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .05em; }
+  .field input, .field textarea { width: 100%; background: var(--asphalt-2); border: 1px solid var(--steel-line); color: var(--chalk); border-radius: 10px; padding: 10px 12px; font-size: .95rem; }
+  .search-row { display: flex; gap: 8px; }
+  .search-row input { flex: 1; }
+  .btn-primary, .btn-ghost { padding: 10px 18px; border-radius: 10px; border: none; font-weight: 600; font-size: .9rem; }
+  .btn-primary { background: var(--amber); color: var(--asphalt); }
+  .btn-ghost { background: transparent; border: 1px solid var(--steel-line); color: var(--chalk); }
+  .btn-primary:disabled, .btn-ghost:disabled { opacity: .4; cursor: not-allowed; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin: 18px 0; }
+  .card { position: relative; border-radius: 10px; overflow: hidden; border: 2px solid transparent; background: var(--asphalt-2); cursor: pointer; }
+  .card.selected { border-color: var(--amber); }
+  .card video { width: 100%; height: 180px; object-fit: cover; display: block; background: #000; }
+  .card .credit { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,.85)); color: var(--chalk); font-size: .65rem; padding: 14px 6px 5px; }
+  .card .check { position: absolute; top: 6px; right: 6px; width: 20px; height: 20px; border-radius: 50%; background: rgba(0,0,0,.5); border: 1.5px solid var(--chalk-dim); display: flex; align-items: center; justify-content: center; font-size: .7rem; }
+  .card.selected .check { background: var(--amber); border-color: var(--amber); color: var(--asphalt); }
+  .status-line { font-size: .85rem; color: var(--chalk-dim); margin: 10px 0; }
+  .status-line.err { color: var(--danger); }
+  .status-line.ok { color: var(--route-green); }
+  .actions { display: flex; gap: 10px; margin-top: 16px; position: sticky; bottom: 0; background: var(--asphalt); padding: 12px 0; }
+</style>
+</head>
+<body>
+
+<div class="seed-wrap">
+  <div class="seed-header">Seed the feed</div>
+  <div class="seed-sub">Pull free stock clips from Pexels and post them as veeds — for populating the feed before real riders start posting.</div>
+
+  <div class="seed-note">
+    Only use this for footage you're actually licensed to post. Pexels' license covers commercial use with no attribution required — good for generic filler (roads, riders, city life, nature). It won't have "funny viral" content; that's almost always copyrighted elsewhere and shouldn't go through this tool.
+    <br><br>
+    This page isn't linked from the app's nav — keep the URL to yourself, and consider deleting it (or password-gating it) before wider rollout.
+  </div>
+
+  <div class="field">
+    <label>Pexels API key</label>
+    <input type="password" id="apiKeyInput" placeholder="Paste your free key from pexels.com/api">
+  </div>
+
+  <div class="field">
+    <label>Posted as (display name shown on the veed)</label>
+    <input type="text" id="displayNameInput" value="Nduthi Flix" maxlength="30">
+  </div>
+
+  <div class="field">
+    <label>Tag applied to all posted veeds (optional)</label>
+    <input type="text" id="tagInput" placeholder="e.g. Featured" maxlength="30">
+  </div>
+
+  <div class="search-row">
+    <input type="text" id="queryInput" placeholder="Search term, e.g. motorbike, city traffic, sunset">
+    <button class="btn-primary" id="searchBtn">Search</button>
+  </div>
+
+  <p class="status-line hidden" id="statusLine"></p>
+
+  <div class="grid" id="resultsGrid"></div>
+
+  <div class="actions hidden" id="actionsBar">
+    <button class="btn-primary" id="postBtn">Post selected (<span id="selCount">0</span>)</button>
+    <button class="btn-ghost" id="clearBtn">Clear selection</button>
+    <button class="btn-ghost" id="loadMoreBtn">Load more</button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/seed.js"></script>
+</body>
+</html>

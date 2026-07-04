@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Nduthi Flix — Sign in</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="manifest" href="manifest.json">
+</head>
+<body>
+
+<div class="splash" id="splash">
+  <div class="splash-title">NDUTHI<span>FLIX</span></div>
+  <div class="splash-sub">Riders. Veeds. Real talk.</div>
+</div>
+
+<div class="auth-screen hidden" id="authScreen">
+  <div class="auth-logo">NDUTHI<span>FLIX</span></div>
+  <div class="auth-tag">Sign in with your phone</div>
+
+  <!-- Step 1: phone number -->
+  <div id="phoneStep">
+    <div class="field">
+      <label>Phone number</label>
+      <input type="tel" id="phoneInput" placeholder="+2547XXXXXXXX" inputmode="tel">
+    </div>
+    <p class="error-msg hidden" id="phoneError"></p>
+    <div id="recaptcha-container" style="margin-top:14px;"></div>
+    <button class="btn-primary" id="sendCodeBtn" style="margin-top:14px; width:100%;">Send code</button>
+  </div>
+
+  <!-- Step 2: OTP -->
+  <div id="otpStep" class="hidden">
+    <div class="field">
+      <label>Enter the 6-digit code</label>
+      <input type="tel" id="otpInput" placeholder="123456" inputmode="numeric" maxlength="6">
+    </div>
+    <p class="error-msg hidden" id="otpError"></p>
+    <button class="btn-primary" id="verifyBtn" style="margin-top:14px; width:100%;">Verify & continue</button>
+    <button class="btn-ghost" id="backBtn" style="margin-top:10px; width:100%;">Use a different number</button>
+  </div>
+
+  <!-- Step 3: display name (first-time only) -->
+  <div id="nameStep" class="hidden">
+    <div class="field">
+      <label>What should riders call you?</label>
+      <input type="text" id="nameInput" placeholder="Your rider name" maxlength="30">
+    </div>
+    <button class="btn-primary" id="saveNameBtn" style="margin-top:14px; width:100%;">Start riding</button>
+  </div>
+
+  <a href="index.html" class="btn-ghost" style="text-align:center; display:block;">Continue browsing without an account</a>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/auth.js"></script>
+</body>
+</html>

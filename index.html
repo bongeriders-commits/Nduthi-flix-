@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Nduthi Flix</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0D0D0F">
+</head>
+<body>
+
+<div class="splash" id="splash">
+  <div class="splash-title">NDUTHI<span>FLIX</span></div>
+  <div class="splash-sub">Riders. Veeds. Real talk.</div>
+</div>
+
+<div class="top-bar">
+  <span class="tab" id="tabFollowing">Following</span>
+  <span class="tab active" id="tabForYou">For You</span>
+</div>
+
+<div class="feed" id="feed">
+  <!-- Slides injected here by feed.js -->
+</div>
+
+<div class="bottom-nav">
+  <button class="nav-btn active" id="navHome">
+    <span class="nav-icon">🏠</span>
+    <span class="nav-label">Home</span>
+  </button>
+  <button class="nav-btn" id="navPals">
+    <span class="nav-icon">👥</span>
+    <span class="nav-label">My Pals</span>
+  </button>
+  <button class="nav-btn upload" id="navUpload">
+    <span class="nav-icon">+</span>
+  </button>
+  <button class="nav-btn" id="navBox">
+    <span class="badge-dot" id="boxBadge"></span>
+    <span class="nav-icon">💬</span>
+    <span class="nav-label">My Box</span>
+  </button>
+  <button class="nav-btn" id="navHood">
+    <span class="nav-icon">👤</span>
+    <span class="nav-label">My Hood</span>
+  </button>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/pexels-config.js"></script>
+<script src="js/feed.js"></script>
+</body>
+</html>

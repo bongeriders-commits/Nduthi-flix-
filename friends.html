@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Nduthi Flix — My Pals</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="manifest" href="manifest.json">
+</head>
+<body>
+
+<div class="top-bar">
+  <span class="tab active">My Pals</span>
+</div>
+
+<div class="empty-state" id="palsEmpty">
+  <div class="headline">No pals yet</div>
+  <p>Follow other riders and they'll show up here. Find people from the videos you like.</p>
+</div>
+
+<div class="bottom-nav">
+  <button class="nav-btn" id="navHome">
+    <span class="nav-icon">🏠</span>
+    <span class="nav-label">Home</span>
+  </button>
+  <button class="nav-btn active" id="navPals">
+    <span class="nav-icon">👥</span>
+    <span class="nav-label">My Pals</span>
+  </button>
+  <button class="nav-btn upload" id="navUpload">
+    <span class="nav-icon">+</span>
+  </button>
+  <button class="nav-btn" id="navBox">
+    <span class="badge-dot"></span>
+    <span class="nav-icon">💬</span>
+    <span class="nav-label">My Box</span>
+  </button>
+  <button class="nav-btn" id="navHood">
+    <span class="nav-icon">👤</span>
+    <span class="nav-label">My Hood</span>
+  </button>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script>
+  auth.onAuthStateChanged((user) => {
+    if (!user) { window.location.href = 'login.html'; return; }
+    // TODO: once the follow system is built, load the user's
+    // followed riders here from users/{uid}/following.
+  });
+
+  document.getElementById('navHome').addEventListener('click', () => window.location.href = 'index.html');
+  document.getElementById('navUpload').addEventListener('click', () => window.location.href = 'upload.html');
+  document.getElementById('navBox').addEventListener('click', () => window.location.href = 'inbox.html');
+  document.getElementById('navHood').addEventListener('click', () => window.location.href = 'profile.html');
+</script>
+</body>
+</html>
