@@ -12,4 +12,4 @@
 // mean your quota (200 requests/hour, 20,000/month on the free tier) is
 // shared by every visitor. If you ever see it being abused, regenerate the
 // key from your Pexels account.
-const PEXELS_API_KEY = "PASTE_YOUR_PEXELS_API_KEY";
+const PEXELS_API_KEY = "kNPo6aaQnOGzLC9tqfZDBUviXNcXnatbvU05S969DC2zctJc2YPTUr3X";
