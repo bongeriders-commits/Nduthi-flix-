@@ -74,16 +74,6 @@
   }
   .page-head h1{margin:0;font-size:25px;font-weight:800;letter-spacing:-0.01em;color:var(--text);}
   .page-head p{margin:5px 0 0;font-size:12.5px;color:var(--text-dim);}
-  .btn-add{
-    display:flex;align-items:center;gap:8px;
-    background:var(--oxide);color:#fff;border:none;
-    padding:12px 18px;border-radius:11px;
-    font-size:13.5px;font-weight:700;cursor:pointer;
-    box-shadow:0 8px 18px -6px rgba(245,89,10,0.55);
-    white-space:nowrap;
-  }
-  .btn-add:hover{background:#ff6b1f;}
-  .btn-add svg{width:16px;height:16px;}
 
   /* ===== Toolbar ===== */
   .stock-toolbar{
@@ -276,10 +266,6 @@
       <h1>Stock List</h1>
       <p>All items in your stores</p>
     </div>
-    <button class="btn-add" onclick="openAddModal()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-      Add New Item
-    </button>
   </div>
 
   <!-- TOOLBAR -->
@@ -352,48 +338,6 @@
 
 </div>
 
-<!-- ADD ITEM MODAL -->
-<div class="overlay" id="addOverlay">
-  <div class="modal">
-    <h3>Add New Item</h3>
-    <div class="field">
-      <label>Item name</label>
-      <input type="text" id="newName" placeholder="e.g. Diesel 50ppm">
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>Category</label>
-        <select id="newCategory">
-          <option>Fuel</option><option>Cement</option><option>Steel</option>
-          <option>PPE</option><option>Lubricants</option><option>Filters</option>
-          <option>Hardware</option><option>Other</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>UOM</label>
-        <select id="newUom">
-          <option>Litre (LTR)</option><option>Bag</option><option>Piece</option>
-          <option>Pair</option><option>Kg</option>
-        </select>
-      </div>
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>Min. stock</label>
-        <input type="number" id="newMin" placeholder="e.g. 20" min="0">
-      </div>
-    </div>
-    <p style="font-size:11.5px;color:var(--text-dim);margin:-6px 0 0;">Status (Active / Low Stock / Out of Stock) is calculated automatically from balance vs. min. stock.</p>
-    <div class="field">
-      <label>Starting balance (quantity on hand)</label>
-      <input type="number" id="newBalance" placeholder="e.g. 50" min="0">
-    </div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeAddModal()">Cancel</button>
-      <button class="btn-submit" onclick="submitNewItem()">Add Item</button>
-    </div>
-  </div>
-</div>
 
 <!-- ADMIN LOGIN MODAL -->
 <div class="overlay" id="adminOverlay">
@@ -419,7 +363,7 @@
 /* ---------- Firebase ---------- */
 import {
   db, auth, loginAdmin, logoutAdmin, watchAdmin, statusOf, initialsFromEmail,
-  collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot,
+  collection, doc, updateDoc, deleteDoc, onSnapshot,
   serverTimestamp, query, orderBy
 } from "./firebase-config.js";
 
@@ -644,34 +588,6 @@ function deleteItem(idx){
   }
 }
 
-/* ---------- Add new item ---------- */
-function openAddModal(){
-  if(!requireAdmin()) return;
-  document.getElementById("addOverlay").classList.add("open");
-}
-function closeAddModal(){ document.getElementById("addOverlay").classList.remove("open"); }
-function submitNewItem(){
-  if(!requireAdmin()) return;
-  const name = document.getElementById("newName").value.trim();
-  if(!name){ alert("Please enter an item name."); return; }
-  const category = document.getElementById("newCategory").value;
-  const uom = document.getElementById("newUom").value;
-  const min = parseFloat(document.getElementById("newMin").value) || 0;
-  const balance = parseFloat(document.getElementById("newBalance").value) || 0;
-  const nextNum = items.length + 1;
-  addDoc(collection(db, "stockItems"), {
-    code: "ITEM-" + String(nextNum).padStart(4, "0"),
-    name, category, uom, min, balance,
-    updatedAt: serverTimestamp(),
-    updatedBy: currentAdminEmail
-  }).then(()=>{
-    document.getElementById("newName").value = "";
-    document.getElementById("newMin").value = "";
-    document.getElementById("newBalance").value = "";
-    closeAddModal();
-  }).catch(err=>alert("Could not add item: "+err.message));
-}
-
 /* ---------- Live sync ---------- */
 onSnapshot(query(collection(db, "stockItems"), orderBy("name")), (snap)=>{
   items = snap.docs.map(d=>{
@@ -697,7 +613,7 @@ Object.assign(window, {
   onAdminBtnClick, openAdminModal, closeAdminModal, submitAdminLogin, submitGateLogin,
   onSearch, toggleSort, toggleFilterPanel, clearFilters, applyFilters,
   navigateToItem, deleteItem,
-  openAddModal, closeAddModal, submitNewItem, goPage
+  goPage
 });
 </script>
 

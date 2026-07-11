@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Receive Stock (GRN) — Cabro City</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#f5590a">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" href="/icon-192.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ffffff;
+    --panel:#f6f6f8;
+    --panel-alt:#eeeef1;
+    --line:#e2e2e6;
+    --line-soft:#ececf0;
+    --text:#151517;
+    --text-dim:#68686f;
+    --text-faint:#9a9aa2;
+    --oxide:#f5590a;
+    --oxide-dim:#b8420a;
+    --green:#16a34a;
+    --red:#e13a3a;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  html,body{background:#f4f4f6;color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  button,input,select,textarea{font-family:inherit;}
+
+  .app-shell{max-width:1040px;margin:0 auto;min-height:100vh;background:var(--bg);position:relative;padding-bottom:110px;border-left:1px solid var(--line);border-right:1px solid var(--line);}
+  @media(max-width:1060px){ .app-shell{border-left:none;border-right:none;} }
+
+  /* ===== Header ===== */
+  .mobile-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#ffffff;z-index:30;}
+  .mh-left{display:flex;align-items:center;gap:16px;}
+  .back-btn{background:none;border:none;color:var(--text);cursor:pointer;padding:4px;display:flex;}
+  .back-btn svg{width:22px;height:22px;}
+  .mh-logo{display:flex;align-items:center;gap:10px;cursor:pointer;background:none;border:none;padding:0;}
+  .brand-logo-img{height:36px;width:auto;display:block;}
+  .mh-right{display:flex;align-items:center;gap:16px;position:relative;}
+  .bell{position:relative;width:23px;height:23px;color:#68686f;background:none;border:none;padding:0;cursor:pointer;}
+  .bell svg{width:100%;height:100%;}
+  .bell .badge-dot{position:absolute;top:-6px;right:-8px;background:#ff7a1f;color:#fff;font-size:10px;font-weight:700;min-width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;padding:0 3px;font-family:'IBM Plex Mono',monospace;box-shadow:0 0 0 2px #ffffff;}
+  .avatar-wrap{display:flex;align-items:center;gap:4px;cursor:pointer;background:none;border:none;padding:0;}
+  .avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#3a3a40,#1c1c1f);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;position:relative;font-family:'Oswald',sans-serif;flex-shrink:0;border:1.5px solid #3a3a40;}
+  .avatar .dot{position:absolute;bottom:0;right:0;width:10px;height:10px;border-radius:50%;background:#ff7a1f;border:2px solid #ffffff;}
+  .avatar-chev{width:13px;height:13px;color:var(--text-faint);}
+  .avatar-menu{position:absolute;top:52px;right:0;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 14px 34px -10px rgba(0,0,0,0.28);min-width:140px;padding:6px;display:none;z-index:40;}
+  .avatar-menu.open{display:block;}
+  .avatar-menu button{width:100%;text-align:left;background:none;border:none;padding:9px 10px;font-size:12.5px;color:var(--text);border-radius:7px;cursor:pointer;}
+  .avatar-menu button:hover{background:var(--panel-alt);}
+
+  /* ===== Page head ===== */
+  .page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:22px 20px 6px;}
+  .page-head h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-0.01em;}
+  .page-head .sub{margin:4px 0 0;font-size:12.5px;color:var(--text-dim);}
+  .breadcrumb{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-dim);margin-top:6px;flex-wrap:wrap;}
+  .breadcrumb .cur{color:var(--oxide);font-weight:700;}
+  .breadcrumb svg{width:12px;height:12px;color:var(--text-faint);}
+  .grn-badge{display:flex;align-items:center;gap:10px;background:#fff8f4;border:1.5px solid var(--oxide);border-radius:12px;padding:10px 16px;white-space:nowrap;}
+  .grn-badge svg{width:20px;height:20px;color:var(--oxide);flex-shrink:0;}
+  .grn-badge .k{font-size:11px;color:var(--text-dim);}
+  .grn-badge .v{font-size:14.5px;font-weight:800;color:var(--oxide);font-family:'IBM Plex Mono',monospace;}
+
+  /* ===== Section wrapper ===== */
+  .section{margin:20px 20px 0;}
+  .section h2{font-size:15.5px;font-weight:800;margin:0 0 10px;letter-spacing:-0.01em;}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;}
+
+  .field-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+  @media(max-width:760px){.field-grid{grid-template-columns:1fr 1fr;}}
+  @media(max-width:520px){.field-grid{grid-template-columns:1fr;}}
+  .field label{display:block;font-size:11.5px;color:var(--text-dim);font-weight:600;margin-bottom:6px;}
+  .field label .req{color:var(--red);}
+  .field input,.field select{width:100%;background:var(--panel);border:1px solid var(--line);color:var(--text);padding:11px 12px;border-radius:9px;font-size:13.5px;}
+  .field input:focus,.field select:focus{outline:2px solid var(--oxide);outline-offset:-1px;}
+  .field input[type="date"]{color:var(--text);}
+
+  /* ===== Item search toolbar ===== */
+  .item-toolbar{display:flex;gap:10px;margin-bottom:16px;position:relative;}
+  .item-search{flex:1;min-width:0;position:relative;}
+  .item-search input{width:100%;background:var(--panel);border:1px solid var(--line);color:var(--text);padding:12px 40px 12px 16px;border-radius:11px;font-size:13.5px;}
+  .item-search input::placeholder{color:var(--text-faint);}
+  .item-search input:focus{outline:2px solid var(--oxide);outline-offset:-1px;}
+  .item-search svg{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-faint);pointer-events:none;}
+  .search-suggest{position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 16px 40px -12px rgba(0,0,0,0.25);max-height:280px;overflow-y:auto;z-index:25;display:none;}
+  .search-suggest.open{display:block;}
+  .suggest-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px;cursor:pointer;border-bottom:1px solid var(--line-soft);}
+  .suggest-row:last-child{border-bottom:none;}
+  .suggest-row:hover{background:var(--panel);}
+  .suggest-row .sn{font-size:13.5px;font-weight:700;}
+  .suggest-row .sc{font-size:11px;color:var(--text-faint);font-family:'IBM Plex Mono',monospace;margin-top:2px;}
+  .suggest-row .sb{font-size:11.5px;color:var(--text-dim);white-space:nowrap;}
+  .suggest-empty{padding:16px 14px;font-size:12.5px;color:var(--text-faint);text-align:center;}
+  .btn-add-item{display:flex;align-items:center;gap:8px;background:var(--oxide);color:#fff;border:none;padding:12px 18px;border-radius:11px;font-size:13.5px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 8px 18px -6px rgba(245,89,10,0.55);}
+  .btn-add-item:hover{background:#ff6b1f;}
+  .btn-add-item svg{width:16px;height:16px;}
+
+  /* ===== Items table ===== */
+  .items-table-wrap{border:1px solid var(--line);border-radius:14px;overflow:hidden;}
+  .table-scroll{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;min-width:760px;}
+  thead th{text-align:left;font-size:11px;letter-spacing:0.04em;color:var(--text-dim);padding:12px 14px;border-bottom:1px solid var(--line);background:#fafafb;font-weight:700;white-space:nowrap;text-transform:uppercase;}
+  tbody td{padding:12px 14px;font-size:13.5px;border-bottom:1px solid var(--line-soft);color:var(--text);vertical-align:middle;}
+  tbody tr:last-child td{border-bottom:none;}
+  .it-name{font-weight:700;font-size:13.5px;}
+  .it-code{font-size:11px;color:var(--text-faint);margin-top:2px;font-family:'IBM Plex Mono',monospace;}
+  .qty-input{width:80px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 9px;font-size:13px;text-align:center;}
+  .qty-input:focus{outline:2px solid var(--oxide);outline-offset:-1px;}
+  .cost-input{width:96px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 9px;font-size:13px;text-align:right;}
+  .cost-input:focus{outline:2px solid var(--oxide);outline-offset:-1px;}
+  .row-total{font-weight:700;white-space:nowrap;}
+  .btn-del-row{background:none;border:none;color:var(--text-faint);cursor:pointer;padding:6px;border-radius:8px;}
+  .btn-del-row:hover{background:#fde2e2;color:var(--red);}
+  .btn-del-row svg{width:17px;height:17px;display:block;}
+  .items-empty td{text-align:center;color:var(--text-faint);padding:36px 14px;font-size:13px;}
+
+  .totals-bar{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:10px;background:#fafafb;border-top:1px solid var(--line);padding:14px 18px;}
+  .totals-left{font-size:12px;color:var(--text-dim);line-height:1.7;}
+  .totals-left b{color:var(--text);}
+  .totals-right{text-align:right;}
+  .totals-right .tk{font-size:11.5px;color:var(--text-dim);}
+  .totals-right .tv{font-size:22px;font-weight:800;color:var(--oxide);font-family:'IBM Plex Mono',monospace;}
+
+  /* ===== Attachments ===== */
+  .attach-grid{display:flex;gap:12px;flex-wrap:wrap;}
+  .attach-upload{width:120px;height:110px;border:1.5px dashed var(--line);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--oxide);cursor:pointer;text-align:center;padding:8px;flex-shrink:0;}
+  .attach-upload:hover{background:var(--panel);}
+  .attach-upload svg{width:22px;height:22px;}
+  .attach-upload .au-t{font-size:11.5px;font-weight:700;color:var(--text);line-height:1.3;}
+  .attach-upload .au-s{font-size:9.5px;color:var(--text-faint);}
+  .attach-chip{width:120px;height:110px;border:1px solid var(--line);border-radius:12px;position:relative;overflow:hidden;flex-shrink:0;background:var(--panel);display:flex;flex-direction:column;}
+  .attach-chip .thumb{flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-faint);background:#eeeef1;}
+  .attach-chip .thumb svg{width:26px;height:26px;}
+  .attach-chip .thumb img{width:100%;height:100%;object-fit:cover;}
+  .attach-chip .meta{padding:6px 8px;background:#fff;}
+  .attach-chip .meta .n{font-size:10.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .attach-chip .meta .s{font-size:9.5px;color:var(--text-faint);}
+  .attach-chip .rm{position:absolute;top:5px;right:5px;width:20px;height:20px;border-radius:50%;background:var(--red);color:#fff;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.25);}
+  .attach-chip .rm svg{width:12px;height:12px;}
+  .attach-note{font-size:11px;color:var(--text-faint);margin-top:10px;}
+
+  /* ===== Action bar ===== */
+  .action-bar{display:flex;gap:10px;flex-wrap:wrap;padding:22px 20px 0;}
+  .action-bar button{flex:1;min-width:150px;padding:13px;border-radius:11px;font-size:13.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;}
+  .action-bar button svg{width:16px;height:16px;}
+  .btn-draft{background:#fff;border:1.5px solid var(--oxide);color:var(--oxide);}
+  .btn-draft:hover{background:#fff4ee;}
+  .btn-print{background:#fff;border:1.5px solid var(--oxide);color:var(--oxide);}
+  .btn-print:hover{background:#fff4ee;}
+  .btn-submit-grn{background:var(--oxide);border:none;color:#fff;box-shadow:0 8px 18px -6px rgba(245,89,10,0.55);}
+  .btn-submit-grn:hover{background:#ff6b1f;}
+  .btn-submit-grn:disabled,.btn-draft:disabled{opacity:0.55;cursor:default;}
+
+  .form-msg{margin:14px 20px 0;padding:12px 14px;border-radius:10px;font-size:13px;font-weight:600;display:none;}
+  .form-msg.show{display:block;}
+  .form-msg.ok{background:#dcfce7;color:var(--green);}
+  .form-msg.err{background:#fde2e2;color:var(--red);}
+
+  /* ===== Bottom nav ===== */
+  .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:1040px;background:var(--panel);border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-around;padding:11px 4px 16px;z-index:40;}
+  .nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;color:var(--text-faint);font-size:9.5px;cursor:pointer;flex:1;padding:2px 0;max-width:120px;}
+  .nav-item svg{width:19px;height:19px;}
+  .nav-item.active{color:var(--oxide);}
+
+  /* ===== Modal ===== */
+  .overlay{position:fixed;inset:0;background:rgba(10,10,11,0.55);display:none;align-items:center;justify-content:center;z-index:100;padding:20px;}
+  .overlay.open{display:flex;}
+  .modal{background:#fff;border:1px solid var(--line);border-radius:14px;width:100%;max-width:460px;padding:22px 22px 20px;max-height:88vh;overflow-y:auto;}
+  .modal h3{font-size:16px;margin:0 0 16px;color:var(--text);font-weight:800;}
+  .field{margin-bottom:13px;}
+  .modal-actions{display:flex;gap:10px;margin-top:18px;}
+  .btn-cancel{flex:1;padding:11px;border-radius:9px;border:1px solid var(--line);background:transparent;color:var(--text-dim);font-size:13px;font-weight:600;cursor:pointer;}
+  .btn-submit{flex:2;padding:11px;border-radius:9px;border:none;background:var(--oxide);color:#fff;font-size:13px;font-weight:700;cursor:pointer;}
+  .btn-submit:hover{background:#ff6b1f;}
+
+  .picker-search{position:relative;margin-bottom:12px;}
+  .picker-search input{width:100%;background:var(--panel);border:1px solid var(--line);padding:10px 36px 10px 12px;border-radius:9px;font-size:13px;}
+  .picker-search svg{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--text-faint);}
+  .picker-list{max-height:320px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;}
+  .picker-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line-soft);cursor:pointer;}
+  .picker-row:last-child{border-bottom:none;}
+  .picker-row:hover{background:var(--panel);}
+  .picker-row input[type="checkbox"]{width:16px;height:16px;accent-color:var(--oxide);flex-shrink:0;}
+  .picker-row .pn{font-size:13px;font-weight:700;}
+  .picker-row .pc{font-size:10.5px;color:var(--text-faint);font-family:'IBM Plex Mono',monospace;margin-top:1px;}
+  .picker-row .pb{margin-left:auto;font-size:11.5px;color:var(--text-dim);white-space:nowrap;}
+  .picker-empty{padding:24px 12px;text-align:center;font-size:12.5px;color:var(--text-faint);}
+
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--oxide);outline-offset:2px;}
+
+  .app-shell{display:none;}
+  .app-shell.ready{display:block;}
+
+  /* ---------- Access gate (whole app is locked behind sign-in) ---------- */
+  #accessGate{position:fixed;inset:0;z-index:9999;background:#fff;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .gate-card{width:100%;max-width:340px;text-align:center;}
+  .gate-card img{height:34px;width:auto;margin:0 auto 22px;display:block;}
+  .gate-card h2{font-family:'Inter',sans-serif;text-transform:none;font-size:17px;font-weight:700;margin-bottom:6px;}
+  .gate-card p{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-bottom:22px;}
+  .gate-card .field{margin-bottom:12px;text-align:left;}
+  .gate-card .field label{display:block;font-size:11px;color:var(--text-dim);margin-bottom:5px;}
+  .gate-card .field input{width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--line);font-size:13.5px;font-family:'Inter',sans-serif;box-sizing:border-box;}
+  .gate-card .btn-submit{width:100%;padding:12px;border-radius:9px;border:1px solid var(--oxide);background:var(--oxide);color:#fff;font-weight:700;font-size:13px;cursor:pointer;margin-top:6px;font-family:'Inter',sans-serif;}
+  .gate-error{color:var(--red);font-size:12px;margin:-4px 0 12px;text-align:left;}
+
+  /* ---------- Print ---------- */
+  @media print{
+    .mobile-header,.bottom-nav,.action-bar,.item-toolbar,.form-msg,.attach-upload,#accessGate{display:none !important;}
+    .app-shell{padding-bottom:0;border:none;}
+    .card,.items-table-wrap{border:1px solid #ccc;box-shadow:none;}
+    body{background:#fff;}
+    .btn-del-row{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<div id="accessGate" style="display:none;">
+  <div class="gate-card">
+    <img src="/cabro-city-logo.png" alt="Cabro City">
+    <h2>Sign in required</h2>
+    <p>Cabro City is restricted to approved staff. If you don't have an account yet, ask your admin to add one for you.</p>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="gateEmail" placeholder="you@cabrocity.co.ke">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="gatePassword" placeholder="••••••••">
+    </div>
+    <div id="gateError" class="gate-error" style="display:none;"></div>
+    <button class="btn-submit" onclick="submitGateLogin()">Sign In</button>
+  </div>
+</div>
+
+<div class="app-shell">
+
+  <!-- HEADER -->
+  <div class="mobile-header">
+    <div class="mh-left">
+      <button class="back-btn" onclick="location.href='stock-list.html'" aria-label="Back to stock list">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <button class="mh-logo" onclick="location.href='index.html'" aria-label="Cabro City home">
+        <img src="/cabro-city-logo.png" alt="Cabro City — Paving the Future" class="brand-logo-img">
+      </button>
+    </div>
+    <div class="mh-right">
+      <button class="bell" onclick="location.href='index.html'" aria-label="Notifications">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="badge-dot">5</span>
+      </button>
+      <button class="avatar-wrap" onclick="toggleAvatarMenu(event)" aria-label="Account menu">
+        <div class="avatar"><span id="avatarInitials">--</span><span class="dot"></span></div>
+        <svg class="avatar-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="avatar-menu" id="avatarMenu">
+        <button onclick="location.href='index.html'">Dashboard</button>
+        <button onclick="signOutNow()">Sign out</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE HEAD -->
+  <div class="page-head">
+    <div>
+      <h1>Receive Stock (GRN)</h1>
+      <p class="sub">Goods Received Note</p>
+    </div>
+    <div class="grn-badge">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M9 16l2 2 4-4"/></svg>
+      <div>
+        <div class="k">GRN No.</div>
+        <div class="v" id="grnNoDisplay">GRN-…</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-msg" id="formMsg"></div>
+
+  <!-- 1. DOCUMENT INFORMATION -->
+  <div class="section">
+    <h2>1. Document Information</h2>
+    <div class="card">
+      <div class="field-grid">
+        <div class="field">
+          <label>GRN Date <span class="req">*</span></label>
+          <input type="date" id="grnDate">
+        </div>
+        <div class="field">
+          <label>Supplier <span class="req">*</span></label>
+          <input type="text" id="grnSupplier" placeholder="e.g. Total Kenya Limited" list="supplierList">
+          <datalist id="supplierList"></datalist>
+        </div>
+        <div class="field">
+          <label>Purchase Order</label>
+          <input type="text" id="grnPO" placeholder="e.g. PO-2024-0458">
+        </div>
+        <div class="field">
+          <label>Invoice No.</label>
+          <input type="text" id="grnInvoiceNo" placeholder="e.g. INV-789FG">
+        </div>
+        <div class="field">
+          <label>Invoice Date</label>
+          <input type="date" id="grnInvoiceDate">
+        </div>
+        <div class="field">
+          <label>Delivery Note No.</label>
+          <input type="text" id="grnDeliveryNote" placeholder="e.g. DN-1122">
+        </div>
+        <div class="field">
+          <label>Delivered By</label>
+          <input type="text" id="grnDeliveredBy" placeholder="Driver / supplier rep name">
+        </div>
+        <div class="field">
+          <label>Received By <span class="req">*</span></label>
+          <input type="text" id="grnReceivedBy" placeholder="Your name">
+        </div>
+        <div class="field">
+          <label>Store Location <span class="req">*</span></label>
+          <select id="grnStoreLocation">
+            <option value="">Select location</option>
+            <option>Main Store</option>
+            <option>Site Store A</option>
+            <option>Site Store B</option>
+            <option>Quarry Yard</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. ITEM DETAILS -->
+  <div class="section">
+    <h2>2. Item Details</h2>
+    <div class="item-toolbar">
+      <div class="item-search">
+        <input type="text" id="itemSearchInput" placeholder="Search item by name or code..." autocomplete="off" oninput="onItemSearchInput()" onfocus="onItemSearchInput()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <div class="search-suggest" id="searchSuggest"></div>
+      </div>
+      <button class="btn-add-item" onclick="openPickerModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        Add Item
+      </button>
+    </div>
+
+    <div class="items-table-wrap">
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Item</th>
+              <th>UOM</th>
+              <th>Received</th>
+              <th>Unit Cost (KSh)</th>
+              <th>Total (KSh)</th>
+              <th style="text-align:right;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="itemsTableBody">
+            <tr class="items-empty"><td colspan="7">No items added yet — search above or tap "Add Item".</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="totals-bar">
+        <div class="totals-left">
+          Total Items: <b id="totalItemsCount">0</b><br>
+          Total Quantity: <b id="totalQtyCount">0</b>
+        </div>
+        <div class="totals-right">
+          <div class="tk">Total Amount (KSh)</div>
+          <div class="tv" id="totalAmount">0.00</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. ATTACHMENTS -->
+  <div class="section">
+    <h2>3. Attachments</h2>
+    <div class="card">
+      <div class="attach-grid" id="attachGrid">
+        <div class="attach-upload" onclick="document.getElementById('attachInput').click()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 8l5-5 5 5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+          <div class="au-t">Upload Invoice /<br>Delivery Note</div>
+          <div class="au-s">JPG, PNG, PDF (Max 5MB)</div>
+        </div>
+      </div>
+      <input type="file" id="attachInput" accept=".jpg,.jpeg,.png,.pdf" multiple style="display:none;" onchange="onAttachSelected(event)">
+      <div class="attach-note">Files are attached for reference on this GRN only and are not uploaded to cloud storage.</div>
+    </div>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="action-bar">
+    <button class="btn-draft" id="btnDraft" onclick="saveDraft()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+      Save as Draft
+    </button>
+    <button class="btn-print" onclick="printGRN()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+      Print GRN
+    </button>
+    <button class="btn-submit-grn" id="btnSubmit" onclick="submitGRN()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
+      Submit GRN
+    </button>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <button class="nav-item" onclick="location.href='index.html'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+      Dashboard
+    </button>
+    <button class="nav-item active" onclick="location.href='stock-list.html'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>
+      Inventory
+    </button>
+    <button class="nav-item" onclick="location.href='index.html#transactions'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+      Transactions
+    </button>
+    <button class="nav-item" onclick="location.href='index.html#reports'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+      Reports
+    </button>
+  </div>
+
+</div>
+
+<!-- ITEM PICKER MODAL -->
+<div class="overlay" id="pickerOverlay">
+  <div class="modal">
+    <h3>Add Items to GRN</h3>
+    <div class="picker-search">
+      <input type="text" id="pickerSearchInput" placeholder="Search item by name or code..." oninput="renderPickerList()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    </div>
+    <div class="picker-list" id="pickerList"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closePickerModal()">Cancel</button>
+      <button class="btn-submit" onclick="confirmPickerSelection()">Add Selected</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN LOGIN MODAL -->
+<div class="overlay" id="adminOverlay">
+  <div class="modal">
+    <h3>Admin Login</h3>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="adminEmail" placeholder="you@cabrocity.co.ke">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="adminPassword" placeholder="••••••••">
+    </div>
+    <div id="adminError" style="display:none;color:var(--red);font-size:12.5px;margin:-4px 0 10px;"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeAdminModal()">Cancel</button>
+      <button class="btn-submit" onclick="submitAdminLogin()">Log In</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+/* ---------- Firebase ---------- */
+import {
+  db, loginAdmin, logoutAdmin, watchAdmin, initialsFromEmail, unitAbbr,
+  collection, doc, addDoc, updateDoc, onSnapshot, serverTimestamp,
+  query, orderBy, runTransaction, increment
+} from "./firebase-config.js";
+
+/* ---------- Admin auth (same pattern as the rest of the app) ---------- */
+let isAdmin = false, currentAdminEmail = "";
+let appRevealed = false;
+let grnNoReady = false;
+
+watchAdmin((user)=>{
+  isAdmin = !!user;
+  currentAdminEmail = user ? user.email : "";
+  document.getElementById("avatarInitials").textContent = isAdmin ? initialsFromEmail(currentAdminEmail) : "--";
+
+  const gate = document.getElementById("accessGate");
+  if(isAdmin){
+    gate.style.display = "none";
+    if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
+    if(!grnNoReady){ grnNoReady = true; generateGrnNo(); }
+  } else {
+    gate.style.display = "flex";
+    document.querySelector(".app-shell").classList.remove("ready");
+    appRevealed = false;
+  }
+});
+function signOutNow(){ if(confirm("Sign out?")) logoutAdmin(); }
+function submitGateLogin(){
+  const email = document.getElementById("gateEmail").value.trim();
+  const password = document.getElementById("gatePassword").value;
+  const errBox = document.getElementById("gateError");
+  errBox.style.display = "none";
+  loginAdmin(email, password).catch(()=>{
+    errBox.textContent = "Sign-in failed — check your email and password, or ask your admin for access.";
+    errBox.style.display = "block";
+  });
+}
+function openAdminModal(){
+  document.getElementById("adminError").style.display = "none";
+  document.getElementById("adminOverlay").classList.add("open");
+}
+function closeAdminModal(){ document.getElementById("adminOverlay").classList.remove("open"); }
+function submitAdminLogin(){
+  const email = document.getElementById("adminEmail").value.trim();
+  const password = document.getElementById("adminPassword").value;
+  loginAdmin(email, password).then(closeAdminModal).catch(()=>{
+    const e = document.getElementById("adminError");
+    e.textContent = "Login failed — check email and password.";
+    e.style.display = "block";
+  });
+}
+function requireAdmin(){
+  if(isAdmin) return true;
+  openAdminModal();
+  return false;
+}
+function toggleAvatarMenu(e){
+  e.stopPropagation();
+  document.getElementById("avatarMenu").classList.toggle("open");
+}
+document.addEventListener("click", (e)=>{
+  const menu = document.getElementById("avatarMenu");
+  if(menu.classList.contains("open") && !menu.contains(e.target) && !e.target.closest(".avatar-wrap")){
+    menu.classList.remove("open");
+  }
+});
+
+/* ---------- GRN number — a real running sequence, stored in Firestore ---------- */
+async function generateGrnNo(){
+  try{
+    const year = new Date().getFullYear();
+    const counterRef = doc(db, "counters", "grn");
+    const seq = await runTransaction(db, async (tx)=>{
+      const snap = await tx.get(counterRef);
+      const cur = snap.exists() ? (snap.data().seq || 0) : 0;
+      const next = cur + 1;
+      tx.set(counterRef, { seq: next, year, updatedAt: serverTimestamp() }, { merge: true });
+      return next;
+    });
+    window.__grnNo = `GRN-${year}-${String(seq).padStart(4,"0")}`;
+  }catch(err){
+    console.error("GRN number generation failed:", err);
+    window.__grnNo = `GRN-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`;
+  }
+  document.getElementById("grnNoDisplay").textContent = window.__grnNo;
+}
+
+/* ---------- Default dates ---------- */
+(function setDefaultDate(){
+  const iso = new Date().toISOString().slice(0,10);
+  document.getElementById("grnDate").value = iso;
+})();
+
+/* ---------- Live stock items from Firestore ---------- */
+let items = [];
+onSnapshot(query(collection(db, "stockItems"), orderBy("name")), (snap)=>{
+  items = snap.docs.map(d=>{
+    const data = d.data();
+    return {
+      id: d.id,
+      code: data.code || d.id,
+      name: data.name,
+      uom: data.uom || "Piece",
+      unit: unitAbbr(data.uom),
+      balance: data.balance || 0,
+      price: data.price || 0
+    };
+  });
+  onItemSearchInput();
+  renderPickerList();
+}, (err)=>{ console.error("stockItems listener error:", err); });
+
+/* ---------- Live supplier suggestions from past GRNs ---------- */
+onSnapshot(query(collection(db, "grns"), orderBy("createdAt","desc")), (snap)=>{
+  const names = new Set();
+  snap.docs.forEach(d=>{
+    const s = (d.data().supplier || "").trim();
+    if(s) names.add(s);
+  });
+  document.getElementById("supplierList").innerHTML =
+    [...names].map(n=>`<option value="${escapeHtml(n)}"></option>`).join("");
+}, (err)=>{ console.error("grns listener error:", err); });
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+/* ---------- GRN line items (state) ---------- */
+let rows = []; // { itemId, code, name, uom, unit, received, unitCost }
+
+function addItemToRows(it){
+  if(rows.some(r=>r.itemId===it.id)) return; // already added
+  rows.push({
+    itemId: it.id, code: it.code, name: it.name, uom: it.uom, unit: it.unit,
+    received: 0, unitCost: it.price || 0
+  });
+  renderRows();
+}
+function removeRow(itemId){
+  rows = rows.filter(r=>r.itemId!==itemId);
+  renderRows();
+}
+function updateRowField(itemId, field, value){
+  const r = rows.find(r=>r.itemId===itemId);
+  if(!r) return;
+  r[field] = Math.max(0, parseFloat(value) || 0);
+  renderRows(true); // keep focus, just recalc totals + this row's total cell
+}
+
+function renderRows(lightweight){
+  const body = document.getElementById("itemsTableBody");
+  if(rows.length===0){
+    body.innerHTML = `<tr class="items-empty"><td colspan="7">No items added yet — search above or tap "Add Item".</td></tr>`;
+  } else if(!lightweight){
+    body.innerHTML = rows.map((r,idx)=>`
+      <tr>
+        <td>${idx+1}</td>
+        <td>
+          <div class="it-name">${escapeHtml(r.name)}</div>
+          <div class="it-code">${escapeHtml(r.code)}</div>
+        </td>
+        <td>${escapeHtml(r.uom)}</td>
+        <td><input type="number" min="0" class="qty-input" value="${r.received}" oninput="updateRowField('${r.itemId}','received',this.value)"></td>
+        <td><input type="number" min="0" step="0.01" class="cost-input" value="${r.unitCost}" oninput="updateRowField('${r.itemId}','unitCost',this.value)"></td>
+        <td class="row-total" id="rowTotal-${r.itemId}">${fmtMoney(r.received*r.unitCost)}</td>
+        <td style="text-align:right;">
+          <button class="btn-del-row" onclick="removeRow('${r.itemId}')" aria-label="Remove item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+          </button>
+        </td>
+      </tr>
+    `).join("");
+  } else {
+    rows.forEach(r=>{
+      const cell = document.getElementById(`rowTotal-${r.itemId}`);
+      if(cell) cell.textContent = fmtMoney(r.received*r.unitCost);
+    });
+  }
+  recalcTotals();
+}
+
+function recalcTotals(){
+  const totalItems = rows.length;
+  const totalQty = rows.reduce((s,r)=>s+r.received,0);
+  const totalAmount = rows.reduce((s,r)=>s+(r.received*r.unitCost),0);
+  document.getElementById("totalItemsCount").textContent = totalItems;
+  document.getElementById("totalQtyCount").textContent = fmtNum(totalQty);
+  document.getElementById("totalAmount").textContent = fmtMoney(totalAmount);
+}
+function fmtNum(n){ return (Math.round(n*100)/100).toLocaleString(); }
+function fmtMoney(n){ return fmtNum(n); }
+
+/* ---------- Item search (inline suggestions, no barcode) ---------- */
+function onItemSearchInput(){
+  const q = document.getElementById("itemSearchInput").value.trim().toLowerCase();
+  const box = document.getElementById("searchSuggest");
+  if(!q){ box.classList.remove("open"); box.innerHTML = ""; return; }
+  const matches = items.filter(it=>
+    it.name.toLowerCase().includes(q) || it.code.toLowerCase().includes(q)
+  ).slice(0, 8);
+  if(matches.length===0){
+    box.innerHTML = `<div class="suggest-empty">No matching items in stock list.</div>`;
+  } else {
+    box.innerHTML = matches.map(it=>`
+      <div class="suggest-row" onclick="pickFromSearch('${it.id}')">
+        <div>
+          <div class="sn">${escapeHtml(it.name)}</div>
+          <div class="sc">${escapeHtml(it.code)}</div>
+        </div>
+        <div class="sb">${fmtNum(it.balance)} ${it.unit} in stock</div>
+      </div>
+    `).join("");
+  }
+  box.classList.add("open");
+}
+function pickFromSearch(itemId){
+  const it = items.find(i=>i.id===itemId);
+  if(it) addItemToRows(it);
+  document.getElementById("itemSearchInput").value = "";
+  document.getElementById("searchSuggest").classList.remove("open");
+}
+document.addEventListener("click", (e)=>{
+  const box = document.getElementById("searchSuggest");
+  if(box.classList.contains("open") && !box.contains(e.target) && e.target.id!=="itemSearchInput"){
+    box.classList.remove("open");
+  }
+});
+
+/* ---------- Item picker modal (bulk add, also live from Firestore) ---------- */
+let pickerChecked = new Set();
+function openPickerModal(){
+  pickerChecked = new Set();
+  document.getElementById("pickerSearchInput").value = "";
+  renderPickerList();
+  document.getElementById("pickerOverlay").classList.add("open");
+}
+function closePickerModal(){ document.getElementById("pickerOverlay").classList.remove("open"); }
+function togglePickerItem(itemId, checked){
+  if(checked) pickerChecked.add(itemId); else pickerChecked.delete(itemId);
+}
+function renderPickerList(){
+  const list = document.getElementById("pickerList");
+  if(!list) return;
+  const q = (document.getElementById("pickerSearchInput")?.value || "").trim().toLowerCase();
+  const matches = items.filter(it=>
+    !q || it.name.toLowerCase().includes(q) || it.code.toLowerCase().includes(q)
+  );
+  if(matches.length===0){
+    list.innerHTML = `<div class="picker-empty">No items found.</div>`;
+    return;
+  }
+  list.innerHTML = matches.map(it=>`
+    <label class="picker-row">
+      <input type="checkbox" ${pickerChecked.has(it.id)?"checked":""} onchange="togglePickerItem('${it.id}', this.checked)">
+      <div>
+        <div class="pn">${escapeHtml(it.name)}</div>
+        <div class="pc">${escapeHtml(it.code)}</div>
+      </div>
+      <div class="pb">${fmtNum(it.balance)} ${it.unit}</div>
+    </label>
+  `).join("");
+}
+function confirmPickerSelection(){
+  pickerChecked.forEach(id=>{
+    const it = items.find(i=>i.id===id);
+    if(it) addItemToRows(it);
+  });
+  closePickerModal();
+}
+
+/* ---------- Attachments (reference only — no cloud upload configured) ---------- */
+let attachments = [];
+function onAttachSelected(e){
+  const files = Array.from(e.target.files || []);
+  files.forEach(f=>{
+    const item = { name: f.name, size: f.size, isImage: f.type.startsWith("image/"), url: null };
+    if(item.isImage){
+      const reader = new FileReader();
+      reader.onload = (ev)=>{ item.url = ev.target.result; renderAttachments(); };
+      reader.readAsDataURL(f);
+    }
+    attachments.push(item);
+  });
+  e.target.value = "";
+  renderAttachments();
+}
+function removeAttachment(idx){
+  attachments.splice(idx,1);
+  renderAttachments();
+}
+function fmtSize(bytes){
+  if(bytes < 1024) return bytes + " B";
+  if(bytes < 1024*1024) return Math.round(bytes/1024) + " KB";
+  return (bytes/(1024*1024)).toFixed(1) + " MB";
+}
+function renderAttachments(){
+  const grid = document.getElementById("attachGrid");
+  const uploadBox = grid.querySelector(".attach-upload");
+  grid.querySelectorAll(".attach-chip").forEach(el=>el.remove());
+  attachments.forEach((a,idx)=>{
+    const chip = document.createElement("div");
+    chip.className = "attach-chip";
+    chip.innerHTML = `
+      <button class="rm" onclick="removeAttachment(${idx})" aria-label="Remove file">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <div class="thumb">${a.isImage && a.url ? `<img src="${a.url}">` : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>`}</div>
+      <div class="meta"><div class="n">${escapeHtml(a.name)}</div><div class="s">${fmtSize(a.size)}</div></div>
+    `;
+    grid.insertBefore(chip, uploadBox.nextSibling);
+  });
+}
+
+/* ---------- Form helpers ---------- */
+function showMsg(text, ok){
+  const box = document.getElementById("formMsg");
+  box.textContent = text;
+  box.className = "form-msg show " + (ok ? "ok" : "err");
+  box.scrollIntoView({behavior:"smooth", block:"nearest"});
+}
+function collectHeader(){
+  return {
+    grnDate: document.getElementById("grnDate").value,
+    supplier: document.getElementById("grnSupplier").value.trim(),
+    po: document.getElementById("grnPO").value.trim(),
+    invoiceNo: document.getElementById("grnInvoiceNo").value.trim(),
+    invoiceDate: document.getElementById("grnInvoiceDate").value,
+    deliveryNote: document.getElementById("grnDeliveryNote").value.trim(),
+    deliveredBy: document.getElementById("grnDeliveredBy").value.trim(),
+    receivedBy: document.getElementById("grnReceivedBy").value.trim(),
+    storeLocation: document.getElementById("grnStoreLocation").value
+  };
+}
+function validateForSubmit(h){
+  if(!h.grnDate) return "GRN Date is required.";
+  if(!h.supplier) return "Supplier is required.";
+  if(!h.receivedBy) return "Received By is required.";
+  if(!h.storeLocation) return "Store Location is required.";
+  if(rows.length===0) return "Add at least one item before submitting.";
+  if(rows.some(r=>r.received<=0)) return "Every item needs a Received quantity greater than 0.";
+  return null;
+}
+
+/* ---------- Save as Draft — stored, but does not move stock yet ---------- */
+function saveDraft(){
+  if(!requireAdmin()) return;
+  const h = collectHeader();
+  if(!h.grnDate){ showMsg("GRN Date is required to save a draft.", false); return; }
+  const btn = document.getElementById("btnDraft");
+  btn.disabled = true;
+  const totalQty = rows.reduce((s,r)=>s+r.received,0);
+  const totalAmount = rows.reduce((s,r)=>s+(r.received*r.unitCost),0);
+  addDoc(collection(db, "grns"), {
+    grnNo: window.__grnNo, ...h,
+    items: rows,
+    totalItems: rows.length, totalQty, totalAmount,
+    attachments: attachments.map(a=>({name:a.name, size:a.size})),
+    status: "draft",
+    createdAt: serverTimestamp(), createdBy: currentAdminEmail
+  }).then(()=>{
+    showMsg("Draft saved. Stock levels have not been changed yet.", true);
+  }).catch(err=>{
+    showMsg("Could not save draft: " + err.message, false);
+  }).finally(()=>{ btn.disabled = false; });
+}
+
+/* ---------- Submit GRN — moves stock and logs it against every item ---------- */
+async function submitGRN(){
+  if(!requireAdmin()) return;
+  const h = collectHeader();
+  const err = validateForSubmit(h);
+  if(err){ showMsg(err, false); return; }
+
+  const btn = document.getElementById("btnSubmit");
+  btn.disabled = true;
+  showMsg("Submitting GRN…", true);
+
+  try{
+    // 1. Increase balance on every affected stock item.
+    for(const r of rows){
+      const itemRef = doc(db, "stockItems", r.itemId);
+      await updateDoc(itemRef, {
+        balance: increment(r.received),
+        updatedAt: serverTimestamp(),
+        updatedBy: currentAdminEmail
+      });
+    }
+    // 2. Log a stockTransactions entry per item — this is what item-details.html
+    //    reads live, so every received item instantly shows up there as a GRN movement.
+    for(const r of rows){
+      await addDoc(collection(db, "stockTransactions"), {
+        itemId: r.itemId, itemName: r.name, type: "in",
+        qty: r.received, unit: r.unit,
+        who: h.supplier, note: `GRN ${window.__grnNo}`,
+        createdAt: serverTimestamp(), createdBy: currentAdminEmail
+      });
+    }
+    // 3. Save the GRN document itself as a permanent record.
+    const totalQty = rows.reduce((s,r)=>s+r.received,0);
+    const totalAmount = rows.reduce((s,r)=>s+(r.received*r.unitCost),0);
+    await addDoc(collection(db, "grns"), {
+      grnNo: window.__grnNo, ...h,
+      items: rows,
+      totalItems: rows.length, totalQty, totalAmount,
+      attachments: attachments.map(a=>({name:a.name, size:a.size})),
+      status: "submitted",
+      createdAt: serverTimestamp(), createdBy: currentAdminEmail
+    });
+
+    showMsg(`${window.__grnNo} submitted — stock balances updated.`, true);
+    setTimeout(()=>{ location.href = "stock-list.html"; }, 1200);
+  }catch(e){
+    console.error(e);
+    showMsg("Could not submit GRN: " + e.message, false);
+    btn.disabled = false;
+  }
+}
+
+/* ---------- Print ---------- */
+function printGRN(){ window.print(); }
+
+/* ---------- Expose functions used by inline handlers ---------- */
+Object.assign(window, {
+  submitGateLogin, openAdminModal, closeAdminModal, submitAdminLogin, signOutNow, toggleAvatarMenu,
+  onItemSearchInput, pickFromSearch,
+  openPickerModal, closePickerModal, togglePickerItem, renderPickerList, confirmPickerSelection,
+  updateRowField, removeRow,
+  onAttachSelected, removeAttachment,
+  saveDraft, submitGRN, printGRN
+});
+</script>
+
+</body>
+</html>
