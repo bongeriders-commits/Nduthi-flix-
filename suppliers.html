@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="/logo-data.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Suppliers — Cabro City</title>
@@ -224,7 +225,7 @@
 
 <div id="accessGate" style="display:none;">
   <div class="gate-card">
-    <img src="/cabro-city-logo.png" alt="Cabro City">
+    <img alt="Cabro City" class="cc-logo" data-fallback="/cabro-city-logo.png">
     <h2>Sign in required</h2>
     <p>Cabro City is restricted to approved staff. If you don't have an account yet, ask your admin to add one for you.</p>
     <div class="field">
@@ -245,9 +246,9 @@
   <!-- HEADER -->
   <div class="mobile-header">
     <div class="mh-left">
-      <button class="hamburger" aria-label="Back to dashboard" onclick="location.href='index.html'"><span></span><span></span><span></span></button>
+      <button class="hamburger" aria-label="Back to home" onclick="location.href='index.html'"><span></span><span></span><span></span></button>
       <button class="mh-logo" onclick="location.href='index.html'" aria-label="Cabro City home">
-        <img src="/cabro-city-logo.png" alt="Cabro City — Paving the Future" class="brand-logo-img">
+        <img alt="Cabro City — Paving the Future" class="brand-logo-img cc-logo" data-fallback="/cabro-city-logo.png">
       </button>
     </div>
     <div class="mh-right">
@@ -328,7 +329,7 @@
   <div class="bottom-nav">
     <button class="nav-item" onclick="location.href='index.html'">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
-      Dashboard
+      Home
     </button>
     <button class="nav-item active" onclick="location.href='stock-list.html'">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>
@@ -776,5 +777,13 @@ Object.assign(window, {
   }
 </script>
 
+<script>
+(function(){
+  var uri = window.CABRO_LOGO_URI;
+  document.querySelectorAll("img.cc-logo").forEach(function(img){
+    img.src = uri || img.getAttribute("data-fallback");
+  });
+})();
+</script>
 </body>
 </html>

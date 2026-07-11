@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="/logo-data.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Katani Quarry — Stores</title>
@@ -620,12 +621,12 @@
 <body>
 
 <div id="splashScreen">
-  <img src="/cabro-city-logo.png" alt="Cabro City — Paving the Future">
+  <img alt="Cabro City — Paving the Future" class="cc-logo" data-fallback="/cabro-city-logo.png">
 </div>
 
 <div id="accessGate" style="display:none;">
   <div class="gate-card">
-    <img src="/cabro-city-logo.png" alt="Cabro City">
+    <img alt="Cabro City" class="cc-logo" data-fallback="/cabro-city-logo.png">
     <h2>Sign in required</h2>
     <p>Cabro City is restricted to approved staff. If you don't have an account yet, ask your admin to add one for you.</p>
     <div class="field">
@@ -648,7 +649,7 @@
     <div class="mh-left">
       <button class="hamburger" aria-label="Menu" onclick="openDrawer()"><span></span><span></span><span></span></button>
       <div class="mh-logo">
-        <img src="/cabro-city-logo.png" alt="Cabro City — Paving the Future" class="brand-logo-img">
+        <img alt="Cabro City — Paving the Future" class="brand-logo-img cc-logo" data-fallback="/cabro-city-logo.png">
       </div>
     </div>
     <div class="mh-right">
@@ -686,9 +687,9 @@
           <div class="qa-icon" style="color:var(--red);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></div>
           <span>Issue Stock</span>
         </button>
-        <button class="qa-item" onclick="openNewItemModal()">
-          <div class="qa-icon" style="color:var(--oxide);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v3"/></svg></div>
-          <span>New Item</span>
+        <button class="qa-item" onclick="openStockAudit()">
+          <div class="qa-icon" style="color:var(--oxide);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+          <span>Stock Audit</span>
         </button>
         <button class="qa-item" onclick="switchTab('inventory')">
           <div class="qa-icon" style="color:var(--amber);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3"/><path d="M9 12l2 2 4-4"/></svg></div>
@@ -729,8 +730,6 @@
           <button class="chip" data-filter="critical">Critical</button>
           <button class="chip" data-filter="flagged">Flagged</button>
         </div>
-        <button class="btn-log" id="btnNewItem" onclick="openNewItemModal()" style="background:transparent;border:1px solid var(--line);color:var(--text);">+ New Item</button>
-        <button class="btn-log" onclick="openModal()">+ Log Transaction</button>
       </div>
 
       <div class="panel">
@@ -794,7 +793,7 @@
   <div class="bottom-nav">
     <button class="nav-item active" data-tab="dashboard" onclick="switchTab('dashboard')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
-      Dashboard
+      Home
     </button>
     <button class="nav-item" data-tab="inventory" onclick="switchTab('inventory')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>
@@ -820,7 +819,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
       </button>
       <div class="drawer-brand">
-        <img src="/cabro-city-logo.png" alt="Cabro City — Paving the Future">
+        <img alt="Cabro City — Paving the Future" class="cc-logo" data-fallback="/cabro-city-logo.png">
       </div>
       <div class="drawer-sub">STORES MANAGEMENT</div>
     </div>
@@ -828,12 +827,16 @@
     <div class="drawer-nav">
       <button class="drawer-item active" data-dtab="dashboard" onclick="drawerGo('dashboard')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-        <span class="d-label">Dashboard</span>
+        <span class="d-label">Home</span>
       </button>
       <button class="drawer-item" data-dtab="inventory" onclick="drawerGo('inventory')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>
         <span class="d-label">Inventory</span>
         <svg class="drawer-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+      <button class="drawer-item" onclick="closeDrawer();openNewItemModal();">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v3"/></svg>
+        <span class="d-label">Create Product</span>
       </button>
       <button class="drawer-item" data-dtab="transactions" onclick="drawerGo('transactions')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
@@ -1377,6 +1380,7 @@ function switchTab(name){
 /* ---------- Quick actions ---------- */
 function quickReceive(){ openModal(); setTxType("in"); }
 function quickIssue(){ openModal(); setTxType("out"); }
+function openStockAudit(){ window.location.href = "stock-list.html?mode=audit"; }
 
 /* ---------- Drawer menu ---------- */
 function openDrawer(){
@@ -1602,7 +1606,7 @@ function revealAppOnceReady(){
 Object.assign(window, {
   onAdminBtnClick, onDrawerLogoutClick, openAdminModal, closeAdminModal, submitAdminLogin, submitGateLogin,
   closeDrawer, closeModal, closeNewItemModal, drawerGo, drawerIssue, drawerReceive,
-  exportIssuedPDF, exportReceivedPDF, openDrawer, openModal, openNewItemModal,
+  exportIssuedPDF, exportReceivedPDF, openDrawer, openModal, openNewItemModal, openStockAudit,
   quickIssue, quickReceive, setTxType, submitNewItem, submitTx, switchTab
 });
 </script>
@@ -1617,5 +1621,13 @@ Object.assign(window, {
   }
 </script>
 
+<script>
+(function(){
+  var uri = window.CABRO_LOGO_URI;
+  document.querySelectorAll("img.cc-logo").forEach(function(img){
+    img.src = uri || img.getAttribute("data-fallback");
+  });
+})();
+</script>
 </body>
 </html>

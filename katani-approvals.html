@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="/logo-data.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Katani Quarry — Approvals</title>
@@ -215,7 +216,7 @@
 
 <div id="accessGate" style="display:none;">
   <div class="gate-card">
-    <img src="/cabro-city-logo.png" alt="Cabro City">
+    <img alt="Cabro City" class="cc-logo" data-fallback="/cabro-city-logo.png">
     <h2>Sign in required</h2>
     <p>Cabro City is restricted to approved staff. If you don't have an account yet, ask your admin to add one for you.</p>
     <div class="field">
@@ -540,5 +541,22 @@ document.querySelectorAll(".fchip").forEach(chip=>{
 render();
 </script>
 
+<script>
+(function(){
+  var uri = window.CABRO_LOGO_URI;
+  document.querySelectorAll("img.cc-logo").forEach(function(img){
+    img.src = uri || img.getAttribute("data-fallback");
+  });
+})();
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(() => console.log('SW registered'))
+        .catch((err) => console.error('SW registration failed:', err));
+    });
+  }
+</script>
 </body>
 </html>
