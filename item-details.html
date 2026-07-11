@@ -153,14 +153,6 @@
   .btn-view-all{background:#fff;border:1.5px solid var(--oxide);color:var(--oxide);padding:11px 22px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;}
   .btn-view-all:hover{background:#fff4ee;}
 
-  /* ===== Bottom actions ===== */
-  .bottom-actions{margin:16px 20px 0;display:flex;gap:12px;flex-wrap:wrap;}
-  .btn-receive{flex:1;min-width:180px;display:flex;align-items:center;justify-content:center;gap:8px;background:#fff;border:1.5px solid var(--oxide);color:var(--oxide);padding:13px;border-radius:11px;font-size:13.5px;font-weight:700;cursor:pointer;}
-  .btn-receive:hover{background:#fff4ee;}
-  .btn-adjust{flex:1;min-width:180px;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--oxide);border:none;color:#fff;padding:13px;border-radius:11px;font-size:13.5px;font-weight:700;cursor:pointer;box-shadow:0 8px 18px -6px rgba(245,89,10,0.5);}
-  .btn-adjust:hover{background:#ff6b1f;}
-  .btn-receive svg,.btn-adjust svg{width:16px;height:16px;}
-
   /* ===== Bottom nav ===== */
   .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:1040px;background:var(--panel);border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-around;padding:11px 4px 16px;z-index:40;}
   .nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;color:var(--text-faint);font-size:9.5px;cursor:pointer;flex:1;padding:2px 0;max-width:120px;}
@@ -271,13 +263,8 @@
       <div class="ov-grid">
         <div class="ov-item"><div class="k">Category</div><div class="v" id="ovCategory">Fuel</div></div>
         <div class="ov-item"><div class="k">Unit of Measure</div><div class="v" id="ovUom">Litre (LTR)</div></div>
-        <div class="ov-item"><div class="k">Item Type</div><div class="v" id="ovType">Consumable</div></div>
         <div class="ov-item"><div class="k">Reorder Level</div><div class="v" id="ovReorder">2,000 L</div></div>
         <div class="ov-item"><div class="k">Minimum Stock</div><div class="v" id="ovMin">1,000 L</div></div>
-        <div class="ov-item"><div class="k">Maximum Stock</div><div class="v" id="ovMax">20,000 L</div></div>
-        <div class="ov-item"><div class="k">Storage Location</div><div class="v" id="ovLocation">Fuel Tank Farm</div></div>
-        <div class="ov-item"><div class="k">Shelf / Bin</div><div class="v" id="ovShelf">Tank 1</div></div>
-        <div class="ov-item"><div class="k">Tax</div><div class="v" id="ovTax">Exempt</div></div>
       </div>
     </div>
     <div class="balance-box">
@@ -290,7 +277,7 @@
 
   <!-- STAT STRIP -->
   <div class="stat-strip">
-    <div class="ss-item"><div class="k">Opening Balance</div><div class="v" id="ssOpening">5,000 L</div><div class="sub">01 May 2024</div></div>
+    <div class="ss-item"><div class="k">Opening Balance</div><div class="v" id="ssOpening">5,000 L</div><div class="sub" id="ssOpeningDate">—</div></div>
     <div class="ss-item"><div class="k">Total Received</div><div class="v green" id="ssReceived">12,000 L</div></div>
     <div class="ss-item"><div class="k">Total Issued</div><div class="v red" id="ssIssued">9,160 L</div></div>
     <div class="ss-item"><div class="k">Average Cost</div><div class="v" id="ssAvgCost">KSh 165.00</div><div class="sub" id="ssAvgUnit">per Litre</div></div>
@@ -343,11 +330,8 @@
           <div class="legend-row"><span class="dot" style="background:var(--text-faint);"></span><span class="lbl">Opening Balance</span><span class="val" id="legOpening">5,000 L</span></div>
         </div>
         <div class="kv-list">
-          <div class="kv-row"><span class="k" id="avgCostLabel">Avg. Cost per Litre</span><span class="v" id="kvAvgCost">KSh 165.00</span></div>
-          <div class="kv-row"><span class="k">Stock Value</span><span class="v" id="kvValue">KSh 1,293,600</span></div>
           <div class="kv-row"><span class="k">Reorder Level</span><span class="v" id="kvReorder">2,000 L</span></div>
           <div class="kv-row"><span class="k">Minimum Stock</span><span class="v" id="kvMin">1,000 L</span></div>
-          <div class="kv-row"><span class="k">Maximum Stock</span><span class="v" id="kvMax">20,000 L</span></div>
         </div>
       </div>
     </div>
@@ -413,17 +397,6 @@
   </div>
 
   <!-- BOTTOM ACTIONS -->
-  <div class="bottom-actions">
-    <button class="btn-receive" onclick="receiveStock()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
-      Receive Stock
-    </button>
-    <button class="btn-adjust" onclick="adjustStock()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-      Adjust Stock
-    </button>
-  </div>
-
   <!-- BOTTOM NAV -->
   <div class="bottom-nav">
     <button class="nav-item" onclick="location.href='index.html'">
@@ -481,6 +454,10 @@
         <input type="number" id="editBalance" min="0" style="width:100%;background:#f6f6f8;border:1px solid #e2e2e6;padding:10px 12px;border-radius:8px;font-size:13.5px;">
       </div>
     </div>
+    <div class="field" style="margin-bottom:13px;">
+      <label style="display:block;font-size:11.5px;color:#68686f;font-weight:600;margin-bottom:6px;">Unit price (KSh per unit)</label>
+      <input type="number" id="editPrice" min="0" step="0.01" placeholder="e.g. 165.00" style="width:100%;background:#f6f6f8;border:1px solid #e2e2e6;padding:10px 12px;border-radius:8px;font-size:13.5px;">
+    </div>
     <div id="editError" style="display:none;color:#e13a3a;font-size:12.5px;margin:-4px 0 10px;"></div>
     <div class="modal-actions" style="display:flex;gap:10px;margin-top:18px;">
       <button onclick="closeEditModal()" style="flex:1;padding:11px;border-radius:9px;border:1px solid #e2e2e6;background:transparent;color:#68686f;font-size:13px;font-weight:600;cursor:pointer;">Cancel</button>
@@ -514,21 +491,23 @@
 /* ---------- Firebase ---------- */
 import {
   db, loginAdmin, logoutAdmin, watchAdmin, statusOf, initialsFromEmail,
-  doc, updateDoc, onSnapshot, serverTimestamp, increment,
-  collection, addDoc, query, where
+  doc, updateDoc, onSnapshot, serverTimestamp,
+  collection, query, where
 } from "./firebase-config.js";
 
-/* ---------- Category reference data (for realistic placeholder values) ---------- */
+/* ---------- Category unit-cost fallback ----------
+   Used only until items carry a real "price" field (see Edit Item's Unit
+   Price). Once set, an item's own price always wins over this estimate. ---------- */
 const CATEGORY_META = {
-  "Fuel":       { unitCost:165, type:"Consumable",  location:"Fuel Tank Farm",  shelf:"Tank 1",   tax:"Exempt",   supplier:"Total Kenya Ltd",     issuedTo:["Excavator TX-04","Generator G-12","Loader L-02"] },
-  "Cement":     { unitCost:750, type:"Raw Material", location:"Cement Store",    shelf:"Rack A",   tax:"16% VAT",  supplier:"Bamburi Cement Ltd",  issuedTo:["Site A - Foundation","Site B - Slab","Site C - Columns"] },
-  "Steel":      { unitCost:180, type:"Raw Material", location:"Steel Yard",      shelf:"Bay 2",    tax:"16% VAT",  supplier:"Devki Steel Mills",   issuedTo:["Site A - Foundation","Site B - Slab","Fabrication Yard"] },
-  "PPE":        { unitCost:850, type:"Consumable",  location:"PPE Store",       shelf:"Shelf B3", tax:"16% VAT",  supplier:"Safety Gear Kenya",   issuedTo:["Site Workshop","Site A Crew","Site B Crew"] },
-  "Lubricants": { unitCost:900, type:"Consumable",  location:"Lubricants Store",shelf:"Rack C",   tax:"16% VAT",  supplier:"Total Kenya Ltd",     issuedTo:["Excavator TX-04","Loader L-02","Generator G-12"] },
-  "Filters":    { unitCost:650, type:"Spare Part",  location:"Spares Store",    shelf:"Bin F2",   tax:"16% VAT",  supplier:"AutoParts Kenya",     issuedTo:["Excavator TX-04","Loader L-02","Workshop"] },
-  "Hardware":   { unitCost:150, type:"Raw Material", location:"Hardware Store",  shelf:"Bin H1",   tax:"16% VAT",  supplier:"Hardware World Ltd",  issuedTo:["Site A - Foundation","Fabrication Yard","Site B - Slab"] }
+  "Fuel":       { unitCost:165 },
+  "Cement":     { unitCost:750 },
+  "Steel":      { unitCost:180 },
+  "PPE":        { unitCost:850 },
+  "Lubricants": { unitCost:900 },
+  "Filters":    { unitCost:650 },
+  "Hardware":   { unitCost:150 }
 };
-const DEFAULT_META = { unitCost:200, type:"Consumable", location:"Main Store", shelf:"Bin 1", tax:"16% VAT", supplier:"General Supplier", issuedTo:["Site Store"] };
+const DEFAULT_META = { unitCost:200 };
 
 /* ---------- Read item id from query string ---------- */
 const params = new URLSearchParams(location.search);
@@ -626,7 +605,6 @@ function renderItem(data){
   const balance = data.balance || 0;
   const status = statusOf(balance, min);
   const reorderLevel = Math.round(min * 2);
-  const maxStock = Math.round(min * 20);
   // Real unit cost isn't captured per-item yet (no "price" field is ever set
   // when items are created), so we fall back to a category estimate. Once
   // item creation starts saving a real price, swap this for data.price.
@@ -641,13 +619,8 @@ function renderItem(data){
   stEl.className = "pill " + pillClass(status);
   document.getElementById("ovCategory").textContent = data.category;
   document.getElementById("ovUom").textContent = data.uom;
-  document.getElementById("ovType").textContent = meta.type;
   document.getElementById("ovReorder").textContent = fmtQty(reorderLevel);
   document.getElementById("ovMin").textContent = fmtQty(min);
-  document.getElementById("ovMax").textContent = fmtQty(maxStock);
-  document.getElementById("ovLocation").textContent = meta.location;
-  document.getElementById("ovShelf").textContent = meta.shelf;
-  document.getElementById("ovTax").textContent = meta.tax;
   document.getElementById("ovBalance").textContent = fmtQty(balance);
   document.getElementById("ovValue").textContent = fmtKsh(stockValue);
 
@@ -658,12 +631,8 @@ function renderItem(data){
     : "—";
 
   document.getElementById("donutBalance").textContent = fmtQty(balance);
-  document.getElementById("avgCostLabel").textContent = "Avg. Cost per " + unitLabel;
-  document.getElementById("kvAvgCost").textContent = "KSh " + unitCost.toFixed(2);
-  document.getElementById("kvValue").textContent = fmtKsh(stockValue);
   document.getElementById("kvReorder").textContent = fmtQty(reorderLevel);
   document.getElementById("kvMin").textContent = fmtQty(min);
-  document.getElementById("kvMax").textContent = fmtQty(maxStock);
 
   renderTransactionsAndStats();
 }
@@ -702,6 +671,10 @@ function renderTransactionsAndStats(){
   const opening = Math.max(0, balance - received + issued);
 
   document.getElementById("ssOpening").textContent = fmtQty(opening);
+  const oldestTx = rawTransactions.length ? rawTransactions[rawTransactions.length - 1] : null;
+  document.getElementById("ssOpeningDate").textContent = (oldestTx && oldestTx.ts && oldestTx.ts.getTime())
+    ? "as of " + oldestTx.ts.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})
+    : "No movements recorded yet";
   document.getElementById("ssReceived").textContent = fmtQty(received);
   document.getElementById("ssIssued").textContent = fmtQty(issued);
   document.getElementById("legReceived").textContent = fmtQty(received);
@@ -798,44 +771,10 @@ document.addEventListener("click", (e)=>{
   }
 });
 
-/* ---------- Quick stock actions — write to Firestore AND log a real transaction ---------- */
-// Both actions now write a matching doc to "stockTransactions" (same collection
-// index.html uses), so the ledger, stats, and dashboard activity feed all stay
-// accurate no matter which page an admin uses to move stock.
-function logTransaction(type, qty, extra){
-  return addDoc(collection(db, "stockTransactions"), {
-    itemId, itemName: liveData.name, type, qty: Math.abs(qty), unit: curUnitAbbr,
-    who: (extra && extra.who) || "", machine: (extra && extra.machine) || "",
-    note: (extra && extra.note) || "",
-    createdAt: serverTimestamp(), createdBy: currentAdminEmail
-  });
-}
-function receiveStock(){
-  if(!requireAdmin()) return;
-  const qty = parseFloat(prompt(`Receive stock for "${liveData.name}"\nEnter quantity received (${curUnitAbbr}):`));
-  if(!qty || qty <= 0) return;
-  const who = prompt("Received from (supplier, optional):") || "";
-  updateDoc(doc(db, "stockItems", itemId), {
-    balance: increment(qty),
-    updatedAt: serverTimestamp(),
-    updatedBy: currentAdminEmail
-  }).then(()=>{
-    logTransaction("in", qty, { who });
-  }).catch(err=>alert("Could not update stock: "+err.message));
-}
-function adjustStock(){
-  if(!requireAdmin()) return;
-  const delta = parseFloat(prompt(`Adjust stock for "${liveData.name}"\nEnter adjustment (use "-" to reduce), in ${curUnitAbbr}:`));
-  if(!delta) return;
-  if((liveData.balance||0) + delta < 0){ alert("Adjustment would take balance below zero."); return; }
-  updateDoc(doc(db, "stockItems", itemId), {
-    balance: increment(delta),
-    updatedAt: serverTimestamp(),
-    updatedBy: currentAdminEmail
-  }).then(()=>{
-    logTransaction(delta > 0 ? "in" : "out", delta, { note: "Manual adjustment" });
-  }).catch(err=>alert("Could not update stock: "+err.message));
-}
+/* ---------- Note ----------
+   Receiving stock will be handled by a dedicated Receive Stock (GRN) page
+   (coming later), which will write directly to "stockTransactions". Manual
+   balance corrections are done via the Edit Item button at the top. */
 
 /* ---------- Edit Item modal ---------- */
 function openEditModal(){
@@ -845,6 +784,7 @@ function openEditModal(){
   document.getElementById("editUom").value = liveData.uom || "Litre (LTR)";
   document.getElementById("editMin").value = liveData.min || 0;
   document.getElementById("editBalance").value = liveData.balance || 0;
+  document.getElementById("editPrice").value = liveData.price || "";
   document.getElementById("editError").style.display = "none";
   document.getElementById("editOverlay").classList.add("open");
 }
@@ -856,10 +796,11 @@ function submitEditItem(){
   const uom = document.getElementById("editUom").value;
   const min = parseFloat(document.getElementById("editMin").value) || 0;
   const balance = parseFloat(document.getElementById("editBalance").value) || 0;
+  const price = parseFloat(document.getElementById("editPrice").value) || 0;
   const errBox = document.getElementById("editError");
   if(!name){ errBox.textContent = "Item name is required."; errBox.style.display = "block"; return; }
   updateDoc(doc(db, "stockItems", itemId), {
-    name, category, uom, min, balance,
+    name, category, uom, min, balance, price,
     updatedAt: serverTimestamp(),
     updatedBy: currentAdminEmail
   }).then(()=>{
@@ -873,7 +814,7 @@ function submitEditItem(){
 /* ---------- Expose functions used by inline onclick handlers ---------- */
 Object.assign(window, {
   onAdminBtnClick, openAdminModal, closeAdminModal, submitAdminLogin, submitGateLogin, signOutNow,
-  switchDetailTab, toggleAvatarMenu, receiveStock, adjustStock,
+  switchDetailTab, toggleAvatarMenu,
   openEditModal, closeEditModal, submitEditItem, renderTransactionsSearch
 });
 </script>
