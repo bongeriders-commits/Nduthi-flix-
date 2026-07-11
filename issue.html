@@ -302,7 +302,7 @@
     </div>
     <div id="recentIssueList"><div class="tx-empty">No issues recorded for this item yet.</div></div>
     <div class="view-all-wrap">
-      <button class="btn-view-all" onclick="location.href='item-details.html?id='+encodeURIComponent(itemId)">View All</button>
+      <button class="btn-view-all" id="viewAllBtn" onclick="toggleViewAll()">View All</button>
     </div>
   </div>
 
@@ -316,12 +316,6 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>
       Inventory
     </button>
-    <div class="nav-scan">
-      <button class="nav-scan-btn" onclick="alert('Scanning coming soon.')" aria-label="Scan">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
-      </button>
-      <span>Scan</span>
-    </div>
     <button class="nav-item" onclick="location.href='index.html#transactions'">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
       Transactions
@@ -543,9 +537,20 @@ window.renderPicker = function renderPicker(){
   }).join("");
 };
 
+let showAllIssues = false;
+window.toggleViewAll = function toggleViewAll(){
+  showAllIssues = !showAllIssues;
+  renderRecentIssues();
+};
+
 function renderRecentIssues(){
-  const list = rawIssues.slice(0, 5);
+  const list = showAllIssues ? rawIssues : rawIssues.slice(0, 5);
   const box = document.getElementById("recentIssueList");
+  const viewAllBtn = document.getElementById("viewAllBtn");
+  if(viewAllBtn){
+    viewAllBtn.textContent = showAllIssues ? "Show Less" : "View All";
+    viewAllBtn.style.display = rawIssues.length > 5 ? "inline-block" : "none";
+  }
   if(list.length === 0){
     box.innerHTML = `<div class="tx-empty">No issues recorded for this item yet.</div>`;
     return;
