@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Stock items — everyone using the app can read live stock,
+    // but only a signed-in admin (created by you in Firebase Auth)
+    // can add, edit, or delete an item.
+    match /stockItems/{itemId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null;
+    }
+
+    // Stock in/out transaction log — read for the activity feed,
+    // create only by signed-in admins, never edited or deleted
+    // (keeps an honest audit trail).
+    match /stockTransactions/{txId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if false;
+    }
+
+    // Everything else stays locked down by default.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

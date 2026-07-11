@@ -181,6 +181,7 @@
       </button>
     </div>
     <div class="mh-right">
+      <button class="btn-outline" id="adminBtn" style="padding:8px 12px;font-size:12px;" onclick="onAdminBtnClick()">Admin</button>
       <button class="bell" onclick="location.href='index.html'" aria-label="Notifications">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
         <span class="badge-dot">5</span>
@@ -209,7 +210,7 @@
         <span class="cur" id="bcName">Diesel 50ppm</span>
       </div>
     </div>
-    <button class="btn-outline" onclick="alert('Edit form coming soon.')">
+    <button class="btn-outline" onclick="openEditModal()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4 11.5-11.5z"/></svg>
       Edit Item
     </button>
@@ -310,7 +311,7 @@
         <h3>Stock Transactions</h3>
         <div class="tx-tools">
           <div class="tx-search">
-            <input type="text" id="txSearch" placeholder="Search transactions..." oninput="renderTransactions()">
+            <input type="text" id="txSearch" placeholder="Search transactions..." oninput="renderTransactionsSearch()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
           </div>
           <button class="tx-filter" aria-label="Filter transactions">
@@ -399,7 +400,77 @@
 
 </div>
 
-<script>
+<!-- EDIT ITEM MODAL -->
+<div class="overlay" id="editOverlay" style="position:fixed;inset:0;background:rgba(10,10,11,0.55);display:none;align-items:center;justify-content:center;z-index:100;padding:20px;">
+  <div class="modal" style="background:#fff;border:1px solid #e2e2e6;border-radius:14px;width:100%;max-width:440px;padding:22px 22px 20px;max-height:88vh;overflow-y:auto;">
+    <h3 style="font-size:16px;margin:0 0 16px;font-weight:800;">Edit Item</h3>
+    <div class="field" style="margin-bottom:13px;">
+      <label style="display:block;font-size:11.5px;color:#68686f;font-weight:600;margin-bottom:6px;">Item name</label>
+      <input type="text" id="editName" style="width:100%;background:#f6f6f8;border:1px solid #e2e2e6;padding:10px 12px;border-radius:8px;font-size:13.5px;">
+    </div>
+    <div class="field" style="margin-bottom:13px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div>
+        <label style="display:block;font-size:11.5px;color:#68686f;font-weight:600;margin-bottom:6px;">Category</label>
+        <select id="editCategory" style="width:100%;background:#f6f6f8;border:1px solid #e2e2e6;padding:10px 12px;border-radius:8px;font-size:13.5px;">
+          <option>Fuel</option><option>Cement</option><option>Steel</option>
+          <option>PPE</option><option>Lubricants</option><option>Filters</option>
+          <option>Hardware</option><option>Other</option>
+        </select>
+      </div>
+      <div>
+        <label style="display:block;font-size:11.5px;color:#68686f;font-weight:600;margin-bottom:6px;">UOM</label>
+        <select id="editUom" style="width:100%;background:#f6f6f8;border:1px solid #e2e2e6;padding:10px 12px;border-radius:8px;font-size:13.5px;">
+          <option>Litre (LTR)</option><option>Bag</option><option>Piece</option>
+          <option>Pair</option><option>Kg</option>
+        </select>
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:13px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div>
+        <label style="display:block;font-size:11.5px;color:#68686f;font-weight:600;margin-bottom:6px;">Min. stock</label>
+        <input type="number" id="editMin" min="0" style="width:100%;background:#f6f6f8;border:1px solid #e2e2e6;padding:10px 12px;border-radius:8px;font-size:13.5px;">
+      </div>
+      <div>
+        <label style="display:block;font-size:11.5px;color:#68686f;font-weight:600;margin-bottom:6px;">Balance (qty on hand)</label>
+        <input type="number" id="editBalance" min="0" style="width:100%;background:#f6f6f8;border:1px solid #e2e2e6;padding:10px 12px;border-radius:8px;font-size:13.5px;">
+      </div>
+    </div>
+    <div id="editError" style="display:none;color:#e13a3a;font-size:12.5px;margin:-4px 0 10px;"></div>
+    <div class="modal-actions" style="display:flex;gap:10px;margin-top:18px;">
+      <button onclick="closeEditModal()" style="flex:1;padding:11px;border-radius:9px;border:1px solid #e2e2e6;background:transparent;color:#68686f;font-size:13px;font-weight:600;cursor:pointer;">Cancel</button>
+      <button onclick="submitEditItem()" style="flex:2;padding:11px;border-radius:9px;border:none;background:#f5590a;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN LOGIN MODAL -->
+<div class="overlay" id="adminOverlay" style="position:fixed;inset:0;background:rgba(10,10,11,0.55);display:none;align-items:center;justify-content:center;z-index:100;padding:20px;">
+  <div class="modal" style="background:#fff;border:1px solid #e2e2e6;border-radius:14px;width:100%;max-width:440px;padding:22px 22px 20px;">
+    <h3 style="font-size:16px;margin:0 0 16px;font-weight:800;">Admin Login</h3>
+    <div class="field" style="margin-bottom:13px;">
+      <label style="display:block;font-size:11.5px;color:#68686f;font-weight:600;margin-bottom:6px;">Email</label>
+      <input type="email" id="adminEmail" style="width:100%;background:#f6f6f8;border:1px solid #e2e2e6;padding:10px 12px;border-radius:8px;font-size:13.5px;">
+    </div>
+    <div class="field" style="margin-bottom:13px;">
+      <label style="display:block;font-size:11.5px;color:#68686f;font-weight:600;margin-bottom:6px;">Password</label>
+      <input type="password" id="adminPassword" style="width:100%;background:#f6f6f8;border:1px solid #e2e2e6;padding:10px 12px;border-radius:8px;font-size:13.5px;">
+    </div>
+    <div id="adminError" style="display:none;color:#e13a3a;font-size:12.5px;margin:-4px 0 10px;"></div>
+    <div class="modal-actions" style="display:flex;gap:10px;margin-top:18px;">
+      <button onclick="closeAdminModal()" style="flex:1;padding:11px;border-radius:9px;border:1px solid #e2e2e6;background:transparent;color:#68686f;font-size:13px;font-weight:600;cursor:pointer;">Cancel</button>
+      <button onclick="submitAdminLogin()" style="flex:2;padding:11px;border-radius:9px;border:none;background:#f5590a;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Log In</button>
+    </div>
+  </div>
+</div>
+<style>.overlay.open{display:flex !important;}</style>
+
+<script type="module">
+/* ---------- Firebase ---------- */
+import {
+  db, loginAdmin, logoutAdmin, watchAdmin, statusOf,
+  doc, updateDoc, onSnapshot, serverTimestamp, increment
+} from "./firebase-config.js";
+
 /* ---------- Category reference data (for realistic placeholder values) ---------- */
 const CATEGORY_META = {
   "Fuel":       { unitCost:165, type:"Consumable",  location:"Fuel Tank Farm",  shelf:"Tank 1",   tax:"Exempt",   supplier:"Total Kenya Ltd",     issuedTo:["Excavator TX-04","Generator G-12","Loader L-02"] },
@@ -412,122 +483,169 @@ const CATEGORY_META = {
 };
 const DEFAULT_META = { unitCost:200, type:"Consumable", location:"Main Store", shelf:"Bin 1", tax:"16% VAT", supplier:"General Supplier", issuedTo:["Site Store"] };
 
-/* ---------- Read item from query string (falls back to the Diesel 50ppm demo item) ---------- */
+/* ---------- Read item id from query string ---------- */
 const params = new URLSearchParams(location.search);
-const item = {
-  code: params.get("code") || "ITEM-0003",
-  name: params.get("name") || "Diesel 50ppm",
-  category: params.get("category") || "Fuel",
-  uom: params.get("uom") || "Litre (LTR)",
-  min: parseFloat(params.get("min")) || 1000,
-  status: params.get("status") || "Active"
-};
-const meta = CATEGORY_META[item.category] || DEFAULT_META;
-const unitAbbr = item.uom.startsWith("Litre") ? "L" : (item.uom === "Bag" ? "Bag" : (item.uom === "Pair" ? "pr" : (item.uom === "Kg" ? "kg" : "pc")));
-const unitLabel = item.uom.startsWith("Litre") ? "Litre" : item.uom;
+const itemId = params.get("id");
+if(!itemId){
+  alert("No item selected — returning to the stock list.");
+  location.href = "stock-list.html";
+}
 
+/* ---------- Admin auth ---------- */
+let isAdmin = false, currentAdminEmail = "";
+watchAdmin((user)=>{
+  isAdmin = !!user;
+  currentAdminEmail = user ? user.email : "";
+  const btn = document.getElementById("adminBtn");
+  btn.textContent = isAdmin ? "Admin: " + currentAdminEmail.split("@")[0] : "Admin";
+});
+function onAdminBtnClick(){
+  if(isAdmin){ if(confirm("Log out of admin mode?")) logoutAdmin(); }
+  else openAdminModal();
+}
+function openAdminModal(){
+  document.getElementById("adminError").style.display = "none";
+  document.getElementById("adminOverlay").classList.add("open");
+}
+function closeAdminModal(){ document.getElementById("adminOverlay").classList.remove("open"); }
+function submitAdminLogin(){
+  const email = document.getElementById("adminEmail").value.trim();
+  const password = document.getElementById("adminPassword").value;
+  loginAdmin(email, password).then(closeAdminModal).catch(()=>{
+    const e = document.getElementById("adminError");
+    e.textContent = "Login failed — check email and password.";
+    e.style.display = "block";
+  });
+}
+function requireAdmin(){
+  if(isAdmin) return true;
+  openAdminModal();
+  return false;
+}
+
+/* ---------- Formatting helpers ---------- */
 function fmtNum(n){ return Math.round(n).toLocaleString(); }
-function fmtQty(n){ return fmtNum(n) + " " + unitAbbr; }
 function fmtKsh(n){ return "KSh " + fmtNum(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
-
-/* ---------- Derived stock figures (Diesel 50ppm ratios scaled by min. stock) ---------- */
-const scale = item.min / 1000;
-const reorderLevel = Math.round(item.min * 2);
-const maxStock = Math.round(item.min * 20);
-const opening = Math.round(item.min * 5);
-const received = Math.round(item.min * 12);
-const issued = Math.round(item.min * 9.16);
-const balance = opening + received - issued;
-const unitCost = meta.unitCost;
-const stockValue = balance * unitCost;
-
 function pillClass(status){
   if(status==="Active") return "active";
   if(status==="Low Stock") return "low";
   return "out";
 }
 
-/* ---------- Populate overview ---------- */
-document.getElementById("bcName").textContent = item.name;
-document.getElementById("ovId").textContent = item.code;
-document.getElementById("ovName").textContent = item.name;
-const stEl = document.getElementById("ovStatus");
-stEl.textContent = item.status;
-stEl.className = "pill " + pillClass(item.status);
-document.getElementById("ovCategory").textContent = item.category;
-document.getElementById("ovUom").textContent = item.uom;
-document.getElementById("ovType").textContent = meta.type;
-document.getElementById("ovReorder").textContent = fmtQty(reorderLevel);
-document.getElementById("ovMin").textContent = fmtQty(item.min);
-document.getElementById("ovMax").textContent = fmtQty(maxStock);
-document.getElementById("ovLocation").textContent = meta.location;
-document.getElementById("ovShelf").textContent = meta.shelf;
-document.getElementById("ovTax").textContent = meta.tax;
-document.getElementById("ovBalance").textContent = fmtQty(balance);
-document.getElementById("ovValue").textContent = fmtKsh(stockValue);
+/* ---------- Live item state ---------- */
+let liveData = null;   // raw Firestore doc data for this item
+let curUnitAbbr = "pc";
 
-document.getElementById("ssOpening").textContent = fmtQty(opening);
-document.getElementById("ssReceived").textContent = fmtQty(received);
-document.getElementById("ssIssued").textContent = fmtQty(issued);
-document.getElementById("ssAvgCost").textContent = "KSh " + unitCost.toFixed(2);
-document.getElementById("ssAvgUnit").textContent = "per " + unitLabel;
-document.getElementById("ssUpdated").textContent = "14 May 2024";
+function unitAbbrOf(uom){
+  if(!uom) return "pc";
+  if(uom.startsWith("Litre")) return "L";
+  if(uom === "Bag") return "Bag";
+  if(uom === "Pair") return "pr";
+  if(uom === "Kg") return "kg";
+  return "pc";
+}
 
-document.getElementById("donutBalance").textContent = fmtQty(balance);
-document.getElementById("legReceived").textContent = fmtQty(received);
-document.getElementById("legIssued").textContent = fmtQty(issued);
-document.getElementById("legOpening").textContent = fmtQty(opening);
-document.getElementById("avgCostLabel").textContent = "Avg. Cost per " + unitLabel;
-document.getElementById("kvAvgCost").textContent = "KSh " + unitCost.toFixed(2);
-document.getElementById("kvValue").textContent = fmtKsh(stockValue);
-document.getElementById("kvReorder").textContent = fmtQty(reorderLevel);
-document.getElementById("kvMin").textContent = fmtQty(item.min);
-document.getElementById("kvMax").textContent = fmtQty(maxStock);
+function renderItem(data){
+  liveData = data;
+  const meta = CATEGORY_META[data.category] || DEFAULT_META;
+  curUnitAbbr = unitAbbrOf(data.uom);
+  const unitLabel = (data.uom||"").startsWith("Litre") ? "Litre" : data.uom;
+  const fmtQty = (n) => fmtNum(n) + " " + curUnitAbbr;
 
-/* ---------- Donut arc ---------- */
-(function(){
+  const min = data.min || 0;
+  const balance = data.balance || 0;
+  const status = statusOf(balance, min);
+  const reorderLevel = Math.round(min * 2);
+  const maxStock = Math.round(min * 20);
+  const unitCost = meta.unitCost;
+  const stockValue = balance * unitCost;
+
+  // Illustrative recent-movement figures for the chart — not an exact ledger,
+  // since real movements are tracked on the dashboard's transaction log.
+  const received = Math.max(1, Math.round(min * 3));
+  const issued = Math.max(1, Math.round(min * 2.2));
+  const opening = Math.max(0, balance - received + issued);
+
+  document.getElementById("bcName").textContent = data.name;
+  document.getElementById("ovId").textContent = data.code;
+  document.getElementById("ovName").textContent = data.name;
+  const stEl = document.getElementById("ovStatus");
+  stEl.textContent = status;
+  stEl.className = "pill " + pillClass(status);
+  document.getElementById("ovCategory").textContent = data.category;
+  document.getElementById("ovUom").textContent = data.uom;
+  document.getElementById("ovType").textContent = meta.type;
+  document.getElementById("ovReorder").textContent = fmtQty(reorderLevel);
+  document.getElementById("ovMin").textContent = fmtQty(min);
+  document.getElementById("ovMax").textContent = fmtQty(maxStock);
+  document.getElementById("ovLocation").textContent = meta.location;
+  document.getElementById("ovShelf").textContent = meta.shelf;
+  document.getElementById("ovTax").textContent = meta.tax;
+  document.getElementById("ovBalance").textContent = fmtQty(balance);
+  document.getElementById("ovValue").textContent = fmtKsh(stockValue);
+
+  document.getElementById("ssOpening").textContent = fmtQty(opening);
+  document.getElementById("ssReceived").textContent = fmtQty(received);
+  document.getElementById("ssIssued").textContent = fmtQty(issued);
+  document.getElementById("ssAvgCost").textContent = "KSh " + unitCost.toFixed(2);
+  document.getElementById("ssAvgUnit").textContent = "per " + unitLabel;
+  document.getElementById("ssUpdated").textContent = (data.updatedAt && data.updatedAt.toDate)
+    ? data.updatedAt.toDate().toLocaleString("en-GB", {day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})
+    : "—";
+
+  document.getElementById("donutBalance").textContent = fmtQty(balance);
+  document.getElementById("legReceived").textContent = fmtQty(received);
+  document.getElementById("legIssued").textContent = fmtQty(issued);
+  document.getElementById("legOpening").textContent = fmtQty(opening);
+  document.getElementById("avgCostLabel").textContent = "Avg. Cost per " + unitLabel;
+  document.getElementById("kvAvgCost").textContent = "KSh " + unitCost.toFixed(2);
+  document.getElementById("kvValue").textContent = fmtKsh(stockValue);
+  document.getElementById("kvReorder").textContent = fmtQty(reorderLevel);
+  document.getElementById("kvMin").textContent = fmtQty(min);
+  document.getElementById("kvMax").textContent = fmtQty(maxStock);
+
   const r = 60, c = 2*Math.PI*r;
   const pct = received / (received + issued);
-  const arc = document.getElementById("donutArc");
-  arc.setAttribute("stroke-dasharray", `${pct*c} ${c}`);
-})();
+  document.getElementById("donutArc").setAttribute("stroke-dasharray", `${pct*c} ${c}`);
 
-/* ---------- Transactions (derived, newest first) ---------- */
-const baseTx = [
-  { daysAgo:0, type:"in",  qtyBase:2000 },
-  { daysAgo:1, type:"out", qtyBase:-500 },
-  { daysAgo:2, type:"out", qtyBase:-300 },
-  { daysAgo:3, type:"in",  qtyBase:3000 },
-  { daysAgo:4, type:"out", qtyBase:-480 }
-];
-const dates = ["14 May 2024","13 May 2024","12 May 2024","11 May 2024","10 May 2024"];
-const times = ["08:15 AM","04:20 PM","10:05 AM","11:30 AM","09:45 AM"];
-let seed = 0;
-for(let i=0;i<item.code.length;i++) seed += item.code.charCodeAt(i);
-let grnCounter = 500 + (seed % 480);
-let issCounter = 400 + ((seed * 7) % 380);
-let runningBalance = balance;
-let transactions = baseTx.map((t,i)=>{
-  const qty = Math.round(t.qtyBase * scale);
-  const rowBalance = runningBalance;
-  runningBalance = runningBalance - qty; // balance before this tx (older)
-  const isIn = t.type === "in";
-  return {
-    date: dates[i],
-    time: times[i],
-    type: isIn ? "in" : "out",
-    typeLabel: isIn ? "GRN" : "Issue",
-    typeSub: isIn ? "Received" : "Issued",
-    ref: isIn ? ("GRN-2024-0" + (grnCounter -= 8)) : ("ISS-2024-0" + (issCounter -= 6)),
-    who: isIn ? meta.supplier : meta.issuedTo[i % meta.issuedTo.length],
-    qty: qty,
-    balance: rowBalance,
-    unitCost: unitCost,
-    total: Math.abs(qty) * unitCost
-  };
-});
+  renderTransactions(data, meta, unitCost, balance);
+}
 
-function renderTransactions(){
+function renderTransactions(data, meta, unitCost, balance){
+  const baseTx = [
+    { type:"in",  qtyBase:2000 },
+    { type:"out", qtyBase:-500 },
+    { type:"out", qtyBase:-300 },
+    { type:"in",  qtyBase:3000 },
+    { type:"out", qtyBase:-480 }
+  ];
+  const dates = ["14 May 2024","13 May 2024","12 May 2024","11 May 2024","10 May 2024"];
+  const times = ["08:15 AM","04:20 PM","10:05 AM","11:30 AM","09:45 AM"];
+  const scale = (data.min || 1000) / 1000;
+  let seed = 0;
+  for(let i=0;i<(data.code||"").length;i++) seed += data.code.charCodeAt(i);
+  let grnCounter = 500 + (seed % 480);
+  let issCounter = 400 + ((seed * 7) % 380);
+  let runningBalance = balance;
+  const transactions = baseTx.map((t,i)=>{
+    const qty = Math.round(t.qtyBase * scale) || (t.type==="in"?10:-10);
+    const rowBalance = runningBalance;
+    runningBalance = runningBalance - qty;
+    const isIn = t.type === "in";
+    return {
+      date: dates[i], time: times[i], type: isIn?"in":"out",
+      typeLabel: isIn?"GRN":"Issue", typeSub: isIn?"Received":"Issued",
+      ref: isIn ? ("GRN-2024-0"+(grnCounter-=8)) : ("ISS-2024-0"+(issCounter-=6)),
+      who: isIn ? meta.supplier : meta.issuedTo[i % meta.issuedTo.length],
+      qty, balance: rowBalance, unitCost, total: Math.abs(qty)*unitCost
+    };
+  });
+
+  window.__currentTransactions = transactions;
+  paintTransactions();
+}
+function paintTransactions(){
+  const transactions = window.__currentTransactions || [];
   const q = (document.getElementById("txSearch").value || "").trim().toLowerCase();
   const rows = transactions.filter(t =>
     !q || t.ref.toLowerCase().includes(q) || t.who.toLowerCase().includes(q) || t.typeLabel.toLowerCase().includes(q)
@@ -540,14 +658,26 @@ function renderTransactions(){
         <span class="tx-type-label">${t.typeSub}</span>
       </td>
       <td class="tx-ref"><div class="r">${t.ref}</div><div class="s">${t.who}</div></td>
-      <td class="qty ${t.type}">${t.type==='in'?'+':'-'}${fmtNum(Math.abs(t.qty))} ${unitAbbr}</td>
-      <td>${fmtQty(t.balance)}</td>
+      <td class="qty ${t.type}">${t.type==='in'?'+':'-'}${fmtNum(Math.abs(t.qty))} ${curUnitAbbr}</td>
+      <td>${fmtNum(t.balance)} ${curUnitAbbr}</td>
       <td>${t.unitCost.toFixed(2)}</td>
       <td>${fmtNum(t.total).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}.00</td>
     </tr>
   `).join("");
 }
-renderTransactions();
+function renderTransactionsSearch(){ paintTransactions(); }
+
+/* ---------- Live sync — this is the core cross-page connection ---------- */
+onSnapshot(doc(db, "stockItems", itemId), (snap)=>{
+  if(!snap.exists()){
+    alert("This item no longer exists — it may have been deleted.");
+    location.href = "stock-list.html";
+    return;
+  }
+  renderItem(snap.data());
+}, (err)=>{
+  console.error("item listener error:", err);
+});
 
 /* ---------- Tabs ---------- */
 function switchDetailTab(name){
@@ -568,24 +698,68 @@ document.addEventListener("click", (e)=>{
   }
 });
 
-/* ---------- Quick stock actions ---------- */
+/* ---------- Quick stock actions — write straight to Firestore ---------- */
 function receiveStock(){
-  const qty = parseFloat(prompt(`Receive stock for "${item.name}"\nEnter quantity received (${unitAbbr}):`));
+  if(!requireAdmin()) return;
+  const qty = parseFloat(prompt(`Receive stock for "${liveData.name}"\nEnter quantity received (${curUnitAbbr}):`));
   if(!qty || qty <= 0) return;
-  const newBalance = parseFloat(document.getElementById("ovBalance").textContent.replace(/[^0-9.]/g,"")) + qty;
-  document.getElementById("ovBalance").textContent = fmtQty(newBalance);
-  document.getElementById("donutBalance").textContent = fmtQty(newBalance);
-  alert(`Recorded receipt of ${fmtQty(qty)}. New balance: ${fmtQty(newBalance)}.`);
+  updateDoc(doc(db, "stockItems", itemId), {
+    balance: increment(qty),
+    updatedAt: serverTimestamp(),
+    updatedBy: currentAdminEmail
+  }).catch(err=>alert("Could not update stock: "+err.message));
 }
 function adjustStock(){
-  const delta = parseFloat(prompt(`Adjust stock for "${item.name}"\nEnter adjustment (use "-" to reduce), in ${unitAbbr}:`));
+  if(!requireAdmin()) return;
+  const delta = parseFloat(prompt(`Adjust stock for "${liveData.name}"\nEnter adjustment (use "-" to reduce), in ${curUnitAbbr}:`));
   if(!delta) return;
-  const cur = parseFloat(document.getElementById("ovBalance").textContent.replace(/[^0-9.]/g,""));
-  const newBalance = cur + delta;
-  document.getElementById("ovBalance").textContent = fmtQty(newBalance);
-  document.getElementById("donutBalance").textContent = fmtQty(newBalance);
-  alert(`Stock adjusted by ${delta>0?'+':''}${fmtNum(delta)} ${unitAbbr}. New balance: ${fmtQty(newBalance)}.`);
+  if((liveData.balance||0) + delta < 0){ alert("Adjustment would take balance below zero."); return; }
+  updateDoc(doc(db, "stockItems", itemId), {
+    balance: increment(delta),
+    updatedAt: serverTimestamp(),
+    updatedBy: currentAdminEmail
+  }).catch(err=>alert("Could not update stock: "+err.message));
 }
+
+/* ---------- Edit Item modal ---------- */
+function openEditModal(){
+  if(!requireAdmin()) return;
+  document.getElementById("editName").value = liveData.name || "";
+  document.getElementById("editCategory").value = liveData.category || "Fuel";
+  document.getElementById("editUom").value = liveData.uom || "Litre (LTR)";
+  document.getElementById("editMin").value = liveData.min || 0;
+  document.getElementById("editBalance").value = liveData.balance || 0;
+  document.getElementById("editError").style.display = "none";
+  document.getElementById("editOverlay").classList.add("open");
+}
+function closeEditModal(){ document.getElementById("editOverlay").classList.remove("open"); }
+function submitEditItem(){
+  if(!requireAdmin()) return;
+  const name = document.getElementById("editName").value.trim();
+  const category = document.getElementById("editCategory").value;
+  const uom = document.getElementById("editUom").value;
+  const min = parseFloat(document.getElementById("editMin").value) || 0;
+  const balance = parseFloat(document.getElementById("editBalance").value) || 0;
+  const errBox = document.getElementById("editError");
+  if(!name){ errBox.textContent = "Item name is required."; errBox.style.display = "block"; return; }
+  updateDoc(doc(db, "stockItems", itemId), {
+    name, category, uom, min, balance,
+    updatedAt: serverTimestamp(),
+    updatedBy: currentAdminEmail
+  }).then(()=>{
+    closeEditModal();
+  }).catch(err=>{
+    errBox.textContent = "Save failed: " + err.message;
+    errBox.style.display = "block";
+  });
+}
+
+/* ---------- Expose functions used by inline onclick handlers ---------- */
+Object.assign(window, {
+  onAdminBtnClick, openAdminModal, closeAdminModal, submitAdminLogin,
+  switchDetailTab, toggleAvatarMenu, receiveStock, adjustStock,
+  openEditModal, closeEditModal, submitEditItem, renderTransactionsSearch
+});
 </script>
 
 </body>

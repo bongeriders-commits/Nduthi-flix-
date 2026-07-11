@@ -608,6 +608,7 @@
       </div>
     </div>
     <div class="mh-right">
+      <button id="adminBtn" onclick="onAdminBtnClick()" style="padding:8px 12px;font-size:12px;font-weight:700;border-radius:9px;border:1px solid var(--line,#e2e2e6);background:#fff;cursor:pointer;white-space:nowrap;">Admin</button>
       <button class="bell" id="bellBtn" onclick="switchTab('dashboard')" aria-label="Notifications">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
         <span class="badge-dot" id="alertBadge">0</span>
@@ -841,6 +842,26 @@
   </div>
 </div>
 
+<!-- ADMIN LOGIN MODAL -->
+<div class="overlay" id="adminOverlay">
+  <div class="modal">
+    <h3>Admin Login</h3>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="adminEmail" placeholder="you@cabrocity.co.ke">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="adminPassword" placeholder="••••••••">
+    </div>
+    <div id="adminError" style="display:none;color:var(--red);font-size:12.5px;margin:-4px 0 10px;"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeAdminModal()">Cancel</button>
+      <button class="btn-submit" onclick="submitAdminLogin()">Log In</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL -->
 <div class="overlay" id="overlay">
   <div class="modal">
@@ -926,36 +947,51 @@
   </div>
 </div>
 
-<script>
-/* ---------- Mock data ---------- */
+<script type="module">
+/* ---------- Firebase ---------- */
+import {
+  db, loginAdmin, logoutAdmin, watchAdmin, unitAbbr as sharedUnitAbbr,
+  collection, doc, addDoc, onSnapshot, serverTimestamp, query, orderBy, limit, runTransaction
+} from "./firebase-config.js";
+
+let isAdmin = false, currentAdminEmail = "";
+watchAdmin((user)=>{
+  isAdmin = !!user;
+  currentAdminEmail = user ? user.email : "";
+  const btn = document.getElementById("adminBtn");
+  btn.textContent = isAdmin ? "Admin: " + currentAdminEmail.split("@")[0] : "Admin";
+});
+function onAdminBtnClick(){
+  if(isAdmin){ if(confirm("Log out of admin mode?")) logoutAdmin(); }
+  else openAdminModal();
+}
+function openAdminModal(){
+  document.getElementById("adminError").style.display = "none";
+  document.getElementById("adminOverlay").classList.add("open");
+}
+function closeAdminModal(){ document.getElementById("adminOverlay").classList.remove("open"); }
+function submitAdminLogin(){
+  const email = document.getElementById("adminEmail").value.trim();
+  const password = document.getElementById("adminPassword").value;
+  loginAdmin(email, password).then(closeAdminModal).catch(()=>{
+    const e = document.getElementById("adminError");
+    e.textContent = "Login failed — check email and password.";
+    e.style.display = "block";
+  });
+}
+function requireAdmin(){
+  if(isAdmin) return true;
+  openAdminModal();
+  return false;
+}
+document.getElementById("adminOverlay").addEventListener("click", (e)=>{ if(e.target.id==="adminOverlay") closeAdminModal(); });
+
+/* ---------- Live data (kept in sync with Firestore by onSnapshot below) ---------- */
 function todayAt(h,m){ const d=new Date(); d.setHours(h,m,0,0); return d; }
 function daysAgo(n){ const d=new Date(); d.setDate(d.getDate()-n); d.setHours(9,0,0,0); return d; }
-const items = [
-  {name:"Diesel (bulk)", cat:"Fuel", balance:1840, unit:"L", min:2000, price:182, last:"Issued 90L — Excavator KBZ 220", who:"J. Mutua · 7:40am", flagged:false},
-  {name:"Petrol (generator)", cat:"Fuel", balance:120, unit:"L", min:150, price:194, last:"Issued 20L — Generator", who:"J. Mutua · Yesterday", flagged:false},
-  {name:"Engine oil 15W-40", cat:"Oils", balance:38, unit:"L", min:40, price:760, last:"Issued 8L — Crusher #1", who:"P. Wanjiru · 9:10am", flagged:false},
-  {name:"Hydraulic oil", cat:"Oils", balance:6, unit:"L", min:30, price:650, last:"Issued 12L — Excavator KBZ 220", who:"P. Wanjiru · Yesterday", flagged:false},
-  {name:"Grease (EP2)", cat:"Oils", balance:14, unit:"kg", min:10, price:460, last:"Received 20kg", who:"Supplier — Total", flagged:false},
-  {name:"Coolant", cat:"Oils", balance:22, unit:"L", min:20, price:380, last:"Issued 4L — Tipper KBZ 771X", who:"J. Mutua · 2 days ago", flagged:false},
-  {name:"Crusher jaw plate", cat:"Spares", balance:1, unit:"pc", min:2, price:46000, last:"Issued 1pc — Crusher #2", who:"D. Kiprop · 3 days ago", flagged:false},
-  {name:"V-belt (A-section)", cat:"Spares", balance:9, unit:"pc", min:6, price:3500, last:"Received 6pc", who:"Supplier — Mabati Spares", flagged:false},
-  {name:"Air filter — Tipper", cat:"Spares", balance:0, unit:"pc", min:3, price:2200, last:"Issued 2pc — Tipper KBZ 771X", who:"D. Kiprop · 4 days ago", flagged:true},
-  {name:"Oil filter — Excavator", cat:"Spares", balance:5, unit:"pc", min:4, price:1800, last:"Received 8pc", who:"Supplier — Mabati Spares", flagged:false},
-  {name:"Brake fluid", cat:"Oils", balance:11, unit:"L", min:8, price:900, last:"No recent movement", who:"—", flagged:false},
-  {name:"Fan belt", cat:"Spares", balance:3, unit:"pc", min:4, price:1200, last:"Physical count: 3 — system said 5", who:"Audit · P. Wanjiru", flagged:true},
-  {name:"Radiator hose", cat:"Spares", balance:7, unit:"pc", min:3, price:2800, last:"Received 4pc", who:"Supplier — Mabati Spares", flagged:false},
-  {name:"Battery (12V heavy-duty)", cat:"Spares", balance:2, unit:"pc", min:2, price:18500, last:"No recent movement", who:"—", flagged:false},
-];
-
-const activity = [
-  {type:"out", item:"Diesel (bulk)", qty:90, unit:"L", desc:"<b>90L Diesel</b> issued to Excavator KBZ 220", meta:"J. Mutua · 7:40am", time:"7:40", ts:todayAt(7,40)},
-  {type:"in", item:"V-belt (A-section)", qty:8, unit:"pc", desc:"<b>8 pcs V-belt</b> received from Mabati Spares", meta:"J. Mutua · 8:05am", time:"8:05", ts:todayAt(8,5)},
-  {type:"out", item:"Engine oil 15W-40", qty:8, unit:"L", desc:"<b>8L Engine oil 15W-40</b> issued to Crusher #1", meta:"P. Wanjiru · 9:10am", time:"9:10", ts:todayAt(9,10)},
-  {type:"adj", item:"Fan belt", qty:0, unit:"pc", desc:"<b>Fan belt</b> discrepancy flagged — count 3, system 5", meta:"Audit · P. Wanjiru", time:"9:45", ts:todayAt(9,45)},
-  {type:"out", item:"Air filter — Tipper", qty:2, unit:"pc", desc:"<b>2 pcs Air filter</b> issued to Tipper KBZ 771X", meta:"D. Kiprop · Wed", time:"Wed", ts:daysAgo(2)},
-  {type:"out", item:"Hydraulic oil", qty:12, unit:"L", desc:"<b>12L Hydraulic oil</b> issued to Excavator KBZ 220", meta:"P. Wanjiru · Wed", time:"Wed", ts:daysAgo(2)},
-  {type:"in", item:"Grease (EP2)", qty:20, unit:"kg", desc:"<b>20kg Grease EP2</b> received from Total", meta:"J. Mutua · Tue", time:"Tue", ts:daysAgo(3)},
-];
+let items = [];      // mirrors stockItems collection
+let activity = [];   // mirrors stockTransactions collection (most recent first)
+let itemIdByName = {};
 
 /* ---------- Gauges ---------- */
 function statusOf(it){
@@ -1072,6 +1108,7 @@ function refreshItemDropdown(){
   if(items.some(it=>it.name===current)) sel.value = current;
 }
 function openModal(){
+  if(!requireAdmin()) return;
   refreshItemDropdown();
   document.getElementById("txError").style.display="none";
   document.getElementById("overlay").classList.add("open");
@@ -1103,6 +1140,7 @@ function nowTime(){
   return `${h}:${m<10?"0"+m:m}${ampm}`;
 }
 function submitTx(){
+  if(!requireAdmin()) return;
   const type = document.getElementById("btnIn").classList.contains("active") ? "in" : "out";
   const name = document.getElementById("txItem").value;
   const qty = parseFloat(document.getElementById("txQty").value);
@@ -1115,7 +1153,8 @@ function submitTx(){
   if(!qty || qty<=0){ errBox.textContent = "Enter a quantity greater than 0."; errBox.style.display="block"; return; }
 
   const it = items.find(i=>i.name===name);
-  if(!it){ errBox.textContent = "Item not found."; errBox.style.display="block"; return; }
+  const itemId = itemIdByName[name];
+  if(!it || !itemId){ errBox.textContent = "Item not found."; errBox.style.display="block"; return; }
 
   if(type==="out" && qty>it.balance){
     errBox.textContent = `Only ${it.balance} ${it.unit} in stock — cannot issue ${qty}.`;
@@ -1123,39 +1162,33 @@ function submitTx(){
     return;
   }
 
-  if(type==="in"){
-    it.balance += qty;
-    it.last = `Received ${qty}${it.unit}` + (who ? ` — ${who}` : "");
-    it.who = (who || "Supplier") + " · " + nowTime();
-  } else {
-    it.balance -= qty;
-    it.last = `Issued ${qty}${it.unit}` + (machine ? ` — ${machine}` : "");
-    it.who = (who || "Unspecified") + " · " + nowTime();
-  }
-  it.flagged = false;
-
-  activity.unshift({
-    type: type,
-    item: it.name,
-    qty: qty,
-    unit: it.unit,
-    desc: `<b>${qty} ${it.unit} ${it.name}</b> ${type==="in" ? "received" + (who?` from ${who}`:"") : "issued" + (machine?` to ${machine}`:"")}${note?` — ${note}`:""}`,
-    meta: (who || (type==="in"?"Received":"Issued")) + " · " + nowTime(),
-    time: nowTime(),
-    ts: new Date()
+  const itemRef = doc(db, "stockItems", itemId);
+  runTransaction(db, async (tx)=>{
+    const snap = await tx.get(itemRef);
+    if(!snap.exists()) throw new Error("Item no longer exists.");
+    const curBalance = snap.data().balance || 0;
+    const newBalance = type==="in" ? curBalance + qty : curBalance - qty;
+    if(newBalance < 0) throw new Error(`Only ${curBalance} ${it.unit} in stock — cannot issue ${qty}.`);
+    tx.update(itemRef, { balance: newBalance, updatedAt: serverTimestamp(), updatedBy: currentAdminEmail });
+  }).then(()=>{
+    return addDoc(collection(db, "stockTransactions"), {
+      itemId, itemName: it.name, type, qty, unit: it.unit,
+      who: who || "", machine: machine || "", note: note || "",
+      createdAt: serverTimestamp(), createdBy: currentAdminEmail
+    });
+  }).then(()=>{
+    document.getElementById("txWho").value = "";
+    document.getElementById("txNote").value = "";
+    closeModal();
+  }).catch(err=>{
+    errBox.textContent = err.message || "Could not save transaction.";
+    errBox.style.display = "block";
   });
-
-  renderTable();
-  renderFeed();
-  renderGauges();
-  renderDashboard();
-  document.getElementById("txWho").value = "";
-  document.getElementById("txNote").value = "";
-  closeModal();
 }
 
 /* ---------- New Item Modal ---------- */
 function openNewItemModal(){
+  if(!requireAdmin()) return;
   document.getElementById("niError").style.display="none";
   document.getElementById("niName").value = "";
   document.getElementById("niUnit").value = "";
@@ -1168,6 +1201,7 @@ document.getElementById("newItemOverlay").addEventListener("click", (e)=>{
   if(e.target.id==="newItemOverlay") closeNewItemModal();
 });
 function submitNewItem(){
+  if(!requireAdmin()) return;
   const name = document.getElementById("niName").value.trim();
   const cat = document.getElementById("niCat").value;
   const unit = document.getElementById("niUnit").value.trim() || "pc";
@@ -1182,16 +1216,17 @@ function submitNewItem(){
   if(isNaN(qty) || qty<0){ errBox.textContent = "Enter a valid starting quantity."; errBox.style.display="block"; return; }
   if(isNaN(min) || min<0){ errBox.textContent = "Enter a valid minimum threshold."; errBox.style.display="block"; return; }
 
-  items.push({
-    name: name, cat: cat, balance: qty, unit: unit, min: min, price:0,
-    last: "Item created", who: "—", flagged: false
+  const nextNum = items.length + 1;
+  addDoc(collection(db, "stockItems"), {
+    code: "ITEM-" + String(nextNum).padStart(4, "0"),
+    name, category: cat, uom: unit, min, balance: qty,
+    updatedAt: serverTimestamp(), updatedBy: currentAdminEmail
+  }).then(()=>{
+    closeNewItemModal();
+  }).catch(err=>{
+    errBox.textContent = "Could not add item: " + err.message;
+    errBox.style.display = "block";
   });
-
-  renderTable();
-  renderGauges();
-  refreshItemDropdown();
-  renderDashboard();
-  closeNewItemModal();
 }
 
 /* ---------- Daily PDF export ---------- */
@@ -1403,11 +1438,70 @@ function renderDashboard(){
   `).join("");
 }
 
-renderGauges();
-renderTable();
-renderFeed();
-refreshItemDropdown();
-renderDashboard();
+/* ---------- Live sync — this is what makes edits on any page show up here ---------- */
+function fmtTime(d){
+  if(!d) return "";
+  let h = d.getHours(), m = d.getMinutes();
+  const ampm = h>=12 ? "pm" : "am";
+  h = h%12; if(h===0) h=12;
+  return `${h}:${m<10?"0"+m:m}${ampm}`;
+}
+function relativeDay(d){
+  if(!d) return "";
+  const now = new Date();
+  const diffDays = Math.floor((new Date(now.getFullYear(),now.getMonth(),now.getDate()) - new Date(d.getFullYear(),d.getMonth(),d.getDate())) / 86400000);
+  if(diffDays<=0) return fmtTime(d);
+  if(diffDays===1) return "Yesterday";
+  if(diffDays<7) return d.toLocaleDateString("en-GB",{weekday:"short"});
+  return d.toLocaleDateString("en-GB",{day:"2-digit",month:"short"});
+}
+
+let latestTxByItem = {}; // itemName -> most recent transaction, for the "last movement" column
+
+onSnapshot(query(collection(db, "stockItems"), orderBy("name")), (snap)=>{
+  itemIdByName = {};
+  items = snap.docs.map(d=>{
+    const data = d.data();
+    itemIdByName[data.name] = d.id;
+    const tx = latestTxByItem[data.name];
+    return {
+      id: d.id,
+      name: data.name,
+      cat: data.category,
+      balance: data.balance || 0,
+      unit: sharedUnitAbbr(data.uom),
+      min: data.min || 0,
+      price: data.price || 0,
+      last: tx ? tx.lastText : "No recent movement",
+      who: tx ? tx.whoText : "—",
+      flagged: false
+    };
+  });
+  renderGauges();
+  renderTable();
+  refreshItemDropdown();
+  renderDashboard();
+}, (err)=>{ console.error("stockItems listener error:", err); });
+
+onSnapshot(query(collection(db, "stockTransactions"), orderBy("createdAt", "desc"), limit(50)), (snap)=>{
+  latestTxByItem = {};
+  activity = snap.docs.map(d=>{
+    const t = d.data();
+    const ts = t.createdAt && t.createdAt.toDate ? t.createdAt.toDate() : new Date();
+    const lastText = (t.type==="in" ? `Received ${t.qty}${t.unit}` : `Issued ${t.qty}${t.unit}`) + (t.type==="in" ? (t.who?` — ${t.who}`:"") : (t.machine?` — ${t.machine}`:""));
+    const whoText = (t.who || (t.type==="in"?"Supplier":"Unspecified")) + " · " + relativeDay(ts);
+    if(!latestTxByItem[t.itemName]) latestTxByItem[t.itemName] = { lastText, whoText };
+    return {
+      type: t.type, item: t.itemName, qty: t.qty, unit: t.unit,
+      desc: `<b>${t.qty} ${t.unit} ${t.itemName}</b> ${t.type==="in" ? "received" + (t.who?` from ${t.who}`:"") : "issued" + (t.machine?` to ${t.machine}`:"")}${t.note?` — ${t.note}`:""}`,
+      meta: (t.who || (t.type==="in"?"Received":"Issued")) + " · " + relativeDay(ts),
+      time: fmtTime(ts),
+      ts
+    };
+  });
+  renderFeed();
+  renderDashboard();
+}, (err)=>{ console.error("stockTransactions listener error:", err); });
 
 /* ---------- Open a tab from a URL hash (e.g. stock-list.html links here with #transactions) ---------- */
 (function(){
@@ -1425,6 +1519,14 @@ renderDashboard();
     setTimeout(function(){ splash.remove(); }, 400);
   }, 2000);
 })();
+
+/* ---------- Expose functions used by inline onclick/oninput handlers ---------- */
+Object.assign(window, {
+  onAdminBtnClick, openAdminModal, closeAdminModal, submitAdminLogin,
+  closeDrawer, closeModal, closeNewItemModal, drawerGo, drawerIssue, drawerReceive,
+  exportIssuedPDF, exportReceivedPDF, openDrawer, openModal, openNewItemModal,
+  quickIssue, quickReceive, setTxType, submitNewItem, submitTx, switchTab
+});
 </script>
 
 </body>

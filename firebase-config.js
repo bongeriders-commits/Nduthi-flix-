@@ -1,0 +1,65 @@
+// firebase-config.js
+// Shared Firebase setup for Cabro City. Loaded as an ES module by every page.
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore, collection, doc, addDoc, updateDoc, deleteDoc,
+  onSnapshot, serverTimestamp, query, orderBy, limit, runTransaction, increment
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// ---------- 1. PASTE YOUR FIREBASE CONFIG BELOW ----------
+// Firebase console → Project settings → Your apps → Web app → SDK setup and config
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+// -----------------------------------------------------------
+
+const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+
+/* ---------- Auth helpers ---------- */
+export function loginAdmin(email, password) {
+  return signInWithEmailAndPassword(auth, email, password);
+}
+export function logoutAdmin() {
+  return signOut(auth);
+}
+// callback(user) fires immediately with current state, then on every change
+export function watchAdmin(callback) {
+  return onAuthStateChanged(auth, (user) => callback(user));
+}
+
+/* ---------- Shared item helpers ---------- */
+// Status is always derived from balance vs min so it can never drift
+// out of sync between pages — nobody sets "status" by hand anymore.
+export function statusOf(balance, min) {
+  const b = Number(balance) || 0;
+  const m = Number(min) || 0;
+  if (b <= 0) return "Out of Stock";
+  if (b < m) return "Low Stock";
+  return "Active";
+}
+
+export function unitAbbr(uom) {
+  if (!uom) return "pc";
+  if (uom.startsWith("Litre")) return "L";
+  if (uom === "Bag") return "Bag";
+  if (uom === "Pair") return "pr";
+  if (uom === "Kg") return "kg";
+  return "pc";
+}
+
+/* ---------- Re-exported Firestore functions ---------- */
+export {
+  collection, doc, addDoc, updateDoc, deleteDoc,
+  onSnapshot, serverTimestamp, query, orderBy, limit, runTransaction, increment
+};
