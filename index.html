@@ -1435,10 +1435,11 @@ function renderDashboard(){
       <div class="s-value">${totalItems}</div>
       <div class="s-sub neutral">Active items</div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card" onclick="location.href='grn.html'" style="cursor:pointer;">
       <div class="s-icon green">${ICONS.down}</div>
       <div class="s-label">RECEIVED TODAY</div>
       <div class="s-value">${receiptsToday.length}</div>
+      <div class="s-sub neutral">Tap to receive stock (GRN)</div>
     </div>
     <div class="stat-card">
       <div class="s-icon red">${ICONS.up}</div>
