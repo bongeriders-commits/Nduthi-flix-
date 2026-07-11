@@ -1,7 +1,0 @@
-{
-  "functions": {
-    "api/merge-music.js": {
-      "maxDuration": 60
-    }
-  }
-}
