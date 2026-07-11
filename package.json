@@ -1,9 +1,0 @@
-{
-  "name": "nduthi-flix",
-  "version": "1.0.0",
-  "private": true,
-  "description": "Nduthi Flix — static PWA with a couple of Vercel serverless functions under /api",
-  "dependencies": {
-    "ffmpeg-static": "^5.2.0"
-  }
-}
