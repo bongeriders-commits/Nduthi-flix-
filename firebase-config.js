@@ -7,7 +7,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDoc,
-  onSnapshot, serverTimestamp, query, orderBy, limit, runTransaction, increment
+  onSnapshot, serverTimestamp, query, where, orderBy, limit, runTransaction, increment
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ---------- 1. PASTE YOUR FIREBASE CONFIG BELOW ----------
@@ -71,5 +71,5 @@ export function initialsFromEmail(email) {
 /* ---------- Re-exported Firestore functions ---------- */
 export {
   collection, doc, addDoc, updateDoc, deleteDoc, getDoc,
-  onSnapshot, serverTimestamp, query, orderBy, limit, runTransaction, increment
+  onSnapshot, serverTimestamp, query, where, orderBy, limit, runTransaction, increment
 };

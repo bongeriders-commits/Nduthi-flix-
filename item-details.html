@@ -514,7 +514,8 @@
 /* ---------- Firebase ---------- */
 import {
   db, loginAdmin, logoutAdmin, watchAdmin, statusOf, initialsFromEmail,
-  doc, updateDoc, onSnapshot, serverTimestamp, increment
+  doc, updateDoc, onSnapshot, serverTimestamp, increment,
+  collection, addDoc, query, where
 } from "./firebase-config.js";
 
 /* ---------- Category reference data (for realistic placeholder values) ---------- */
@@ -626,14 +627,11 @@ function renderItem(data){
   const status = statusOf(balance, min);
   const reorderLevel = Math.round(min * 2);
   const maxStock = Math.round(min * 20);
-  const unitCost = meta.unitCost;
+  // Real unit cost isn't captured per-item yet (no "price" field is ever set
+  // when items are created), so we fall back to a category estimate. Once
+  // item creation starts saving a real price, swap this for data.price.
+  const unitCost = (data.price && data.price > 0) ? data.price : meta.unitCost;
   const stockValue = balance * unitCost;
-
-  // Illustrative recent-movement figures for the chart — not an exact ledger,
-  // since real movements are tracked on the dashboard's transaction log.
-  const received = Math.max(1, Math.round(min * 3));
-  const issued = Math.max(1, Math.round(min * 2.2));
-  const opening = Math.max(0, balance - received + issued);
 
   document.getElementById("bcName").textContent = data.name;
   document.getElementById("ovId").textContent = data.code;
@@ -653,9 +651,6 @@ function renderItem(data){
   document.getElementById("ovBalance").textContent = fmtQty(balance);
   document.getElementById("ovValue").textContent = fmtKsh(stockValue);
 
-  document.getElementById("ssOpening").textContent = fmtQty(opening);
-  document.getElementById("ssReceived").textContent = fmtQty(received);
-  document.getElementById("ssIssued").textContent = fmtQty(issued);
   document.getElementById("ssAvgCost").textContent = "KSh " + unitCost.toFixed(2);
   document.getElementById("ssAvgUnit").textContent = "per " + unitLabel;
   document.getElementById("ssUpdated").textContent = (data.updatedAt && data.updatedAt.toDate)
@@ -663,9 +658,6 @@ function renderItem(data){
     : "—";
 
   document.getElementById("donutBalance").textContent = fmtQty(balance);
-  document.getElementById("legReceived").textContent = fmtQty(received);
-  document.getElementById("legIssued").textContent = fmtQty(issued);
-  document.getElementById("legOpening").textContent = fmtQty(opening);
   document.getElementById("avgCostLabel").textContent = "Avg. Cost per " + unitLabel;
   document.getElementById("kvAvgCost").textContent = "KSh " + unitCost.toFixed(2);
   document.getElementById("kvValue").textContent = fmtKsh(stockValue);
@@ -673,52 +665,91 @@ function renderItem(data){
   document.getElementById("kvMin").textContent = fmtQty(min);
   document.getElementById("kvMax").textContent = fmtQty(maxStock);
 
-  const r = 60, c = 2*Math.PI*r;
-  const pct = received / (received + issued);
-  document.getElementById("donutArc").setAttribute("stroke-dasharray", `${pct*c} ${c}`);
-
-  renderTransactions(data, meta, unitCost, balance);
+  renderTransactionsAndStats();
 }
 
-function renderTransactions(data, meta, unitCost, balance){
-  const baseTx = [
-    { type:"in",  qtyBase:2000 },
-    { type:"out", qtyBase:-500 },
-    { type:"out", qtyBase:-300 },
-    { type:"in",  qtyBase:3000 },
-    { type:"out", qtyBase:-480 }
-  ];
-  const dates = ["14 May 2024","13 May 2024","12 May 2024","11 May 2024","10 May 2024"];
-  const times = ["08:15 AM","04:20 PM","10:05 AM","11:30 AM","09:45 AM"];
-  const scale = (data.min || 1000) / 1000;
-  let seed = 0;
-  for(let i=0;i<(data.code||"").length;i++) seed += data.code.charCodeAt(i);
-  let grnCounter = 500 + (seed % 480);
-  let issCounter = 400 + ((seed * 7) % 380);
+/* ---------- Real stock-transaction ledger for this item ---------- */
+// Live-synced from Firestore's "stockTransactions" collection (the same
+// collection index.html writes to). We filter by itemId client-side after
+// a plain "where" query so no composite index is required.
+let rawTransactions = [];
+onSnapshot(
+  query(collection(db, "stockTransactions"), where("itemId", "==", itemId)),
+  (snap)=>{
+    rawTransactions = snap.docs.map(d=>{
+      const t = d.data();
+      const ts = t.createdAt && t.createdAt.toDate ? t.createdAt.toDate() : new Date(0);
+      return { id: d.id, ...t, ts };
+    });
+    rawTransactions.sort((a,b)=> b.ts - a.ts); // newest first
+    renderTransactionsAndStats();
+  },
+  (err)=>{ console.error("stockTransactions listener error:", err); }
+);
+
+function renderTransactionsAndStats(){
+  if(!liveData) return;
+  const balance = liveData.balance || 0;
+  const meta = CATEGORY_META[liveData.category] || DEFAULT_META;
+  const unitCost = (liveData.price && liveData.price > 0) ? liveData.price : meta.unitCost;
+
+  // Totals from the real ledger (all-time, across every logged movement).
+  let received = 0, issued = 0;
+  rawTransactions.forEach(t=>{
+    if(t.type === "in") received += (t.qty || 0);
+    else issued += (t.qty || 0);
+  });
+  const opening = Math.max(0, balance - received + issued);
+
+  document.getElementById("ssOpening").textContent = fmtQty(opening);
+  document.getElementById("ssReceived").textContent = fmtQty(received);
+  document.getElementById("ssIssued").textContent = fmtQty(issued);
+  document.getElementById("legReceived").textContent = fmtQty(received);
+  document.getElementById("legIssued").textContent = fmtQty(issued);
+  document.getElementById("legOpening").textContent = fmtQty(opening);
+
+  const r = 60, c = 2*Math.PI*r;
+  const pct = (received + issued) > 0 ? received / (received + issued) : 0;
+  document.getElementById("donutArc").setAttribute("stroke-dasharray", `${pct*c} ${c}`);
+
+  // Running balance per row, computed backward from the current live balance
+  // (newest row = current balance; each older row adds back what the more
+  // recent transaction changed).
   let runningBalance = balance;
-  const transactions = baseTx.map((t,i)=>{
-    const qty = Math.round(t.qtyBase * scale) || (t.type==="in"?10:-10);
-    const rowBalance = runningBalance;
-    runningBalance = runningBalance - qty;
+  const rows = rawTransactions.map(t=>{
     const isIn = t.type === "in";
+    const qty = t.qty || 0;
+    const rowBalance = runningBalance;
+    runningBalance = isIn ? runningBalance - qty : runningBalance + qty;
     return {
-      date: dates[i], time: times[i], type: isIn?"in":"out",
-      typeLabel: isIn?"GRN":"Issue", typeSub: isIn?"Received":"Issued",
-      ref: isIn ? ("GRN-2024-0"+(grnCounter-=8)) : ("ISS-2024-0"+(issCounter-=6)),
-      who: isIn ? meta.supplier : meta.issuedTo[i % meta.issuedTo.length],
+      date: t.ts && t.ts.getTime() ? t.ts.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}) : "—",
+      time: t.ts && t.ts.getTime() ? t.ts.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}) : "",
+      type: isIn ? "in" : "out",
+      typeLabel: isIn ? "GRN" : "Issue",
+      typeSub: isIn ? "Received" : "Issued",
+      ref: t.id.slice(0,8).toUpperCase(),
+      who: t.who || t.machine || (isIn ? "Supplier" : "Unspecified"),
+      note: t.note || "",
       qty, balance: rowBalance, unitCost, total: Math.abs(qty)*unitCost
     };
   });
 
-  window.__currentTransactions = transactions;
+  window.__currentTransactions = rows;
   paintTransactions();
 }
+
+function fmtQty(n){ return fmtNum(n) + " " + curUnitAbbr; }
+
 function paintTransactions(){
   const transactions = window.__currentTransactions || [];
   const q = (document.getElementById("txSearch").value || "").trim().toLowerCase();
   const rows = transactions.filter(t =>
     !q || t.ref.toLowerCase().includes(q) || t.who.toLowerCase().includes(q) || t.typeLabel.toLowerCase().includes(q)
   );
+  if(rows.length === 0){
+    document.getElementById("txBody").innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-faint);padding:24px 12px;">No stock movements recorded for this item yet.</td></tr>`;
+    return;
+  }
   document.getElementById("txBody").innerHTML = rows.map(t => `
     <tr>
       <td class="tx-date"><div class="d">${t.date}</div><div class="t">${t.time}</div></td>
@@ -767,15 +798,29 @@ document.addEventListener("click", (e)=>{
   }
 });
 
-/* ---------- Quick stock actions — write straight to Firestore ---------- */
+/* ---------- Quick stock actions — write to Firestore AND log a real transaction ---------- */
+// Both actions now write a matching doc to "stockTransactions" (same collection
+// index.html uses), so the ledger, stats, and dashboard activity feed all stay
+// accurate no matter which page an admin uses to move stock.
+function logTransaction(type, qty, extra){
+  return addDoc(collection(db, "stockTransactions"), {
+    itemId, itemName: liveData.name, type, qty: Math.abs(qty), unit: curUnitAbbr,
+    who: (extra && extra.who) || "", machine: (extra && extra.machine) || "",
+    note: (extra && extra.note) || "",
+    createdAt: serverTimestamp(), createdBy: currentAdminEmail
+  });
+}
 function receiveStock(){
   if(!requireAdmin()) return;
   const qty = parseFloat(prompt(`Receive stock for "${liveData.name}"\nEnter quantity received (${curUnitAbbr}):`));
   if(!qty || qty <= 0) return;
+  const who = prompt("Received from (supplier, optional):") || "";
   updateDoc(doc(db, "stockItems", itemId), {
     balance: increment(qty),
     updatedAt: serverTimestamp(),
     updatedBy: currentAdminEmail
+  }).then(()=>{
+    logTransaction("in", qty, { who });
   }).catch(err=>alert("Could not update stock: "+err.message));
 }
 function adjustStock(){
@@ -787,6 +832,8 @@ function adjustStock(){
     balance: increment(delta),
     updatedAt: serverTimestamp(),
     updatedBy: currentAdminEmail
+  }).then(()=>{
+    logTransaction(delta > 0 ? "in" : "out", delta, { note: "Manual adjustment" });
   }).catch(err=>alert("Could not update stock: "+err.message));
 }
 
