@@ -679,13 +679,6 @@
   <!-- ===== DASHBOARD TAB ===== -->
   <div class="tab-panel active" id="tab-dashboard">
 
-    <div class="greeting-row" style="justify-content:flex-end;">
-      <div class="date-pill">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-        <span id="todayDate"></span>
-      </div>
-    </div>
-
     <div class="stat-grid" id="statGrid"></div>
 
     <div class="dash-section" id="dashQuickActions">
@@ -857,14 +850,6 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
         <span class="d-label">Transactions</span>
         <svg class="drawer-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-      </button>
-      <button class="drawer-item" onclick="drawerReceive()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
-        <span class="d-label">Receipts (In)</span>
-      </button>
-      <button class="drawer-item" onclick="drawerIssue()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-        <span class="d-label">Issues (Out)</span>
       </button>
       <button class="drawer-item" data-dtab="reports" onclick="drawerGo('reports')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
@@ -1437,10 +1422,6 @@ function ring(pct, size){
   </svg>`;
 }
 function renderDashboard(){
-  // Date
-  const now = new Date();
-  document.getElementById("todayDate").textContent = now.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
-
   // Core figures
   const totalItems = items.length;
   const receiptsToday = activity.filter(a=>a.type==="in" && isToday(a.ts));
