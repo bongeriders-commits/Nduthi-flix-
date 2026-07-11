@@ -46,6 +46,14 @@
   }
   @media(max-width:520px){ .app-shell{border-left:none;border-right:none;} }
 
+  /* ===== Desktop layout: widened, multi-column approvals grid ===== */
+  @media(min-width:860px){
+    .app-shell{max-width:1100px;margin:0 auto;}
+    .summary-row{grid-template-columns:repeat(3,1fr);gap:14px;}
+    #pendingList{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;align-items:start;}
+    #pendingList .approval-card{margin-bottom:0;}
+  }
+
   /* Header */
   .mobile-header{
     display:flex;align-items:center;gap:12px;
