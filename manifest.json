@@ -2,7 +2,7 @@
   "name": "Cabro City",
   "short_name": "Cabro City",
   "description": "Katani Quarry stores — stock, approvals, and inventory management",
-  "start_url": "/index.html",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "browser"],
@@ -19,12 +19,12 @@
   "shortcuts": [
     {
       "name": "Stock List",
-      "url": "/stock-list.html",
+      "url": "/stock-list",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Approvals",
-      "url": "/katani-approvals.html",
+      "url": "/katani-approvals",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }
   ]

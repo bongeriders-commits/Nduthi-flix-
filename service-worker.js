@@ -3,10 +3,10 @@
 const CACHE_NAME = "cabro-city-v1";
 
 const PRECACHE_URLS = [
-  "/index.html",
-  "/item-details.html",
-  "/katani-approvals.html",
-  "/stock-list.html",
+  "/",
+  "/item-details",
+  "/katani-approvals",
+  "/stock-list",
   "/manifest.json",
   "/cabro-city-logo.png",
   "/icons/icon-192.png",
