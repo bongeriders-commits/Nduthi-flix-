@@ -6,8 +6,8 @@
 <title>Stock List — Cabro City</title>
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#f5590a">
-<link rel="apple-touch-icon" href="/icons/icon-192.png">
-<link rel="icon" href="/icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" href="/icon-192.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -153,22 +153,9 @@
   .pill.low{background:#ffe6d3;color:var(--oxide-dim);}
   .pill.out{background:#fde2e2;color:var(--red);}
   .action-cell{position:relative;text-align:right;}
-  .action-dot{background:none;border:none;color:var(--text-faint);cursor:pointer;padding:6px;border-radius:8px;}
-  .action-dot:hover{background:var(--panel-alt);color:var(--text);}
-  .action-dot svg{width:17px;height:17px;display:block;}
-  .action-menu{
-    position:absolute;right:14px;top:38px;z-index:20;
-    background:#fff;border:1px solid var(--line);border-radius:10px;
-    box-shadow:0 14px 34px -10px rgba(0,0,0,0.28);
-    min-width:130px;padding:6px;display:none;text-align:left;
-  }
-  .action-menu.open{display:block;}
-  .action-menu button{
-    width:100%;text-align:left;background:none;border:none;padding:9px 10px;
-    font-size:12.5px;color:var(--text);border-radius:7px;cursor:pointer;
-  }
-  .action-menu button:hover{background:var(--panel-alt);}
-  .action-menu button.danger{color:var(--red);}
+  .btn-delete-row{background:none;border:none;color:var(--text-faint);cursor:pointer;padding:6px;border-radius:8px;}
+  .btn-delete-row:hover{background:#fde2e2;color:var(--red);}
+  .btn-delete-row svg{width:17px;height:17px;display:block;}
   .empty-row td{text-align:center;color:var(--text-faint);padding:40px 18px;font-size:13px;}
 
   /* ===== Pagination ===== */
@@ -275,7 +262,6 @@
       </button>
     </div>
     <div class="mh-right">
-      <button class="btn-filter" id="adminBtn" style="padding:8px 12px;font-size:12px;" onclick="onAdminBtnClick()">Admin</button>
       <button class="bell" onclick="location.href='index.html'" aria-label="Notifications">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
         <span class="badge-dot">5</span>
@@ -444,9 +430,6 @@ let appRevealed = false;
 watchAdmin((user)=>{
   isAdmin = !!user;
   currentAdminEmail = user ? user.email : "";
-  const btn = document.getElementById("adminBtn");
-  btn.textContent = isAdmin ? "Admin: " + currentAdminEmail.split("@")[0] : "Admin";
-  btn.classList.toggle("on", isAdmin);
   document.getElementById("avatarInitials").textContent = isAdmin ? initialsFromEmail(currentAdminEmail) : "--";
 
   // Whole app is locked behind sign-in — only "added" (Firebase Auth) users get in.
@@ -504,7 +487,6 @@ let currentPage = 1;
 const PAGE_SIZE = 10;
 let sortKey = null, sortDir = 1;
 let allowedStatuses = new Set(["Active","Low Stock","Out of Stock"]);
-let openMenuIndex = null;
 
 /* ---------- Render ---------- */
 function formatMin(item){
@@ -527,7 +509,7 @@ function renderTable(){
     body.innerHTML = pageItems.map((it, idx)=>`
       <tr>
         <td>
-          <div class="it-name">${escapeHtml(it.name)}</div>
+          <div class="it-name" style="cursor:pointer;color:var(--oxide);text-decoration:underline;text-decoration-color:transparent;" onmouseover="this.style.textDecorationColor='var(--oxide)'" onmouseout="this.style.textDecorationColor='transparent'" onclick="navigateToItem('${it.id}')">${escapeHtml(it.name)}</div>
           <div class="it-code">${it.code}</div>
         </td>
         <td>${escapeHtml(it.category)}</td>
@@ -535,14 +517,9 @@ function renderTable(){
         <td>${formatMin(it)}</td>
         <td><span class="pill ${pillClass(it.status)}">${it.status}</span></td>
         <td class="action-cell">
-          <button class="action-dot" onclick="toggleActionMenu(event, ${start+idx})" aria-label="Actions">
-            <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
+          <button class="btn-delete-row" onclick="deleteItem(${start+idx})" aria-label="Delete item" title="Delete item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
           </button>
-          <div class="action-menu" id="menu-${start+idx}">
-            <button onclick="viewItem(${start+idx})">View</button>
-            <button onclick="editItem(${start+idx})">Edit</button>
-            <button class="danger" onclick="deleteItem(${start+idx})">Delete</button>
-          </div>
         </td>
       </tr>
     `).join("");
@@ -649,31 +626,11 @@ document.addEventListener("click", (e)=>{
   if(panel.classList.contains("open") && !panel.contains(e.target) && !btn.contains(e.target)){
     panel.classList.remove("open");
   }
-  if(openMenuIndex !== null){
-    const menu = document.getElementById("menu-"+openMenuIndex);
-    if(menu && !menu.contains(e.target) && !e.target.closest(".action-dot")){
-      menu.classList.remove("open");
-      openMenuIndex = null;
-    }
-  }
 });
 
 /* ---------- Row actions ---------- */
-function toggleActionMenu(e, idx){
-  e.stopPropagation();
-  document.querySelectorAll(".action-menu.open").forEach(m=>m.classList.remove("open"));
-  const menu = document.getElementById("menu-"+idx);
-  const isOpen = menu.classList.contains("open");
-  if(!isOpen){ menu.classList.add("open"); openMenuIndex = idx; }
-  else { openMenuIndex = null; }
-}
-function viewItem(idx){
-  const it = items[idx];
-  goToDetails(it);
-}
-function editItem(idx){
-  const it = items[idx];
-  goToDetails(it);
+function navigateToItem(id){
+  location.href = "item-details.html?id=" + encodeURIComponent(id);
 }
 function goToDetails(it){
   location.href = "item-details.html?id=" + encodeURIComponent(it.id);
@@ -739,7 +696,7 @@ onSnapshot(query(collection(db, "stockItems"), orderBy("name")), (snap)=>{
 Object.assign(window, {
   onAdminBtnClick, openAdminModal, closeAdminModal, submitAdminLogin, submitGateLogin,
   onSearch, toggleSort, toggleFilterPanel, clearFilters, applyFilters,
-  toggleActionMenu, viewItem, editItem, deleteItem,
+  navigateToItem, deleteItem,
   openAddModal, closeAddModal, submitNewItem, goPage
 });
 </script>

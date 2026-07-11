@@ -6,8 +6,8 @@
 <title>Katani Quarry — Approvals</title>
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#f5590a">
-<link rel="apple-touch-icon" href="/icons/icon-192.png">
-<link rel="icon" href="/icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" href="/icon-192.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -241,7 +241,6 @@
       <h1>Approvals</h1>
     </div>
     <div class="mh-count" id="pendingCount">0</div>
-    <button class="admin-btn" id="adminBtn" onclick="onAdminBtnClick()">Admin</button>
     <div class="avatar"><span id="avatarInitials">--</span></div>
   </div>
 
@@ -318,9 +317,6 @@ let appRevealed = false;
 watchAdmin((user)=>{
   isAdmin = !!user;
   currentAdminEmail = user ? user.email : "";
-  const btn = document.getElementById("adminBtn");
-  btn.textContent = isAdmin ? "Admin: " + currentAdminEmail.split("@")[0] : "Admin";
-  btn.classList.toggle("on", isAdmin);
   document.getElementById("avatarInitials").textContent = isAdmin ? initialsFromEmail(currentAdminEmail) : "--";
 
   // Whole app is locked behind sign-in — only "added" (Firebase Auth) users get in.
