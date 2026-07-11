@@ -144,6 +144,40 @@
   .empty-state p{font-size:11.5px;color:var(--text-faint);max-width:230px;line-height:1.5;}
 
   button:focus-visible{outline:2px solid var(--oxide);outline-offset:2px;}
+
+  .admin-btn{
+    padding:7px 11px;font-size:11px;font-weight:700;border-radius:9px;
+    border:1px solid var(--line);background:#fff;color:var(--text);
+    cursor:pointer;white-space:nowrap;flex-shrink:0;font-family:'Inter',sans-serif;
+  }
+  .admin-btn.on{background:var(--oxide);border-color:var(--oxide);color:#fff;}
+
+  .overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,0.45);
+    display:none;align-items:center;justify-content:center;z-index:100;padding:16px;
+  }
+  .overlay.open{display:flex;}
+  .modal{
+    background:#fff;border-radius:14px;padding:20px;width:100%;max-width:360px;
+    border:1px solid var(--line);
+  }
+  .modal h3{font-size:14px;margin-bottom:14px;}
+  .modal .field{margin-bottom:12px;}
+  .modal .field label{display:block;font-size:11px;color:var(--text-dim);margin-bottom:5px;font-family:'Inter',sans-serif;}
+  .modal .field input{
+    width:100%;padding:10px 11px;border-radius:8px;border:1px solid var(--line);
+    font-size:13px;font-family:'Inter',sans-serif;
+  }
+  .modal-actions{display:flex;gap:8px;margin-top:6px;}
+  .modal-actions button{
+    flex:1;padding:10px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;
+    font-family:'Oswald',sans-serif;letter-spacing:0.04em;text-transform:uppercase;
+  }
+  .btn-cancel{background:var(--panel);border:1px solid var(--line);color:var(--text-dim);}
+  .btn-submit{background:var(--oxide);border:1px solid var(--oxide);color:#fff;}
+
+  .ac-btn[disabled]{opacity:0.5;cursor:not-allowed;}
+  .load-state{padding:40px 24px;text-align:center;color:var(--text-faint);font-size:12px;}
 </style>
 </head>
 <body>
@@ -158,6 +192,7 @@
       <h1>Approvals</h1>
     </div>
     <div class="mh-count" id="pendingCount">0</div>
+    <button class="admin-btn" id="adminBtn" onclick="onAdminBtnClick()">Admin</button>
   </div>
 
   <div class="wrap">
@@ -190,7 +225,34 @@
   </div>
 </div>
 
-<script>
+<!-- ADMIN LOGIN MODAL -->
+<div class="overlay" id="adminOverlay">
+  <div class="modal">
+    <h3>Admin Login</h3>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="adminEmail" placeholder="you@cabrocity.co.ke">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="adminPassword" placeholder="••••••••">
+    </div>
+    <div id="adminError" style="display:none;color:var(--red);font-size:12.5px;margin:-4px 0 10px;"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeAdminModal()">Cancel</button>
+      <button class="btn-submit" onclick="submitAdminLogin()">Log In</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+/* ---------- Firebase ---------- */
+import {
+  db, auth, loginAdmin, logoutAdmin, watchAdmin, statusOf,
+  collection, doc, addDoc, updateDoc, getDoc, onSnapshot,
+  serverTimestamp, query, orderBy
+} from "./firebase-config.js";
+
 const ICONS = {
   warn:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>`,
   box:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v3"/></svg>`,
@@ -200,39 +262,103 @@ const ICONS = {
   empty:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>`
 };
 
-let approvals = [
-  {
-    id:1, type:"discrepancy", status:"pending",
-    title:"Fan belt — count mismatch",
-    who:"P. Wanjiru · Audit", time:"2 days ago",
-    detail:`Physical count came to <b>3 pcs</b>, system recorded <b>5 pcs</b>. A discrepancy of 2 needs sign-off before the balance is corrected.`
-  },
-  {
-    id:2, type:"discrepancy", status:"pending",
-    title:"Air filter — Tipper flagged after issue",
-    who:"D. Kiprop · Store Clerk", time:"4 days ago",
-    detail:`Balance dropped to <b>0 pcs</b> after issue to Tipper KBZ 771X. Flagged for review before reordering.`
-  },
-  {
-    id:3, type:"new-item", status:"pending",
-    title:"New item request — Excavator hydraulic hose",
-    who:"J. Mutua · Store Clerk", time:"Yesterday",
-    detail:`Requesting to add <b>Excavator hydraulic hose</b> (Spares, unit: pc) to the register with a starting balance of <b>0</b> and minimum threshold of <b>2</b>.`
-  },
-  {
-    id:4, type:"threshold", status:"pending",
-    title:"Raise minimum threshold — Diesel (bulk)",
-    who:"P. Wanjiru · Store Clerk", time:"Today · 8:20am",
-    detail:`Requesting to raise the reorder minimum for <b>Diesel (bulk)</b> from <b>2,000 L</b> to <b>2,500 L</b> ahead of the rainy season.`
-  }
-];
+/* ---------- Admin auth (same pattern as index.html / stock-list.html) ---------- */
+let isAdmin = false, currentAdminEmail = "";
+watchAdmin((user)=>{
+  isAdmin = !!user;
+  currentAdminEmail = user ? user.email : "";
+  const btn = document.getElementById("adminBtn");
+  btn.textContent = isAdmin ? "Admin: " + currentAdminEmail.split("@")[0] : "Admin";
+  btn.classList.toggle("on", isAdmin);
+  render();
+});
+window.onAdminBtnClick = function(){
+  if(isAdmin){ if(confirm("Log out of admin mode?")) logoutAdmin(); }
+  else openAdminModal();
+};
+function openAdminModal(){
+  document.getElementById("adminError").style.display = "none";
+  document.getElementById("adminOverlay").classList.add("open");
+}
+window.closeAdminModal = function(){ document.getElementById("adminOverlay").classList.remove("open"); };
+window.submitAdminLogin = function(){
+  const email = document.getElementById("adminEmail").value.trim();
+  const password = document.getElementById("adminPassword").value;
+  loginAdmin(email, password).then(closeAdminModal).catch(()=>{
+    const e = document.getElementById("adminError");
+    e.textContent = "Login failed — check email and password.";
+    e.style.display = "block";
+  });
+};
+function requireAdmin(){
+  if(isAdmin) return true;
+  openAdminModal();
+  return false;
+}
+document.getElementById("adminOverlay").addEventListener("click", (e)=>{ if(e.target.id==="adminOverlay") closeAdminModal(); });
 
+/* ---------- Live approvals data (mirrors the "approvals" Firestore collection) ---------- */
+let approvals = [];
 let activeFilter = "all";
+let loaded = false;
+
+onSnapshot(query(collection(db, "approvals"), orderBy("createdAt", "desc")), (snap)=>{
+  approvals = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  loaded = true;
+  render();
+}, (err)=>{
+  console.error("approvals listener failed:", err);
+  loaded = true;
+  document.getElementById("pendingList").innerHTML =
+    `<div class="load-state">Couldn't load approvals. Check your connection and try again.</div>`;
+});
+
 const iconFor = t => t==="discrepancy" ? "warn" : t==="new-item" ? "box" : "sliders";
 const colorFor = t => t==="discrepancy" ? "red" : t==="new-item" ? "blue" : "amber";
 const labelFor = t => t==="discrepancy" ? "STOCK DISCREPANCY" : t==="new-item" ? "NEW ITEM REQUEST" : "THRESHOLD CHANGE";
 
+function escapeHtml(str){
+  return String(str ?? "").replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
+}
+
+function timeAgo(ts){
+  if(!ts || !ts.toDate) return "";
+  const d = ts.toDate();
+  const diffMs = Date.now() - d.getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if(mins < 1) return "Just now";
+  if(mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if(hrs < 24) return `Today · ${d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}`;
+  const days = Math.floor(hrs / 24);
+  if(days === 1) return "Yesterday";
+  return `${days} days ago`;
+}
+
+// Builds the escaped detail line for a card from structured fields —
+// never stores or injects raw HTML from a requester.
+function detailFor(a){
+  const item = `<b>${escapeHtml(a.itemName || "Unnamed item")}</b>`;
+  if(a.type === "discrepancy"){
+    return `Physical count came to <b>${escapeHtml(a.actualCount)} ${escapeHtml(a.uom||"")}</b>, system recorded <b>${escapeHtml(a.systemCount)} ${escapeHtml(a.uom||"")}</b> for ${item}. Approving corrects the balance to the physical count.`;
+  }
+  if(a.type === "new-item"){
+    return `Requesting to add ${item} (${escapeHtml(a.category||"—")}, unit: ${escapeHtml(a.uom||"—")}) to the register with a starting balance of <b>${escapeHtml(a.startBalance ?? 0)}</b> and minimum threshold of <b>${escapeHtml(a.minThreshold ?? 0)}</b>.`;
+  }
+  if(a.type === "threshold"){
+    return `Requesting to change the reorder minimum for ${item} from <b>${escapeHtml(a.oldMin)}</b> to <b>${escapeHtml(a.newMin)}</b>.`;
+  }
+  return "";
+}
+
 function render(){
+  if(!loaded){
+    document.getElementById("pendingList").innerHTML = `<div class="load-state">Loading approvals…</div>`;
+    return;
+  }
+
   const pending = approvals.filter(a=>a.status==="pending");
   const resolved = approvals.filter(a=>a.status!=="pending");
   const approvedCount = approvals.filter(a=>a.status==="approved").length;
@@ -244,6 +370,7 @@ function render(){
   document.getElementById("sumRejected").textContent = rejectedCount;
 
   const shownPending = pending.filter(a=> activeFilter==="all" || a.type===activeFilter);
+  const disabledAttr = isAdmin ? "" : "disabled";
 
   document.getElementById("pendingList").innerHTML = shownPending.length
     ? shownPending.map(a=>`
@@ -252,14 +379,14 @@ function render(){
           <div class="ac-icon ${colorFor(a.type)}">${ICONS[iconFor(a.type)]}</div>
           <div class="ac-body">
             <div class="ac-type">${labelFor(a.type)}</div>
-            <div class="ac-title">${a.title}</div>
-            <div class="ac-meta">${a.who} · ${a.time}</div>
+            <div class="ac-title">${escapeHtml(a.title)}</div>
+            <div class="ac-meta">${escapeHtml(a.requestedBy)} · ${timeAgo(a.createdAt)}</div>
           </div>
         </div>
-        <div class="ac-detail">${a.detail}</div>
+        <div class="ac-detail">${detailFor(a)}</div>
         <div class="ac-actions">
-          <button class="ac-btn reject" onclick="resolve(${a.id},'rejected')">${ICONS.x} Reject</button>
-          <button class="ac-btn approve" onclick="resolve(${a.id},'approved')">${ICONS.check} Approve</button>
+          <button class="ac-btn reject" ${disabledAttr} onclick="resolveApproval('${a.id}','rejected')">${ICONS.x} Reject</button>
+          <button class="ac-btn approve" ${disabledAttr} onclick="resolveApproval('${a.id}','approved')">${ICONS.check} Approve</button>
         </div>
       </div>
     `).join("")
@@ -276,8 +403,8 @@ function render(){
           <div class="ac-icon ${colorFor(a.type)}">${ICONS[iconFor(a.type)]}</div>
           <div class="ac-body">
             <div class="ac-type">${labelFor(a.type)}</div>
-            <div class="ac-title">${a.title}</div>
-            <div class="ac-meta">${a.who} · ${a.time}</div>
+            <div class="ac-title">${escapeHtml(a.title)}</div>
+            <div class="ac-meta">${escapeHtml(a.requestedBy)} · ${timeAgo(a.createdAt)}</div>
           </div>
           <span class="resolved-badge ${a.status}">${a.status}</span>
         </div>
@@ -286,11 +413,52 @@ function render(){
     : "";
 }
 
-function resolve(id, status){
+// Approving/rejecting is admin-only (enforced client-side here AND by
+// Firestore rules, which is what actually matters). Approving a request
+// also applies its effect to stockItems in the same step.
+window.resolveApproval = async function(id, status){
+  if(!requireAdmin()) return;
   const a = approvals.find(x=>x.id===id);
-  if(a) a.status = status;
-  render();
-}
+  if(!a) return;
+
+  try{
+    if(status === "approved"){
+      if(a.type === "new-item"){
+        await addDoc(collection(db, "stockItems"), {
+          name: a.itemName,
+          category: a.category || "",
+          uom: a.uom || "",
+          balance: a.startBalance || 0,
+          min: a.minThreshold || 0,
+          status: statusOf(a.startBalance || 0, a.minThreshold || 0)
+        });
+      } else if(a.type === "discrepancy" && a.itemId){
+        const itemSnap = await getDoc(doc(db, "stockItems", a.itemId));
+        const min = itemSnap.exists() ? (itemSnap.data().min || 0) : 0;
+        await updateDoc(doc(db, "stockItems", a.itemId), {
+          balance: a.actualCount,
+          status: statusOf(a.actualCount, min)
+        });
+      } else if(a.type === "threshold" && a.itemId){
+        const itemSnap = await getDoc(doc(db, "stockItems", a.itemId));
+        const balance = itemSnap.exists() ? (itemSnap.data().balance || 0) : 0;
+        await updateDoc(doc(db, "stockItems", a.itemId), {
+          min: a.newMin,
+          status: statusOf(balance, a.newMin)
+        });
+      }
+    }
+
+    await updateDoc(doc(db, "approvals", id), {
+      status,
+      resolvedAt: serverTimestamp(),
+      resolvedBy: currentAdminEmail || "admin"
+    });
+  } catch(err){
+    console.error("Failed to resolve approval:", err);
+    alert("Something went wrong resolving this request. Please try again.");
+  }
+};
 
 document.querySelectorAll(".fchip").forEach(chip=>{
   chip.addEventListener("click", ()=>{

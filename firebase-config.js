@@ -6,19 +6,19 @@ import {
   getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, collection, doc, addDoc, updateDoc, deleteDoc,
+  getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDoc,
   onSnapshot, serverTimestamp, query, orderBy, limit, runTransaction, increment
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ---------- 1. PASTE YOUR FIREBASE CONFIG BELOW ----------
 // Firebase console → Project settings → Your apps → Web app → SDK setup and config
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyAIoLfUG9nO7dTaVzgfBjKBDl3MsRATMZQ",
+  authDomain: "cabrocity-a92e3.firebaseapp.com",
+  projectId: "cabrocity-a92e3",
+  storageBucket: "cabrocity-a92e3.firebasestorage.app",
+  messagingSenderId: "664726134259",
+  appId: "1:664726134259:web:09b8435da56563b1e94686"
 };
 // -----------------------------------------------------------
 
@@ -60,6 +60,6 @@ export function unitAbbr(uom) {
 
 /* ---------- Re-exported Firestore functions ---------- */
 export {
-  collection, doc, addDoc, updateDoc, deleteDoc,
+  collection, doc, addDoc, updateDoc, deleteDoc, getDoc,
   onSnapshot, serverTimestamp, query, orderBy, limit, runTransaction, increment
 };
