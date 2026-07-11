@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Issue Stock — Cabro City</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#f5590a">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" href="/icon-192.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+  :root{
+    --bg:#ffffff;
+    --panel:#f6f6f8;
+    --panel-alt:#eeeef1;
+    --line:#e2e2e6;
+    --line-soft:#ececf0;
+    --text:#151517;
+    --text-dim:#68686f;
+    --text-faint:#9a9aa2;
+    --oxide:#f5590a;
+    --oxide-dim:#b8420a;
+    --green:#16a34a;
+    --red:#e13a3a;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  html,body{background:#f4f4f6;color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  button,input,select,textarea{font-family:inherit;}
+
+  .app-shell{max-width:560px;margin:0 auto;min-height:100vh;background:var(--bg);position:relative;padding-bottom:96px;border-left:1px solid var(--line);border-right:1px solid var(--line);}
+  @media(max-width:580px){ .app-shell{border-left:none;border-right:none;} }
+
+  /* ===== Header ===== */
+  .mobile-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#ffffff;z-index:30;}
+  .mh-left{display:flex;align-items:center;gap:16px;}
+  .back-btn{background:none;border:none;color:var(--text);cursor:pointer;padding:4px;display:flex;}
+  .back-btn svg{width:22px;height:22px;}
+  .mh-logo{display:flex;align-items:center;gap:10px;cursor:pointer;background:none;border:none;padding:0;}
+  .brand-logo-img{height:36px;width:auto;display:block;}
+  .mh-right{display:flex;align-items:center;gap:16px;position:relative;}
+  .bell{position:relative;width:23px;height:23px;color:#68686f;background:none;border:none;padding:0;cursor:pointer;}
+  .bell svg{width:100%;height:100%;}
+  .bell .badge-dot{position:absolute;top:-6px;right:-8px;background:#ff7a1f;color:#fff;font-size:10px;font-weight:700;min-width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;padding:0 3px;font-family:'IBM Plex Mono',monospace;box-shadow:0 0 0 2px #ffffff;}
+  .avatar-wrap{display:flex;align-items:center;gap:4px;cursor:pointer;background:none;border:none;padding:0;}
+  .avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#3a3a40,#1c1c1f);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;position:relative;font-family:'Oswald',sans-serif;flex-shrink:0;border:1.5px solid #3a3a40;}
+  .avatar .dot{position:absolute;bottom:0;right:0;width:10px;height:10px;border-radius:50%;background:#ff7a1f;border:2px solid #ffffff;}
+  .avatar-chev{width:13px;height:13px;color:var(--text-faint);}
+  .avatar-menu{position:absolute;top:52px;right:0;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 14px 34px -10px rgba(0,0,0,0.28);min-width:140px;padding:6px;display:none;z-index:40;}
+  .avatar-menu.open{display:block;}
+  .avatar-menu button{width:100%;text-align:left;background:none;border:none;padding:9px 10px;font-size:12.5px;color:var(--text);border-radius:7px;cursor:pointer;}
+  .avatar-menu button:hover{background:var(--panel-alt);}
+
+  /* ===== Page head ===== */
+  .page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:20px 20px 4px;}
+  .page-head h1{margin:0;font-size:20px;font-weight:800;letter-spacing:-0.01em;}
+  .btn-outline{display:flex;align-items:center;gap:7px;background:#fff;border:1.5px solid var(--line);color:var(--text);padding:9px 14px;border-radius:10px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;}
+  .btn-outline:hover{background:var(--panel);}
+  .btn-outline svg{width:15px;height:15px;}
+
+  /* ===== Item summary ===== */
+  .item-summary{padding:14px 20px 4px;}
+  .is-name{font-size:24px;font-weight:800;margin:2px 0 4px;}
+  .is-code{color:var(--oxide);font-size:13px;font-weight:700;letter-spacing:0.02em;margin-bottom:10px;}
+  .pill{display:inline-flex;align-items:center;padding:5px 12px;border-radius:100px;font-size:11.5px;font-weight:700;}
+  .pill.active{background:#dcfce7;color:var(--green);}
+  .pill.low{background:#ffe6d3;color:var(--oxide-dim);}
+  .pill.out{background:#fde2e2;color:var(--red);}
+
+  /* ===== Cards ===== */
+  .card{margin:16px 20px 0;background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;}
+  .card h3{margin:0 0 4px;font-size:16px;font-weight:800;}
+  .card .sub{font-size:12.5px;color:var(--text-dim);margin:0 0 18px;}
+
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:7px;}
+  .field label .req{color:var(--red);margin-left:2px;}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  @media(max-width:420px){.field-row{grid-template-columns:1fr;}}
+  .input-wrap{position:relative;display:flex;align-items:stretch;}
+  .input-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-faint);pointer-events:none;}
+  .input-wrap input, .input-wrap textarea{
+    width:100%;background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:11px 12px 11px 36px;font-size:13.5px;color:var(--text);
+  }
+  .input-wrap textarea{resize:vertical;min-height:60px;padding-left:36px;}
+  .input-wrap.no-icon input{padding-left:12px;}
+  .qty-row{display:flex;}
+  .qty-row .input-wrap{flex:1;}
+  .qty-row input{border-top-right-radius:0;border-bottom-right-radius:0;}
+  .unit-badge{display:flex;align-items:center;padding:0 14px;background:var(--panel-alt);border:1px solid var(--line);border-left:none;border-top-right-radius:10px;border-bottom-right-radius:10px;font-size:13px;font-weight:700;color:var(--text-dim);white-space:nowrap;}
+
+  .btn-issue{width:100%;display:flex;align-items:center;justify-content:center;gap:9px;background:var(--oxide);color:#fff;border:none;padding:15px;border-radius:11px;font-size:14.5px;font-weight:700;cursor:pointer;}
+  .btn-issue:hover{background:var(--oxide-dim);}
+  .btn-issue:disabled{opacity:0.6;cursor:default;}
+  .btn-issue svg{width:17px;height:17px;}
+
+  .form-error{color:var(--red);font-size:12.5px;margin:-6px 0 14px;}
+  .form-success{color:var(--green);font-size:12.5px;margin:-6px 0 14px;}
+
+  /* ===== Recent transactions ===== */
+  .tx-list-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+  .tx-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--line-soft);}
+  .tx-row:last-child{border-bottom:none;}
+  .tx-left .d{font-size:12.5px;font-weight:700;}
+  .tx-left .t{font-size:11px;color:var(--text-faint);margin-top:1px;}
+  .tx-mid{flex:1;padding:0 10px;}
+  .tx-mid .r{font-size:12.5px;font-weight:700;}
+  .tx-mid .s{font-size:11px;color:var(--text-faint);margin-top:1px;}
+  .tx-mid .tag{display:inline-flex;padding:2px 8px;border-radius:100px;font-size:9.5px;font-weight:700;background:#dcfce7;color:var(--green);margin-top:4px;}
+  .tx-right{display:flex;align-items:center;gap:8px;}
+  .tx-right .q{font-size:13.5px;font-weight:800;color:var(--red);white-space:nowrap;}
+  .tx-pdf-btn{background:none;border:none;color:var(--text-faint);cursor:pointer;padding:4px;display:flex;}
+  .tx-pdf-btn:hover{color:var(--oxide);}
+  .tx-pdf-btn svg{width:16px;height:16px;}
+
+  .view-all-wrap{text-align:center;margin-top:14px;}
+  .btn-view-all{background:#fff;border:1.5px solid var(--oxide);color:var(--oxide);padding:11px 22px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;}
+  .btn-view-all:hover{background:#fff4ee;}
+  .tx-empty{text-align:center;color:var(--text-faint);font-size:12.5px;padding:20px 0;}
+
+  /* ===== Bottom nav ===== */
+  .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:560px;background:var(--panel);border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-around;padding:11px 4px 16px;z-index:40;}
+  .nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;color:var(--text-faint);font-size:9.5px;cursor:pointer;flex:1;padding:2px 0;max-width:120px;}
+  .nav-item svg{width:19px;height:19px;}
+  .nav-item.active{color:var(--oxide);}
+  .nav-scan{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;max-width:120px;}
+  .nav-scan-btn{width:48px;height:48px;border-radius:50%;background:var(--oxide);border:none;display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;margin-top:-22px;box-shadow:0 6px 16px -4px rgba(245,89,10,0.55);}
+  .nav-scan-btn svg{width:21px;height:21px;}
+  .nav-scan span{font-size:9.5px;color:var(--oxide);margin-top:1px;}
+
+  button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--oxide);outline-offset:2px;}
+
+  .app-shell{display:none;}
+  .app-shell.ready{display:block;}
+
+  /* ---------- Access gate ---------- */
+  #accessGate{position:fixed;inset:0;z-index:9999;background:#fff;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .gate-card{width:100%;max-width:340px;text-align:center;}
+  .gate-card img{height:34px;width:auto;margin:0 auto 22px;display:block;}
+  .gate-card h2{font-size:17px;font-weight:700;margin-bottom:6px;}
+  .gate-card p{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-bottom:22px;}
+  .gate-card .field{margin-bottom:12px;text-align:left;}
+  .gate-card .field label{display:block;font-size:11px;color:var(--text-dim);margin-bottom:5px;}
+  .gate-card .field input{width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--line);font-size:13.5px;box-sizing:border-box;}
+  .gate-card .btn-submit{width:100%;padding:12px;border-radius:9px;border:1px solid var(--oxide);background:var(--oxide);color:#fff;font-weight:700;font-size:13px;cursor:pointer;margin-top:6px;}
+  .gate-error{color:var(--red);font-size:12px;margin:-4px 0 12px;text-align:left;}
+</style>
+</head>
+<body>
+
+<div id="accessGate" style="display:none;">
+  <div class="gate-card">
+    <img src="/cabro-city-logo.png" alt="Cabro City">
+    <h2>Sign in required</h2>
+    <p>Issuing stock is restricted to approved store staff. If you don't have an account yet, ask your admin to add one for you.</p>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="gateEmail" placeholder="you@cabrocity.co.ke">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="gatePassword" placeholder="••••••••">
+    </div>
+    <div id="gateError" class="gate-error" style="display:none;"></div>
+    <button class="btn-submit" onclick="submitGateLogin()">Sign In</button>
+  </div>
+</div>
+
+<div class="app-shell">
+
+  <!-- HEADER -->
+  <div class="mobile-header">
+    <div class="mh-left">
+      <button class="back-btn" onclick="location.href='stock-list.html'" aria-label="Back to stock list">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <button class="mh-logo" onclick="location.href='index.html'" aria-label="Cabro City home">
+        <img src="/cabro-city-logo.png" alt="Cabro City — Paving the Future" class="brand-logo-img">
+      </button>
+    </div>
+    <div class="mh-right">
+      <button class="bell" onclick="location.href='index.html'" aria-label="Notifications">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="badge-dot">5</span>
+      </button>
+      <button class="avatar-wrap" onclick="toggleAvatarMenu(event)" aria-label="Account menu">
+        <div class="avatar"><span id="avatarInitials">--</span><span class="dot"></span></div>
+        <svg class="avatar-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="avatar-menu" id="avatarMenu">
+        <button onclick="location.href='index.html'">Dashboard</button>
+        <button onclick="signOutNow()">Sign out</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE HEAD -->
+  <div class="page-head">
+    <h1>Item Details</h1>
+    <button class="btn-outline" onclick="generateSummaryPDF()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+      Print
+    </button>
+  </div>
+
+  <!-- ITEM PICKER (shown only when issue.html is opened with no item pre-selected) -->
+  <div class="card" id="pickerCard" style="display:none;">
+    <h3>Select an Item to Issue</h3>
+    <p class="sub">Choose which item you're issuing stock for.</p>
+    <div class="input-wrap" style="margin-bottom:14px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input type="text" id="pickerSearch" placeholder="Search items by name or code..." oninput="renderPicker()">
+    </div>
+    <div id="pickerList"></div>
+  </div>
+
+  <!-- ITEM SUMMARY (image, spec grid and balance banner intentionally omitted) -->
+  <div class="item-summary" id="itemSummaryBlock" style="display:none;">
+    <div class="is-name" id="itName">—</div>
+    <div class="is-code" id="itCode">—</div>
+    <span class="pill active" id="itStatus">Active</span>
+    <div style="margin-top:10px;">
+      <button class="btn-outline" style="padding:7px 12px;font-size:11.5px;" onclick="backToPicker()">Change item</button>
+    </div>
+  </div>
+
+  <!-- ISSUE STOCK FORM -->
+  <div class="card" id="issueFormCard" style="display:none;">
+    <h3>Issue Stock (Storeman)</h3>
+    <p class="sub" id="issueSub">You can issue this item. Current balance is restricted.</p>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Issue To <span class="req">*</span></label>
+        <div class="input-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>
+          <input type="text" id="issueTo" placeholder="Department / equipment">
+        </div>
+      </div>
+      <div class="field">
+        <label>Collected By <span class="req">*</span></label>
+        <div class="input-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg>
+          <input type="text" id="collectedBy" placeholder="Person collecting the item">
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Purpose / Work Order <span class="req">*</span></label>
+      <div class="input-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2h6a1 1 0 0 1 1 1v2H8V3a1 1 0 0 1 1-1z"/><rect x="5" y="5" width="14" height="17" rx="2"/></svg>
+        <input type="text" id="purpose" placeholder="Enter purpose or work order">
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Quantity to Issue <span class="req">*</span></label>
+        <div class="qty-row">
+          <div class="input-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m-9 0v14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V6"/></svg>
+            <input type="number" id="qty" min="0" step="any" placeholder="Enter quantity">
+          </div>
+          <div class="unit-badge" id="unitBadge">—</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Time of Issue <span class="req">*</span></label>
+        <div class="input-wrap no-icon">
+          <input type="time" id="issueTime">
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Remarks (Optional)</label>
+      <div class="input-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        <textarea id="remarks" placeholder="Add any remarks..."></textarea>
+      </div>
+    </div>
+
+    <div class="form-error" id="issueError" style="display:none;"></div>
+    <div class="form-success" id="issueSuccess" style="display:none;"></div>
+
+    <button class="btn-issue" id="issueBtn" onclick="submitIssue()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+      Issue Stock
+    </button>
+  </div>
+
+  <!-- RECENT ISSUE TRANSACTIONS -->
+  <div class="card" id="recentCard" style="display:none;">
+    <div class="tx-list-head">
+      <h3>Recent Issue Transactions</h3>
+    </div>
+    <div id="recentIssueList"><div class="tx-empty">No issues recorded for this item yet.</div></div>
+    <div class="view-all-wrap">
+      <button class="btn-view-all" onclick="location.href='item-details.html?id='+encodeURIComponent(itemId)">View All</button>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <button class="nav-item" onclick="location.href='index.html'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+      Dashboard
+    </button>
+    <button class="nav-item active" onclick="location.href='stock-list.html'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>
+      Inventory
+    </button>
+    <div class="nav-scan">
+      <button class="nav-scan-btn" onclick="alert('Scanning coming soon.')" aria-label="Scan">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
+      </button>
+      <span>Scan</span>
+    </div>
+    <button class="nav-item" onclick="location.href='index.html#transactions'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+      Transactions
+    </button>
+    <button class="nav-item" onclick="location.href='index.html#reports'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+      Reports
+    </button>
+  </div>
+
+</div>
+
+<script type="module">
+/* ---------- Firebase ---------- */
+import {
+  db, loginAdmin, logoutAdmin, watchAdmin, statusOf, initialsFromEmail, unitAbbr,
+  doc, getDoc, addDoc, onSnapshot, serverTimestamp, runTransaction,
+  collection, query, where
+} from "./firebase-config.js";
+
+/* ---------- Read item id from query string (optional — may be picked below) ---------- */
+const params = new URLSearchParams(location.search);
+let itemId = params.get("id");
+window.itemId = itemId;
+
+/* =========================================================================
+   PERMISSIONS
+   This page is the dedicated Storeman workflow. Anyone who reaches it must
+   be signed in, but — unlike item-details.html — there is no Edit Item
+   button, no delete action, and the item's current balance is never
+   fetched into a visible field. The only write this page performs is the
+   stock deduction inside submitIssue()'s runTransaction below. A storeman
+   account should be created in Firebase Auth without also being granted
+   any "admin" affordances elsewhere in the app.
+   ========================================================================= */
+let currentUser = null, currentUserEmail = "", storemanName = "";
+let appRevealed = false;
+
+watchAdmin((user)=>{
+  currentUser = user;
+  currentUserEmail = user ? user.email : "";
+  document.getElementById("avatarInitials").textContent = user ? initialsFromEmail(currentUserEmail) : "--";
+
+  const gate = document.getElementById("accessGate");
+  if(user){
+    gate.style.display = "none";
+    if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
+    loadStoremanName();
+  } else {
+    gate.style.display = "flex";
+    document.querySelector(".app-shell").classList.remove("ready");
+    appRevealed = false;
+  }
+});
+
+// Looks up a friendly display name for the signed-in storeman so it can be
+// printed on the PDF slip. Falls back to a name derived from the email if
+// no "users/{email}" profile document exists yet.
+async function loadStoremanName(){
+  storemanName = nameFromEmail(currentUserEmail);
+  try{
+    const snap = await getDoc(doc(db, "users", currentUserEmail));
+    if(snap.exists() && snap.data().name){
+      storemanName = snap.data().name;
+    }
+  }catch(e){ /* no users collection yet — fine, use the fallback */ }
+}
+function nameFromEmail(email){
+  if(!email) return "Storeman";
+  const local = email.split("@")[0];
+  return local.split(/[._\-+]+/).filter(Boolean)
+    .map(p => p.charAt(0).toUpperCase() + p.slice(1))
+    .join(" ") || email;
+}
+
+function submitGateLogin(){
+  const email = document.getElementById("gateEmail").value.trim();
+  const password = document.getElementById("gatePassword").value;
+  const errBox = document.getElementById("gateError");
+  errBox.style.display = "none";
+  loginAdmin(email, password).catch(()=>{
+    errBox.textContent = "Sign-in failed — check your email and password, or ask your admin for access.";
+    errBox.style.display = "block";
+  });
+}
+function signOutNow(){
+  if(confirm("Sign out?")) logoutAdmin();
+}
+function toggleAvatarMenu(e){
+  e.stopPropagation();
+  document.getElementById("avatarMenu").classList.toggle("open");
+}
+document.addEventListener("click", (e)=>{
+  const menu = document.getElementById("avatarMenu");
+  if(menu.classList.contains("open") && !menu.contains(e.target) && !e.target.closest(".avatar-wrap")){
+    menu.classList.remove("open");
+  }
+});
+
+/* ---------- Formatting ---------- */
+function fmtNum(n){ return Math.round(n).toLocaleString(); }
+function pillClass(status){
+  if(status==="Active") return "active";
+  if(status==="Low Stock") return "low";
+  return "out";
+}
+function nowHHMM(){
+  const d = new Date();
+  return String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+}
+document.getElementById("issueTime").value = nowHHMM();
+
+/* ---------- Live item (name / code / status / unit only — no balance shown) ---------- */
+let liveData = null;
+let curUnitAbbr = "pc";
+let unsubItem = null, unsubTx = null;
+let rawIssues = [];
+
+function watchItem(id){
+  if(unsubItem) unsubItem();
+  if(unsubTx) unsubTx();
+
+  unsubItem = onSnapshot(doc(db, "stockItems", id), (snap)=>{
+    if(!snap.exists()){
+      alert("This item no longer exists — it may have been deleted.");
+      backToPicker();
+      return;
+    }
+    liveData = snap.data();
+    curUnitAbbr = unitAbbr(liveData.uom);
+    document.getElementById("itName").textContent = liveData.name || "—";
+    document.getElementById("itCode").textContent = liveData.code || "—";
+    const status = statusOf(liveData.balance, liveData.min);
+    const stEl = document.getElementById("itStatus");
+    stEl.textContent = status === "Active" ? "Active Item" : status;
+    stEl.className = "pill " + pillClass(status);
+    document.getElementById("unitBadge").textContent = liveData.uom || "—";
+  }, (err)=>{ console.error("item listener error:", err); });
+
+  /* Recent issue transactions for this item (out only) */
+  unsubTx = onSnapshot(
+    query(collection(db, "stockTransactions"), where("itemId", "==", id)),
+    (snap)=>{
+      rawIssues = snap.docs
+        .map(d=>({ id:d.id, ...d.data() }))
+        .filter(t=>t.type === "out")
+        .map(t=>{
+          const ts = t.createdAt && t.createdAt.toDate ? t.createdAt.toDate() : null;
+          return { ...t, ts };
+        });
+      rawIssues.sort((a,b)=> (b.ts||0) - (a.ts||0));
+      renderRecentIssues();
+    },
+    (err)=>{ console.error("stockTransactions listener error:", err); }
+  );
+}
+
+function selectItem(id){
+  itemId = id;
+  window.itemId = id;
+  history.replaceState(null, "", "issue.html?id=" + encodeURIComponent(id));
+  document.getElementById("pickerCard").style.display = "none";
+  document.getElementById("itemSummaryBlock").style.display = "block";
+  document.getElementById("issueFormCard").style.display = "block";
+  document.getElementById("recentCard").style.display = "block";
+  watchItem(id);
+}
+window.selectItem = selectItem;
+
+function backToPicker(){
+  itemId = null;
+  window.itemId = null;
+  liveData = null;
+  history.replaceState(null, "", "issue.html");
+  document.getElementById("itemSummaryBlock").style.display = "none";
+  document.getElementById("issueFormCard").style.display = "none";
+  document.getElementById("recentCard").style.display = "none";
+  document.getElementById("pickerCard").style.display = "block";
+}
+window.backToPicker = backToPicker;
+
+/* ---------- Item picker (used when issue.html is opened without ?id=) ---------- */
+let allItems = [];
+if(!itemId){
+  document.getElementById("pickerCard").style.display = "block";
+  onSnapshot(query(collection(db, "stockItems")), (snap)=>{
+    allItems = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+    renderPicker();
+  }, (err)=>{ console.error("stockItems listener error:", err); });
+} else {
+  watchItem(itemId);
+  document.getElementById("itemSummaryBlock").style.display = "block";
+  document.getElementById("issueFormCard").style.display = "block";
+  document.getElementById("recentCard").style.display = "block";
+}
+
+window.renderPicker = function renderPicker(){
+  const q = (document.getElementById("pickerSearch").value || "").trim().toLowerCase();
+  const list = allItems
+    .filter(it => !q || (it.name||"").toLowerCase().includes(q) || (it.code||"").toLowerCase().includes(q))
+    .sort((a,b)=> (a.name||"").localeCompare(b.name||""));
+  const box = document.getElementById("pickerList");
+  if(list.length === 0){
+    box.innerHTML = `<div class="tx-empty">No items match your search.</div>`;
+    return;
+  }
+  box.innerHTML = list.map(it=>{
+    const status = statusOf(it.balance, it.min);
+    return `
+      <div class="tx-row" style="cursor:pointer;" onclick="selectItem('${it.id}')">
+        <div class="tx-mid" style="padding:0;">
+          <div class="r">${it.name || "—"}</div>
+          <div class="s">${it.code || "—"} · ${it.uom || ""}</div>
+        </div>
+        <div class="tx-right">
+          <span class="pill ${pillClass(status)}" style="font-size:10px;padding:3px 9px;">${status}</span>
+        </div>
+      </div>`;
+  }).join("");
+};
+
+function renderRecentIssues(){
+  const list = rawIssues.slice(0, 5);
+  const box = document.getElementById("recentIssueList");
+  if(list.length === 0){
+    box.innerHTML = `<div class="tx-empty">No issues recorded for this item yet.</div>`;
+    return;
+  }
+  box.innerHTML = list.map(t=>{
+    const dateStr = t.ts ? t.ts.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}) : "—";
+    const timeStr = t.issueTime || (t.ts ? t.ts.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}) : "");
+    const ref = "ISS-" + t.id.slice(0,8).toUpperCase();
+    return `
+      <div class="tx-row">
+        <div class="tx-left">
+          <div class="d">${dateStr}</div>
+          <div class="t">${timeStr}</div>
+        </div>
+        <div class="tx-mid">
+          <div class="r">${ref}</div>
+          <div class="s">${t.machine || "—"} · ${t.who || "—"}</div>
+          <span class="tag">ISSUED</span>
+        </div>
+        <div class="tx-right">
+          <span class="q">${fmtNum(t.qty||0)} ${curUnitAbbr}</span>
+          <button class="tx-pdf-btn" onclick="generateIssuePDF('${t.id}')" aria-label="Download issue slip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M6 9l6 6 6-6"/><path d="M4 21h16"/></svg>
+          </button>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+/* =========================================================================
+   ISSUE STOCK — the only write action available on this page.
+   Deducts the issued quantity from stockItems.balance inside a Firestore
+   transaction (so two storemen issuing at once can't oversell the same
+   stock), then logs a stockTransactions "out" record for the ledger.
+   ========================================================================= */
+window.submitIssue = function submitIssue(){
+  if(!currentUser){ document.getElementById("accessGate").style.display = "flex"; return; }
+  if(!itemId){ return showIssueError("Select an item to issue first."); }
+  const errBox = document.getElementById("issueError");
+  const okBox = document.getElementById("issueSuccess");
+  errBox.style.display = "none";
+  okBox.style.display = "none";
+
+  const issueTo = document.getElementById("issueTo").value.trim();
+  const collectedBy = document.getElementById("collectedBy").value.trim();
+  const purpose = document.getElementById("purpose").value.trim();
+  const qty = parseFloat(document.getElementById("qty").value);
+  const issueTime = document.getElementById("issueTime").value;
+  const remarks = document.getElementById("remarks").value.trim();
+
+  if(!issueTo){ return showIssueError("Enter who this item is being issued to."); }
+  if(!collectedBy){ return showIssueError("Enter who is collecting the item."); }
+  if(!purpose){ return showIssueError("Enter a purpose or work order."); }
+  if(!qty || qty <= 0){ return showIssueError("Enter a quantity greater than 0."); }
+  if(!issueTime){ return showIssueError("Enter the time of issue."); }
+  if(!liveData){ return showIssueError("Item not loaded yet — try again in a moment."); }
+
+  const btn = document.getElementById("issueBtn");
+  btn.disabled = true;
+
+  const itemRef = doc(db, "stockItems", itemId);
+  let newBalanceAfter = null;
+
+  runTransaction(db, async (tx)=>{
+    const snap = await tx.get(itemRef);
+    if(!snap.exists()) throw new Error("This item no longer exists.");
+    const curBalance = snap.data().balance || 0;
+    if(qty > curBalance) throw new Error(`Only ${fmtNum(curBalance)} ${curUnitAbbr} in stock — cannot issue ${qty}.`);
+    newBalanceAfter = curBalance - qty;
+    tx.update(itemRef, { balance: newBalanceAfter, updatedAt: serverTimestamp(), updatedBy: currentUserEmail });
+  }).then(()=>{
+    return addDoc(collection(db, "stockTransactions"), {
+      itemId, itemName: liveData.name, type: "out", qty, unit: curUnitAbbr,
+      machine: issueTo, who: collectedBy, note: purpose + (remarks ? (" — " + remarks) : ""),
+      issueTime, createdAt: serverTimestamp(), createdBy: currentUserEmail, createdByName: storemanName
+    });
+  }).then((docRef)=>{
+    okBox.textContent = `Issued ${fmtNum(qty)} ${curUnitAbbr} of ${liveData.name}.`;
+    okBox.style.display = "block";
+    generateIssuePDF(null, {
+      itemName: liveData.name, itemCode: liveData.code, qty, unit: curUnitAbbr,
+      issueTo, collectedBy, purpose, remarks, issueTime,
+      dateStr: new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}),
+      ref: "ISS-" + docRef.id.slice(0,8).toUpperCase(), storemanName
+    });
+    document.getElementById("issueTo").value = "";
+    document.getElementById("collectedBy").value = "";
+    document.getElementById("purpose").value = "";
+    document.getElementById("qty").value = "";
+    document.getElementById("remarks").value = "";
+    document.getElementById("issueTime").value = nowHHMM();
+    btn.disabled = false;
+  }).catch(err=>{
+    showIssueError(err.message || "Could not issue stock.");
+    btn.disabled = false;
+  });
+};
+function showIssueError(msg){
+  const errBox = document.getElementById("issueError");
+  errBox.textContent = msg;
+  errBox.style.display = "block";
+}
+
+/* ---------- PDF: issue slip (used right after issuing, and per-row) ---------- */
+window.generateIssuePDF = function generateIssuePDF(txId, prebuilt){
+  const build = (data)=>{
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.setFont("helvetica","bold");
+    doc.setFontSize(16);
+    doc.text("Cabro City — Stock Issue Slip", 14, 18);
+    doc.setFont("helvetica","normal");
+    doc.setFontSize(10);
+    doc.setTextColor(90);
+    doc.text(`Reference: ${data.ref}`, 14, 26);
+    doc.text(`Date: ${data.dateStr}    Time of issue: ${data.issueTime}`, 14, 31);
+    doc.setTextColor(0);
+
+    doc.autoTable({
+      startY: 40,
+      head: [["Field","Details"]],
+      body: [
+        ["Item", `${data.itemName} (${data.itemCode||""})`],
+        ["Quantity issued", `${fmtNum(data.qty)} ${data.unit}`],
+        ["Issue to", data.issueTo],
+        ["Collected by", data.collectedBy],
+        ["Purpose / work order", data.purpose],
+        ["Remarks", data.remarks || "—"]
+      ],
+      theme: "grid",
+      headStyles: { fillColor: [245,89,10] },
+      styles: { fontSize: 10 },
+      margin: { left: 14, right: 14 }
+    });
+
+    const finalY = doc.lastAutoTable.finalY + 16;
+    doc.setFont("helvetica","bold");
+    doc.setFontSize(10);
+    doc.text(`Issued by (Storeman): ${data.storemanName}`, 14, finalY);
+
+    doc.save(`${data.ref}-issue-slip.pdf`);
+  };
+
+  if(prebuilt){ build(prebuilt); return; }
+
+  const t = rawIssues.find(r=>r.id === txId);
+  if(!t){ alert("Could not find that transaction."); return; }
+  build({
+    itemName: liveData ? liveData.name : (t.itemName || "—"),
+    itemCode: liveData ? liveData.code : "",
+    qty: t.qty||0, unit: t.unit || curUnitAbbr,
+    issueTo: t.machine || "—", collectedBy: t.who || "—",
+    purpose: (t.note||"").split(" — ")[0] || "—",
+    remarks: (t.note||"").split(" — ")[1] || "",
+    issueTime: t.issueTime || (t.ts ? t.ts.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}) : "—"),
+    dateStr: t.ts ? t.ts.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}) : "—",
+    ref: "ISS-" + t.id.slice(0,8).toUpperCase(),
+    storemanName: t.createdByName || nameFromEmail(t.createdBy) || "—"
+  });
+};
+
+/* ---------- Print button: PDF summary of recent issues for this item ---------- */
+window.generateSummaryPDF = function generateSummaryPDF(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.setFont("helvetica","bold");
+  doc.setFontSize(16);
+  doc.text("Cabro City — Recent Issue Transactions", 14, 18);
+  doc.setFont("helvetica","normal");
+  doc.setFontSize(10);
+  doc.setTextColor(90);
+  doc.text(`Item: ${liveData ? liveData.name : "—"} (${liveData ? liveData.code : "—"})`, 14, 26);
+  doc.text(`Prepared by (Storeman): ${storemanName}`, 14, 31);
+  doc.setTextColor(0);
+
+  const rows = rawIssues.slice(0,20).map(t=>[
+    t.ts ? t.ts.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}) : "—",
+    "ISS-" + t.id.slice(0,8).toUpperCase(),
+    t.machine || "—",
+    t.who || "—",
+    `${fmtNum(t.qty||0)} ${t.unit||curUnitAbbr}`
+  ]);
+
+  doc.autoTable({
+    startY: 40,
+    head: [["Date","Reference","Issue To","Collected By","Quantity"]],
+    body: rows.length ? rows : [["No issues recorded yet.","","","",""]],
+    theme: "grid",
+    headStyles: { fillColor: [245,89,10] },
+    styles: { fontSize: 9 },
+    margin: { left: 14, right: 14 }
+  });
+
+  doc.save(`${liveData ? liveData.code : "item"}-issue-summary.pdf`);
+};
+
+Object.assign(window, { toggleAvatarMenu, signOutNow, submitGateLogin });
+</script>
+
+</body>
+</html>
