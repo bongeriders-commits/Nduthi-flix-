@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock List — Cabro City</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ffffff;
+    --panel:#f6f6f8;
+    --panel-alt:#eeeef1;
+    --panel-raise:#ffffff;
+    --line:#e2e2e6;
+    --line-soft:#ececf0;
+    --text:#151517;
+    --text-dim:#68686f;
+    --text-faint:#9a9aa2;
+    --oxide:#f5590a;
+    --oxide-dim:#b8420a;
+    --amber:#b45309;
+    --red:#e13a3a;
+    --green:#16a34a;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  html,body{
+    background:#f4f4f6;
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  button,input,select{font-family:inherit;}
+
+  /* ===== App shell ===== */
+  .app-shell{
+    max-width:1040px;margin:0 auto;min-height:100vh;
+    background:var(--bg);position:relative;
+    padding-bottom:96px;
+    border-left:1px solid var(--line);border-right:1px solid var(--line);
+  }
+  @media(max-width:1060px){ .app-shell{border-left:none;border-right:none;} }
+
+  /* ===== Mobile header ===== */
+  .mobile-header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 20px;border-bottom:1px solid var(--line);
+    position:sticky;top:0;background:#ffffff;z-index:30;
+  }
+  .mh-left{display:flex;align-items:center;gap:14px;}
+  .hamburger{width:22px;height:15px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;background:none;border:none;padding:0;}
+  .hamburger span{display:block;height:2.5px;background:#1a1a1d;border-radius:2px;}
+  .mh-logo{display:flex;align-items:center;gap:10px;cursor:pointer;background:none;border:none;padding:0;}
+  .brand-logo-img{height:36px;width:auto;display:block;}
+  .mh-right{display:flex;align-items:center;gap:18px;}
+  .bell{position:relative;width:23px;height:23px;color:#68686f;background:none;border:none;padding:0;cursor:pointer;}
+  .bell svg{width:100%;height:100%;}
+  .bell .badge-dot{position:absolute;top:-6px;right:-8px;background:#ff7a1f;color:#fff;font-size:10px;font-weight:700;min-width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;padding:0 3px;font-family:'IBM Plex Mono',monospace;box-shadow:0 0 0 2px #ffffff;}
+  .avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#3a3a40,#1c1c1f);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;position:relative;font-family:'Oswald',sans-serif;flex-shrink:0;border:1.5px solid #3a3a40;cursor:pointer;}
+  .avatar .dot{position:absolute;bottom:0;right:0;width:10px;height:10px;border-radius:50%;background:#ff7a1f;border:2px solid #ffffff;}
+
+  /* ===== Page head ===== */
+  .page-head{
+    display:flex;align-items:flex-start;justify-content:space-between;
+    gap:14px;flex-wrap:wrap;
+    padding:22px 20px 16px;
+  }
+  .page-head h1{margin:0;font-size:25px;font-weight:800;letter-spacing:-0.01em;color:var(--text);}
+  .page-head p{margin:5px 0 0;font-size:12.5px;color:var(--text-dim);}
+  .btn-add{
+    display:flex;align-items:center;gap:8px;
+    background:var(--oxide);color:#fff;border:none;
+    padding:12px 18px;border-radius:11px;
+    font-size:13.5px;font-weight:700;cursor:pointer;
+    box-shadow:0 8px 18px -6px rgba(245,89,10,0.55);
+    white-space:nowrap;
+  }
+  .btn-add:hover{background:#ff6b1f;}
+  .btn-add svg{width:16px;height:16px;}
+
+  /* ===== Toolbar ===== */
+  .stock-toolbar{
+    display:flex;gap:10px;padding:0 20px 16px;flex-wrap:wrap;
+    position:relative;
+  }
+  .stock-search{
+    flex:1;min-width:220px;position:relative;
+  }
+  .stock-search input{
+    width:100%;background:#ffffff;border:1px solid var(--line);
+    color:var(--text);padding:12px 40px 12px 16px;border-radius:11px;
+    font-size:13.5px;
+  }
+  .stock-search input::placeholder{color:var(--text-faint);}
+  .stock-search input:focus{outline:2px solid var(--oxide);outline-offset:-1px;}
+  .stock-search svg{
+    position:absolute;right:14px;top:50%;transform:translateY(-50%);
+    width:16px;height:16px;color:var(--text-faint);pointer-events:none;
+  }
+  .btn-filter{
+    display:flex;align-items:center;gap:8px;
+    background:#ffffff;border:1px solid var(--line);color:var(--text);
+    padding:12px 16px;border-radius:11px;font-size:13.5px;font-weight:600;
+    cursor:pointer;white-space:nowrap;
+  }
+  .btn-filter svg{width:15px;height:15px;color:var(--text-dim);}
+  .btn-filter.on{border-color:var(--oxide);color:var(--oxide);}
+
+  .filter-panel{
+    position:absolute;top:52px;right:20px;z-index:25;
+    background:#fff;border:1px solid var(--line);border-radius:12px;
+    box-shadow:0 16px 40px -12px rgba(0,0,0,0.25);
+    padding:14px;width:220px;display:none;
+  }
+  .filter-panel.open{display:block;}
+  .filter-panel h4{margin:0 0 10px;font-size:11px;letter-spacing:0.07em;text-transform:uppercase;color:var(--text-faint);font-family:'Oswald',sans-serif;}
+  .filter-row{display:flex;align-items:center;gap:9px;padding:7px 2px;font-size:13px;color:var(--text);cursor:pointer;}
+  .filter-row input{width:15px;height:15px;accent-color:var(--oxide);}
+  .filter-actions{display:flex;gap:8px;margin-top:10px;}
+  .filter-actions button{flex:1;padding:8px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;}
+  .filter-clear{background:none;border:1px solid var(--line);color:var(--text-dim);}
+  .filter-apply{background:var(--oxide);border:none;color:#fff;}
+
+  /* ===== Table ===== */
+  .table-wrap{margin:0 20px 14px;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;}
+  .table-scroll{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;min-width:680px;}
+  thead th{
+    text-align:left;font-size:11.5px;letter-spacing:0.04em;
+    color:var(--text-dim);padding:13px 18px;
+    border-bottom:1px solid var(--line);background:#fafafb;
+    font-weight:700;white-space:nowrap;
+  }
+  th.sortable{cursor:pointer;user-select:none;}
+  th.sortable .car{display:inline-flex;flex-direction:column;margin-left:4px;vertical-align:middle;line-height:0;}
+  th.sortable .car svg{width:8px;height:8px;display:block;color:var(--text-faint);}
+  th.sortable.sort-asc .car svg:first-child,
+  th.sortable.sort-desc .car svg:last-child{color:var(--oxide);}
+  tbody td{padding:14px 18px;font-size:13.5px;border-bottom:1px solid var(--line-soft);color:var(--text);vertical-align:middle;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:#fbfbfc;}
+  .it-name{font-weight:700;font-size:13.5px;}
+  .it-code{font-size:11.5px;color:var(--text-faint);margin-top:2px;font-family:'IBM Plex Mono',monospace;}
+  .pill{display:inline-flex;align-items:center;padding:5px 12px;border-radius:100px;font-size:11.5px;font-weight:700;}
+  .pill.active{background:#dcfce7;color:var(--green);}
+  .pill.low{background:#ffe6d3;color:var(--oxide-dim);}
+  .pill.out{background:#fde2e2;color:var(--red);}
+  .action-cell{position:relative;text-align:right;}
+  .action-dot{background:none;border:none;color:var(--text-faint);cursor:pointer;padding:6px;border-radius:8px;}
+  .action-dot:hover{background:var(--panel-alt);color:var(--text);}
+  .action-dot svg{width:17px;height:17px;display:block;}
+  .action-menu{
+    position:absolute;right:14px;top:38px;z-index:20;
+    background:#fff;border:1px solid var(--line);border-radius:10px;
+    box-shadow:0 14px 34px -10px rgba(0,0,0,0.28);
+    min-width:130px;padding:6px;display:none;text-align:left;
+  }
+  .action-menu.open{display:block;}
+  .action-menu button{
+    width:100%;text-align:left;background:none;border:none;padding:9px 10px;
+    font-size:12.5px;color:var(--text);border-radius:7px;cursor:pointer;
+  }
+  .action-menu button:hover{background:var(--panel-alt);}
+  .action-menu button.danger{color:var(--red);}
+  .empty-row td{text-align:center;color:var(--text-faint);padding:40px 18px;font-size:13px;}
+
+  /* ===== Pagination ===== */
+  .pagination{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 20px 6px;gap:12px;flex-wrap:wrap;
+  }
+  .pg-info{font-size:12.5px;color:var(--text-dim);}
+  .pg-controls{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .pg-btn{
+    min-width:34px;height:34px;padding:0 8px;border-radius:9px;
+    border:1px solid var(--line);background:#fff;color:var(--text);
+    font-size:12.5px;font-weight:600;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .pg-btn:hover:not(.active):not(:disabled){border-color:var(--text-faint);}
+  .pg-btn.active{background:var(--oxide);border-color:var(--oxide);color:#fff;}
+  .pg-btn:disabled{opacity:0.4;cursor:default;}
+  .pg-btn svg{width:14px;height:14px;}
+  .pg-dots{color:var(--text-faint);font-size:12.5px;padding:0 2px;}
+
+  /* ===== Bottom nav ===== */
+  .bottom-nav{
+    position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+    width:100%;max-width:1040px;background:var(--panel);
+    border-top:1px solid var(--line);
+    display:flex;align-items:center;justify-content:space-around;
+    padding:11px 4px 16px;z-index:40;
+  }
+  .nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;color:var(--text-faint);font-size:9.5px;cursor:pointer;flex:1;padding:2px 0;max-width:120px;}
+  .nav-item svg{width:19px;height:19px;}
+  .nav-item.active{color:var(--oxide);}
+
+  /* ===== Modal ===== */
+  .overlay{position:fixed;inset:0;background:rgba(10,10,11,0.55);display:none;align-items:center;justify-content:center;z-index:100;padding:20px;}
+  .overlay.open{display:flex;}
+  .modal{background:#fff;border:1px solid var(--line);border-radius:14px;width:100%;max-width:440px;padding:22px 22px 20px;max-height:88vh;overflow-y:auto;}
+  .modal h3{font-size:16px;margin:0 0 16px;color:var(--text);font-weight:800;}
+  .field{margin-bottom:13px;}
+  .field label{display:block;font-size:11.5px;color:var(--text-dim);font-weight:600;margin-bottom:6px;}
+  .field select,.field input{width:100%;background:var(--panel);border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:8px;font-size:13.5px;}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .modal-actions{display:flex;gap:10px;margin-top:18px;}
+  .btn-cancel{flex:1;padding:11px;border-radius:9px;border:1px solid var(--line);background:transparent;color:var(--text-dim);font-size:13px;font-weight:600;cursor:pointer;}
+  .btn-submit{flex:2;padding:11px;border-radius:9px;border:none;background:var(--oxide);color:#fff;font-size:13px;font-weight:700;cursor:pointer;}
+  .btn-submit:hover{background:#ff6b1f;}
+
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--oxide);outline-offset:2px;}
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- HEADER -->
+  <div class="mobile-header">
+    <div class="mh-left">
+      <button class="hamburger" aria-label="Back to dashboard" onclick="location.href='index.html'"><span></span><span></span><span></span></button>
+      <button class="mh-logo" onclick="location.href='index.html'" aria-label="Cabro City home">
+        <img src="assets/cabro-city-logo.png" alt="Cabro City — Paving the Future" class="brand-logo-img">
+      </button>
+    </div>
+    <div class="mh-right">
+      <button class="bell" onclick="location.href='index.html'" aria-label="Notifications">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="badge-dot">5</span>
+      </button>
+      <div class="avatar" onclick="location.href='index.html'">JM<span class="dot"></span></div>
+    </div>
+  </div>
+
+  <!-- PAGE HEAD -->
+  <div class="page-head">
+    <div>
+      <h1>Stock List</h1>
+      <p>All items in your stores</p>
+    </div>
+    <button class="btn-add" onclick="openAddModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      Add New Item
+    </button>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="stock-toolbar">
+    <div class="stock-search">
+      <input type="text" id="searchInput" placeholder="Search item by name, code or category..." oninput="onSearch()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    </div>
+    <button class="btn-filter" id="filterBtn" onclick="toggleFilterPanel()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+      Filter
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="filter-panel" id="filterPanel">
+      <h4>Status</h4>
+      <label class="filter-row"><input type="checkbox" class="statusFilter" value="Active" checked> Active</label>
+      <label class="filter-row"><input type="checkbox" class="statusFilter" value="Low Stock" checked> Low Stock</label>
+      <label class="filter-row"><input type="checkbox" class="statusFilter" value="Out of Stock" checked> Out of Stock</label>
+      <div class="filter-actions">
+        <button class="filter-clear" onclick="clearFilters()">Clear</button>
+        <button class="filter-apply" onclick="applyFilters()">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th class="sortable" data-key="category" onclick="toggleSort('category')">Category<span class="car"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5l5 6H7z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 19l-5-6h10z"/></svg></span></th>
+            <th class="sortable" data-key="uom" onclick="toggleSort('uom')">UOM<span class="car"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5l5 6H7z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 19l-5-6h10z"/></svg></span></th>
+            <th class="sortable" data-key="min" onclick="toggleSort('min')">Min. Stock<span class="car"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5l5 6H7z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 19l-5-6h10z"/></svg></span></th>
+            <th class="sortable" data-key="status" onclick="toggleSort('status')">Status<span class="car"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5l5 6H7z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 19l-5-6h10z"/></svg></span></th>
+            <th style="text-align:right;">Action</th>
+          </tr>
+        </thead>
+        <tbody id="stockTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PAGINATION -->
+  <div class="pagination">
+    <div class="pg-info" id="pgInfo"></div>
+    <div class="pg-controls" id="pgControls"></div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <button class="nav-item" onclick="location.href='index.html'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+      Dashboard
+    </button>
+    <button class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>
+      Inventory
+    </button>
+    <button class="nav-item" onclick="location.href='index.html#transactions'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+      Transactions
+    </button>
+    <button class="nav-item" onclick="location.href='index.html#reports'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+      Reports
+    </button>
+  </div>
+
+</div>
+
+<!-- ADD ITEM MODAL -->
+<div class="overlay" id="addOverlay">
+  <div class="modal">
+    <h3>Add New Item</h3>
+    <div class="field">
+      <label>Item name</label>
+      <input type="text" id="newName" placeholder="e.g. Diesel 50ppm">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Category</label>
+        <select id="newCategory">
+          <option>Fuel</option><option>Cement</option><option>Steel</option>
+          <option>PPE</option><option>Lubricants</option><option>Filters</option>
+          <option>Hardware</option><option>Other</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>UOM</label>
+        <select id="newUom">
+          <option>Litre (LTR)</option><option>Bag</option><option>Piece</option>
+          <option>Pair</option><option>Kg</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Min. stock</label>
+        <input type="number" id="newMin" placeholder="e.g. 20" min="0">
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <select id="newStatus">
+          <option>Active</option><option>Low Stock</option><option>Out of Stock</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeAddModal()">Cancel</button>
+      <button class="btn-submit" onclick="submitNewItem()">Add Item</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- Data ---------- */
+const BASE_ITEMS = [
+  {name:"Diesel 50ppm", category:"Fuel", uom:"Litre (LTR)", min:1000, status:"Active"},
+  {name:"Ordinary Portland Cement 42.5N", category:"Cement", uom:"Bag", min:100, status:"Active"},
+  {name:"Steel Rebar 16mm", category:"Steel", uom:"Piece", min:50, status:"Active"},
+  {name:"Safety Helmet", category:"PPE", uom:"Piece", min:20, status:"Active"},
+  {name:"Safety Gloves", category:"PPE", uom:"Pair", min:30, status:"Active"},
+  {name:"Engine Oil 15W40", category:"Lubricants", uom:"Litre (LTR)", min:10, status:"Active"},
+  {name:"Air Filter", category:"Filters", uom:"Piece", min:15, status:"Low Stock"},
+  {name:"Bolts & Nuts", category:"Hardware", uom:"Kg", min:25, status:"Low Stock"},
+  {name:"Reflective Jacket", category:"PPE", uom:"Piece", min:10, status:"Active"},
+  {name:"Fuel Filter", category:"Filters", uom:"Piece", min:12, status:"Low Stock"}
+];
+const TOTAL_ITEMS = 256;
+let items = [];
+for(let i=0;i<TOTAL_ITEMS;i++){
+  const t = BASE_ITEMS[i % BASE_ITEMS.length];
+  items.push({
+    code: "ITEM-" + String(i+1).padStart(4,"0"),
+    name: t.name,
+    category: t.category,
+    uom: t.uom,
+    min: t.min,
+    status: t.status
+  });
+}
+
+let filtered = items.slice();
+let currentPage = 1;
+const PAGE_SIZE = 10;
+let sortKey = null, sortDir = 1;
+let allowedStatuses = new Set(["Active","Low Stock","Out of Stock"]);
+let openMenuIndex = null;
+
+/* ---------- Render ---------- */
+function formatMin(item){
+  if(item.uom.startsWith("Litre")) return item.min.toLocaleString() + " L";
+  return item.min.toLocaleString();
+}
+function pillClass(status){
+  if(status==="Active") return "active";
+  if(status==="Low Stock") return "low";
+  return "out";
+}
+function renderTable(){
+  const start = (currentPage-1)*PAGE_SIZE;
+  const pageItems = filtered.slice(start, start+PAGE_SIZE);
+  const body = document.getElementById("stockTableBody");
+
+  if(pageItems.length === 0){
+    body.innerHTML = `<tr class="empty-row"><td colspan="6">No items match your search or filters.</td></tr>`;
+  } else {
+    body.innerHTML = pageItems.map((it, idx)=>`
+      <tr>
+        <td>
+          <div class="it-name">${escapeHtml(it.name)}</div>
+          <div class="it-code">${it.code}</div>
+        </td>
+        <td>${escapeHtml(it.category)}</td>
+        <td>${escapeHtml(it.uom)}</td>
+        <td>${formatMin(it)}</td>
+        <td><span class="pill ${pillClass(it.status)}">${it.status}</span></td>
+        <td class="action-cell">
+          <button class="action-dot" onclick="toggleActionMenu(event, ${start+idx})" aria-label="Actions">
+            <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
+          </button>
+          <div class="action-menu" id="menu-${start+idx}">
+            <button onclick="viewItem(${start+idx})">View</button>
+            <button onclick="editItem(${start+idx})">Edit</button>
+            <button class="danger" onclick="deleteItem(${start+idx})">Delete</button>
+          </div>
+        </td>
+      </tr>
+    `).join("");
+  }
+  renderPagination();
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+/* ---------- Pagination ---------- */
+function renderPagination(){
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if(currentPage > totalPages) currentPage = totalPages;
+  const start = total === 0 ? 0 : (currentPage-1)*PAGE_SIZE + 1;
+  const end = Math.min(currentPage*PAGE_SIZE, total);
+
+  document.getElementById("pgInfo").textContent = `Showing ${start} to ${end} of ${total} items`;
+
+  const controls = document.getElementById("pgControls");
+  let pages = [];
+  const windowSize = 3;
+  pages.push(1);
+  if(totalPages > 1){
+    for(let p=currentPage-1;p<=currentPage+1;p++){ if(p>1 && p<totalPages) pages.push(p); }
+    pages.push(totalPages);
+  }
+  pages = [...new Set(pages)].sort((a,b)=>a-b);
+
+  let html = `<button class="pg-btn" ${currentPage<=1?"disabled":""} onclick="goPage(${currentPage-1})" aria-label="Previous page">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+  </button>`;
+
+  let prev = 0;
+  pages.forEach(p=>{
+    if(prev && p - prev > 1) html += `<span class="pg-dots">…</span>`;
+    html += `<button class="pg-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`;
+    prev = p;
+  });
+
+  html += `<button class="pg-btn" ${currentPage>=totalPages?"disabled":""} onclick="goPage(${currentPage+1})" aria-label="Next page">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+  </button>`;
+
+  controls.innerHTML = html;
+}
+function goPage(p){
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  if(p<1 || p>totalPages) return;
+  currentPage = p;
+  renderTable();
+  document.querySelector(".table-wrap").scrollIntoView({behavior:"smooth", block:"nearest"});
+}
+
+/* ---------- Search / filter / sort ---------- */
+function applyPipeline(){
+  const q = document.getElementById("searchInput").value.trim().toLowerCase();
+  filtered = items.filter(it=>{
+    const matchesQuery = !q || it.name.toLowerCase().includes(q) || it.code.toLowerCase().includes(q) || it.category.toLowerCase().includes(q);
+    const matchesStatus = allowedStatuses.has(it.status);
+    return matchesQuery && matchesStatus;
+  });
+  if(sortKey){
+    filtered.sort((a,b)=>{
+      let av = a[sortKey], bv = b[sortKey];
+      if(typeof av === "string"){ av = av.toLowerCase(); bv = bv.toLowerCase(); }
+      if(av < bv) return -1*sortDir;
+      if(av > bv) return 1*sortDir;
+      return 0;
+    });
+  }
+  currentPage = 1;
+  renderTable();
+}
+function onSearch(){ applyPipeline(); }
+
+function toggleSort(key){
+  if(sortKey === key){ sortDir *= -1; } else { sortKey = key; sortDir = 1; }
+  document.querySelectorAll("th.sortable").forEach(th=>{
+    th.classList.remove("sort-asc","sort-desc");
+    if(th.dataset.key === sortKey) th.classList.add(sortDir===1 ? "sort-asc" : "sort-desc");
+  });
+  applyPipeline();
+}
+
+function toggleFilterPanel(){
+  document.getElementById("filterPanel").classList.toggle("open");
+}
+function clearFilters(){
+  document.querySelectorAll(".statusFilter").forEach(cb=>cb.checked=true);
+}
+function applyFilters(){
+  allowedStatuses = new Set(
+    [...document.querySelectorAll(".statusFilter:checked")].map(cb=>cb.value)
+  );
+  document.getElementById("filterBtn").classList.toggle("on", allowedStatuses.size < 3);
+  document.getElementById("filterPanel").classList.remove("open");
+  applyPipeline();
+}
+document.addEventListener("click", (e)=>{
+  const panel = document.getElementById("filterPanel");
+  const btn = document.getElementById("filterBtn");
+  if(panel.classList.contains("open") && !panel.contains(e.target) && !btn.contains(e.target)){
+    panel.classList.remove("open");
+  }
+  if(openMenuIndex !== null){
+    const menu = document.getElementById("menu-"+openMenuIndex);
+    if(menu && !menu.contains(e.target) && !e.target.closest(".action-dot")){
+      menu.classList.remove("open");
+      openMenuIndex = null;
+    }
+  }
+});
+
+/* ---------- Row actions ---------- */
+function toggleActionMenu(e, idx){
+  e.stopPropagation();
+  document.querySelectorAll(".action-menu.open").forEach(m=>m.classList.remove("open"));
+  const menu = document.getElementById("menu-"+idx);
+  const isOpen = menu.classList.contains("open");
+  if(!isOpen){ menu.classList.add("open"); openMenuIndex = idx; }
+  else { openMenuIndex = null; }
+}
+function viewItem(idx){
+  const it = items[idx];
+  goToDetails(it);
+}
+function editItem(idx){
+  const it = items[idx];
+  goToDetails(it);
+}
+function goToDetails(it){
+  const q = new URLSearchParams({
+    code: it.code, name: it.name, category: it.category,
+    uom: it.uom, min: it.min, status: it.status
+  });
+  location.href = "item-details.html?" + q.toString();
+}
+function deleteItem(idx){
+  const it = items[idx];
+  if(confirm(`Remove "${it.name}" (${it.code}) from the stock list?`)){
+    items.splice(idx,1);
+    applyPipeline();
+  }
+}
+
+/* ---------- Add new item ---------- */
+function openAddModal(){ document.getElementById("addOverlay").classList.add("open"); }
+function closeAddModal(){ document.getElementById("addOverlay").classList.remove("open"); }
+function submitNewItem(){
+  const name = document.getElementById("newName").value.trim();
+  if(!name){ alert("Please enter an item name."); return; }
+  const category = document.getElementById("newCategory").value;
+  const uom = document.getElementById("newUom").value;
+  const min = parseFloat(document.getElementById("newMin").value) || 0;
+  const status = document.getElementById("newStatus").value;
+  const nextNum = items.length + 1;
+  items.unshift({ code:"ITEM-"+String(nextNum).padStart(4,"0"), name, category, uom, min, status });
+  document.getElementById("newName").value = "";
+  document.getElementById("newMin").value = "";
+  closeAddModal();
+  applyPipeline();
+}
+
+/* ---------- Init ---------- */
+renderTable();
+</script>
+
+</body>
+</html>

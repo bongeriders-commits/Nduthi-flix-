@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Katani Quarry — Approvals</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ffffff;
+    --panel:#f6f6f8;
+    --panel-alt:#eeeef1;
+    --panel-raise:#ffffff;
+    --line:#e2e2e6;
+    --line-soft:#ececf0;
+    --text:#151517;
+    --text-dim:#68686f;
+    --text-faint:#9a9aa2;
+    --oxide:#f5590a;
+    --amber:#b45309;
+    --red:#e13a3a;
+    --green:#f5590a;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:#ffffff;}
+  html,body{
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  h1,h2,h3{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:0.04em;margin:0;}
+
+  .app-shell{
+    max-width:480px;margin:0 auto;min-height:100vh;
+    background:var(--bg);position:relative;
+    border-left:1px solid var(--line);border-right:1px solid var(--line);
+    padding-bottom:30px;
+  }
+  @media(max-width:520px){ .app-shell{border-left:none;border-right:none;} }
+
+  /* Header */
+  .mobile-header{
+    display:flex;align-items:center;gap:12px;
+    padding:16px;border-bottom:1px solid var(--line);
+    position:sticky;top:0;background:var(--bg);z-index:20;
+  }
+  .back-btn{
+    width:34px;height:34px;border-radius:9px;background:var(--panel);
+    border:1px solid var(--line);color:var(--text-dim);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;
+  }
+  .back-btn svg{width:16px;height:16px;}
+  .mh-title{flex:1;}
+  .mh-title h1{font-size:15px;color:var(--text);}
+  .mh-title .sub{font-size:10.5px;color:var(--text-faint);letter-spacing:0.1em;margin-top:2px;}
+  .mh-brand-logo{height:14px;width:auto;display:block;margin-top:4px;}
+  .mh-count{
+    background:var(--oxide);color:#fff;font-size:11px;font-weight:700;
+    min-width:22px;height:22px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Mono',monospace;flex-shrink:0;
+  }
+
+  .wrap{padding:16px;}
+
+  /* Summary strip */
+  .summary-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
+  .summary-card{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:12px;text-align:center;}
+  .summary-card .sc-val{font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:600;}
+  .summary-card .sc-val.red{color:var(--red);}
+  .summary-card .sc-val.blue{color:var(--oxide);}
+  .summary-card .sc-val.dim{color:var(--text);}
+  .summary-card .sc-label{font-size:9.5px;letter-spacing:0.08em;color:var(--text-faint);font-family:'Oswald',sans-serif;margin-top:4px;}
+
+  /* Filters */
+  .filter-row{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:2px;}
+  .fchip{
+    padding:8px 13px;border:1px solid var(--line);border-radius:100px;
+    font-size:11.5px;color:var(--text-dim);background:var(--panel);
+    cursor:pointer;white-space:nowrap;font-family:'Inter',sans-serif;flex-shrink:0;
+  }
+  .fchip.active{background:var(--oxide);border-color:var(--oxide);color:#fff;font-weight:600;}
+
+  /* Approval cards */
+  .approval-card{
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:14px;margin-bottom:10px;
+  }
+  .approval-card.crit{border-color:rgba(225,58,58,0.35);}
+  .ac-top{display:flex;align-items:flex-start;gap:11px;margin-bottom:10px;}
+  .ac-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .ac-icon svg{width:17px;height:17px;}
+  .ac-icon.red{background:rgba(225,58,58,0.16);color:var(--red);}
+  .ac-icon.blue{background:rgba(245,89,10,0.16);color:var(--oxide);}
+  .ac-icon.amber{background:rgba(180,83,9,0.12);color:var(--amber);}
+  .ac-body{flex:1;min-width:0;}
+  .ac-type{font-size:9.5px;letter-spacing:0.09em;color:var(--text-faint);font-family:'Oswald',sans-serif;margin-bottom:3px;}
+  .ac-title{font-size:13.5px;font-weight:600;color:var(--text);line-height:1.3;}
+  .ac-meta{font-size:11px;color:var(--text-faint);margin-top:6px;}
+  .ac-detail{
+    background:var(--panel-alt);border:1px solid var(--line-soft);border-radius:8px;
+    padding:9px 11px;font-size:11.5px;color:var(--text-dim);margin-bottom:12px;line-height:1.5;
+  }
+  .ac-detail b{color:var(--text);font-weight:600;}
+  .ac-actions{display:flex;gap:8px;}
+  .ac-btn{
+    flex:1;padding:10px;border-radius:8px;border:1px solid var(--line);
+    font-family:'Oswald',sans-serif;font-size:11.5px;letter-spacing:0.05em;
+    text-transform:uppercase;font-weight:600;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:6px;
+  }
+  .ac-btn svg{width:14px;height:14px;}
+  .ac-btn.approve{background:var(--oxide);border-color:var(--oxide);color:#fff;}
+  .ac-btn.approve:hover{background:#ff7a2e;}
+  .ac-btn.reject{background:transparent;color:var(--red);border-color:rgba(225,58,58,0.4);}
+  .ac-btn.reject:hover{background:rgba(225,58,58,0.1);}
+
+  .resolved-badge{
+    display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:100px;
+    font-size:10px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;
+    font-family:'Oswald',sans-serif;
+  }
+  .resolved-badge.approved{color:var(--oxide);background:rgba(245,89,10,0.14);}
+  .resolved-badge.rejected{color:var(--red);background:rgba(225,58,58,0.14);}
+
+  .section-label{
+    font-family:'Oswald',sans-serif;font-size:11px;letter-spacing:0.1em;
+    color:var(--text-faint);margin:22px 0 10px;
+  }
+
+  .empty-state{
+    display:flex;flex-direction:column;align-items:center;text-align:center;
+    padding:50px 24px;color:var(--text-dim);
+  }
+  .empty-state .e-icon{
+    width:52px;height:52px;border-radius:14px;background:var(--panel);border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;margin-bottom:14px;color:var(--oxide);
+  }
+  .empty-state .e-icon svg{width:24px;height:24px;}
+  .empty-state h3{font-family:'Inter',sans-serif;text-transform:none;font-size:14px;color:var(--text);margin-bottom:5px;}
+  .empty-state p{font-size:11.5px;color:var(--text-faint);max-width:230px;line-height:1.5;}
+
+  button:focus-visible{outline:2px solid var(--oxide);outline-offset:2px;}
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <div class="mobile-header">
+    <button class="back-btn" onclick="history.back()" aria-label="Back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    </button>
+    <div class="mh-title">
+      <h1>Approvals</h1>
+    </div>
+    <div class="mh-count" id="pendingCount">0</div>
+  </div>
+
+  <div class="wrap">
+
+    <div class="summary-row">
+      <div class="summary-card">
+        <div class="sc-val red" id="sumPending">0</div>
+        <div class="sc-label">PENDING</div>
+      </div>
+      <div class="summary-card">
+        <div class="sc-val blue" id="sumApproved">0</div>
+        <div class="sc-label">APPROVED</div>
+      </div>
+      <div class="summary-card">
+        <div class="sc-val dim" id="sumRejected">0</div>
+        <div class="sc-label">REJECTED</div>
+      </div>
+    </div>
+
+    <div class="filter-row">
+      <button class="fchip active" data-filter="all">All</button>
+      <button class="fchip" data-filter="discrepancy">Discrepancies</button>
+      <button class="fchip" data-filter="new-item">New Items</button>
+      <button class="fchip" data-filter="threshold">Threshold Changes</button>
+    </div>
+
+    <div id="pendingList"></div>
+    <div id="resolvedWrap"></div>
+
+  </div>
+</div>
+
+<script>
+const ICONS = {
+  warn:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>`,
+  box:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v3"/></svg>`,
+  sliders:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>`,
+  check:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>`,
+  x:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>`,
+  empty:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>`
+};
+
+let approvals = [
+  {
+    id:1, type:"discrepancy", status:"pending",
+    title:"Fan belt — count mismatch",
+    who:"P. Wanjiru · Audit", time:"2 days ago",
+    detail:`Physical count came to <b>3 pcs</b>, system recorded <b>5 pcs</b>. A discrepancy of 2 needs sign-off before the balance is corrected.`
+  },
+  {
+    id:2, type:"discrepancy", status:"pending",
+    title:"Air filter — Tipper flagged after issue",
+    who:"D. Kiprop · Store Clerk", time:"4 days ago",
+    detail:`Balance dropped to <b>0 pcs</b> after issue to Tipper KBZ 771X. Flagged for review before reordering.`
+  },
+  {
+    id:3, type:"new-item", status:"pending",
+    title:"New item request — Excavator hydraulic hose",
+    who:"J. Mutua · Store Clerk", time:"Yesterday",
+    detail:`Requesting to add <b>Excavator hydraulic hose</b> (Spares, unit: pc) to the register with a starting balance of <b>0</b> and minimum threshold of <b>2</b>.`
+  },
+  {
+    id:4, type:"threshold", status:"pending",
+    title:"Raise minimum threshold — Diesel (bulk)",
+    who:"P. Wanjiru · Store Clerk", time:"Today · 8:20am",
+    detail:`Requesting to raise the reorder minimum for <b>Diesel (bulk)</b> from <b>2,000 L</b> to <b>2,500 L</b> ahead of the rainy season.`
+  }
+];
+
+let activeFilter = "all";
+const iconFor = t => t==="discrepancy" ? "warn" : t==="new-item" ? "box" : "sliders";
+const colorFor = t => t==="discrepancy" ? "red" : t==="new-item" ? "blue" : "amber";
+const labelFor = t => t==="discrepancy" ? "STOCK DISCREPANCY" : t==="new-item" ? "NEW ITEM REQUEST" : "THRESHOLD CHANGE";
+
+function render(){
+  const pending = approvals.filter(a=>a.status==="pending");
+  const resolved = approvals.filter(a=>a.status!=="pending");
+  const approvedCount = approvals.filter(a=>a.status==="approved").length;
+  const rejectedCount = approvals.filter(a=>a.status==="rejected").length;
+
+  document.getElementById("pendingCount").textContent = pending.length;
+  document.getElementById("sumPending").textContent = pending.length;
+  document.getElementById("sumApproved").textContent = approvedCount;
+  document.getElementById("sumRejected").textContent = rejectedCount;
+
+  const shownPending = pending.filter(a=> activeFilter==="all" || a.type===activeFilter);
+
+  document.getElementById("pendingList").innerHTML = shownPending.length
+    ? shownPending.map(a=>`
+      <div class="approval-card ${a.type==='discrepancy'?'crit':''}">
+        <div class="ac-top">
+          <div class="ac-icon ${colorFor(a.type)}">${ICONS[iconFor(a.type)]}</div>
+          <div class="ac-body">
+            <div class="ac-type">${labelFor(a.type)}</div>
+            <div class="ac-title">${a.title}</div>
+            <div class="ac-meta">${a.who} · ${a.time}</div>
+          </div>
+        </div>
+        <div class="ac-detail">${a.detail}</div>
+        <div class="ac-actions">
+          <button class="ac-btn reject" onclick="resolve(${a.id},'rejected')">${ICONS.x} Reject</button>
+          <button class="ac-btn approve" onclick="resolve(${a.id},'approved')">${ICONS.check} Approve</button>
+        </div>
+      </div>
+    `).join("")
+    : `<div class="empty-state">
+        <div class="e-icon">${ICONS.empty}</div>
+        <h3>Nothing pending</h3>
+        <p>${activeFilter==="all" ? "All approval requests are cleared." : "No requests in this category right now."}</p>
+      </div>`;
+
+  document.getElementById("resolvedWrap").innerHTML = resolved.length
+    ? `<div class="section-label">RECENTLY ACTIONED</div>` + resolved.slice(0,6).map(a=>`
+      <div class="approval-card" style="opacity:0.7;">
+        <div class="ac-top" style="margin-bottom:0;">
+          <div class="ac-icon ${colorFor(a.type)}">${ICONS[iconFor(a.type)]}</div>
+          <div class="ac-body">
+            <div class="ac-type">${labelFor(a.type)}</div>
+            <div class="ac-title">${a.title}</div>
+            <div class="ac-meta">${a.who} · ${a.time}</div>
+          </div>
+          <span class="resolved-badge ${a.status}">${a.status}</span>
+        </div>
+      </div>
+    `).join("")
+    : "";
+}
+
+function resolve(id, status){
+  const a = approvals.find(x=>x.id===id);
+  if(a) a.status = status;
+  render();
+}
+
+document.querySelectorAll(".fchip").forEach(chip=>{
+  chip.addEventListener("click", ()=>{
+    document.querySelectorAll(".fchip").forEach(c=>c.classList.remove("active"));
+    chip.classList.add("active");
+    activeFilter = chip.dataset.filter;
+    render();
+  });
+});
+
+render();
+</script>
+
+</body>
+</html>
