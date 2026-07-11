@@ -58,6 +58,16 @@ export function unitAbbr(uom) {
   return "pc";
 }
 
+// Turns "john.mutua@cabrocity.co.ke" into "JM" for the header avatar.
+// Falls back gracefully for single-word or missing addresses.
+export function initialsFromEmail(email) {
+  if (!email) return "?";
+  const local = email.split("@")[0];
+  const parts = local.split(/[._\-+]+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return local.slice(0, 2).toUpperCase() || "?";
+}
+
 /* ---------- Re-exported Firestore functions ---------- */
 export {
   collection, doc, addDoc, updateDoc, deleteDoc, getDoc,

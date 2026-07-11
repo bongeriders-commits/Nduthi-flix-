@@ -2,31 +2,31 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Stock items — everyone using the app can read live stock,
-    // but only a signed-in admin (created by you in Firebase Auth)
-    // can add, edit, or delete an item.
+    // Stock items — the app is now locked behind sign-in, so only
+    // signed-in ("added") users can read at all. Only a signed-in admin
+    // (created by you in Firebase Auth) can add, edit, or delete an item.
     match /stockItems/{itemId} {
-      allow read: if true;
+      allow read: if request.auth != null;
       allow create, update, delete: if request.auth != null;
     }
 
-    // Stock in/out transaction log — read for the activity feed,
-    // create only by signed-in admins, never edited or deleted
-    // (keeps an honest audit trail).
+    // Stock in/out transaction log — read for the activity feed by any
+    // signed-in user, create only by signed-in admins, never edited or
+    // deleted (keeps an honest audit trail).
     match /stockTransactions/{txId} {
-      allow read: if true;
+      allow read: if request.auth != null;
       allow create: if request.auth != null;
       allow update, delete: if false;
     }
 
     // Approval requests (discrepancies, new-item requests, threshold changes) —
-    // readable by anyone so the approvals screen works without login, and
-    // creatable by anyone (store clerks aren't given Firebase accounts).
-    // Only a signed-in admin can resolve (approve/reject) a request, and a
-    // request can never be edited back to "pending" or deleted once created.
+    // readable and creatable by any signed-in user. Only a signed-in admin
+    // can resolve (approve/reject) a request, and a request can never be
+    // edited back to "pending" or deleted once created.
     match /approvals/{approvalId} {
-      allow read: if true;
-      allow create: if request.resource.data.status == "pending"
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.resource.data.status == "pending"
                     && request.resource.data.type in ["discrepancy", "new-item", "threshold"];
       allow update: if request.auth != null
                     && request.resource.data.status in ["approved", "rejected"];

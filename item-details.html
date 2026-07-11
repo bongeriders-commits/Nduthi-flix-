@@ -164,9 +164,52 @@
   .nav-item.active{color:var(--oxide);}
 
   button:focus-visible,input:focus-visible{outline:2px solid var(--oxide);outline-offset:2px;}
+
+  .app-shell{display:none;}
+  .app-shell.ready{display:block;}
+
+  /* ---------- Access gate (whole app is locked behind sign-in) ---------- */
+  #accessGate{
+    position:fixed;inset:0;z-index:9999;background:#fff;
+    display:flex;align-items:center;justify-content:center;padding:24px;
+  }
+  .gate-card{width:100%;max-width:340px;text-align:center;}
+  .gate-card img{height:34px;width:auto;margin:0 auto 22px;display:block;}
+  .gate-card h2{font-family:'Inter',sans-serif;text-transform:none;font-size:17px;font-weight:700;margin-bottom:6px;}
+  .gate-card p{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-bottom:22px;}
+  .gate-card .field{margin-bottom:12px;text-align:left;}
+  .gate-card .field label{display:block;font-size:11px;color:var(--text-dim);margin-bottom:5px;}
+  .gate-card .field input{
+    width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--line);
+    font-size:13.5px;font-family:'Inter',sans-serif;box-sizing:border-box;
+  }
+  .gate-card .btn-submit{
+    width:100%;padding:12px;border-radius:9px;border:1px solid var(--oxide);
+    background:var(--oxide);color:#fff;font-weight:700;font-size:13px;
+    cursor:pointer;margin-top:6px;font-family:'Inter',sans-serif;
+  }
+  .gate-error{color:var(--red);font-size:12px;margin:-4px 0 12px;text-align:left;}
 </style>
 </head>
 <body>
+
+<div id="accessGate" style="display:none;">
+  <div class="gate-card">
+    <img src="/cabro-city-logo.png" alt="Cabro City">
+    <h2>Sign in required</h2>
+    <p>Cabro City is restricted to approved staff. If you don't have an account yet, ask your admin to add one for you.</p>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="gateEmail" placeholder="you@cabrocity.co.ke">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="gatePassword" placeholder="••••••••">
+    </div>
+    <div id="gateError" class="gate-error" style="display:none;"></div>
+    <button class="btn-submit" onclick="submitGateLogin()">Sign In</button>
+  </div>
+</div>
 
 <div class="app-shell">
 
@@ -187,13 +230,13 @@
         <span class="badge-dot">5</span>
       </button>
       <button class="avatar-wrap" onclick="toggleAvatarMenu(event)" aria-label="Account menu">
-        <div class="avatar">JM<span class="dot"></span></div>
+        <div class="avatar"><span id="avatarInitials">--</span><span class="dot"></span></div>
         <svg class="avatar-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
       </button>
       <div class="avatar-menu" id="avatarMenu">
         <button onclick="location.href='index.html'">Dashboard</button>
         <button onclick="alert('Profile settings coming soon.')">Profile</button>
-        <button onclick="alert('You have been signed out.')">Sign out</button>
+        <button onclick="signOutNow()">Sign out</button>
       </div>
     </div>
   </div>
@@ -467,7 +510,7 @@
 <script type="module">
 /* ---------- Firebase ---------- */
 import {
-  db, loginAdmin, logoutAdmin, watchAdmin, statusOf,
+  db, loginAdmin, logoutAdmin, watchAdmin, statusOf, initialsFromEmail,
   doc, updateDoc, onSnapshot, serverTimestamp, increment
 } from "./firebase-config.js";
 
@@ -493,15 +536,40 @@ if(!itemId){
 
 /* ---------- Admin auth ---------- */
 let isAdmin = false, currentAdminEmail = "";
+let appRevealed = false;
 watchAdmin((user)=>{
   isAdmin = !!user;
   currentAdminEmail = user ? user.email : "";
   const btn = document.getElementById("adminBtn");
   btn.textContent = isAdmin ? "Admin: " + currentAdminEmail.split("@")[0] : "Admin";
+  document.getElementById("avatarInitials").textContent = isAdmin ? initialsFromEmail(currentAdminEmail) : "--";
+
+  // Whole app is locked behind sign-in — only "added" (Firebase Auth) users get in.
+  const gate = document.getElementById("accessGate");
+  if(isAdmin){
+    gate.style.display = "none";
+    if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
+  } else {
+    gate.style.display = "flex";
+    document.querySelector(".app-shell").classList.remove("ready");
+    appRevealed = false;
+  }
 });
 function onAdminBtnClick(){
-  if(isAdmin){ if(confirm("Log out of admin mode?")) logoutAdmin(); }
-  else openAdminModal();
+  if(isAdmin){ if(confirm("Log out?")) logoutAdmin(); }
+}
+function signOutNow(){
+  if(confirm("Sign out?")) logoutAdmin();
+}
+function submitGateLogin(){
+  const email = document.getElementById("gateEmail").value.trim();
+  const password = document.getElementById("gatePassword").value;
+  const errBox = document.getElementById("gateError");
+  errBox.style.display = "none";
+  loginAdmin(email, password).catch(()=>{
+    errBox.textContent = "Sign-in failed — check your email and password, or ask your admin for access.";
+    errBox.style.display = "block";
+  });
 }
 function openAdminModal(){
   document.getElementById("adminError").style.display = "none";
@@ -756,7 +824,7 @@ function submitEditItem(){
 
 /* ---------- Expose functions used by inline onclick handlers ---------- */
 Object.assign(window, {
-  onAdminBtnClick, openAdminModal, closeAdminModal, submitAdminLogin,
+  onAdminBtnClick, openAdminModal, closeAdminModal, submitAdminLogin, submitGateLogin, signOutNow,
   switchDetailTab, toggleAvatarMenu, receiveStock, adjustStock,
   openEditModal, closeEditModal, submitEditItem, renderTransactionsSearch
 });
