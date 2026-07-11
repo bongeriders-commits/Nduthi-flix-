@@ -360,7 +360,7 @@
         </table>
       </div>
       <div class="view-all-wrap">
-        <button class="btn-view-all" onclick="alert('Full transaction history coming soon.')">View All Transactions</button>
+        <button class="btn-view-all" onclick="switchDetailTab('transactions')">View All Transactions</button>
       </div>
     </div>
 
@@ -368,10 +368,31 @@
 
   <!-- OTHER TABS (placeholders) -->
   <div class="tab-panel" id="tab-transactions">
-    <div class="placeholder-view">
-      <div class="p-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
-      <h3>Full transaction history</h3>
-      <p>A complete, filterable log of every receipt and issue for this item is coming soon.</p>
+    <div class="tx-card" style="margin:16px 20px 0;">
+      <div class="tx-head">
+        <h3>Full Transaction History</h3>
+        <div class="tx-tools">
+          <div class="tx-search">
+            <input type="text" id="txSearchFull" placeholder="Search transactions..." oninput="paintFullTransactions()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          </div>
+          <select id="txTypeFilterFull" onchange="paintFullTransactions()" style="background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:12.5px;color:var(--text-dim);cursor:pointer;">
+            <option value="">All types</option>
+            <option value="in">Received (GRN)</option>
+            <option value="out">Issued</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th><th>Type</th><th>Reference</th><th>Quantity</th><th>Balance</th><th>Unit Cost</th><th>Total (KSh)</th>
+            </tr>
+          </thead>
+          <tbody id="txBodyFull"></tbody>
+        </table>
+      </div>
     </div>
   </div>
   <div class="tab-panel" id="tab-purchase">
@@ -709,21 +730,16 @@ function renderTransactionsAndStats(){
 
   window.__currentTransactions = rows;
   paintTransactions();
+  paintFullTransactions();
 }
 
 function fmtQty(n){ return fmtNum(n) + " " + curUnitAbbr; }
 
-function paintTransactions(){
-  const transactions = window.__currentTransactions || [];
-  const q = (document.getElementById("txSearch").value || "").trim().toLowerCase();
-  const rows = transactions.filter(t =>
-    !q || t.ref.toLowerCase().includes(q) || t.who.toLowerCase().includes(q) || t.typeLabel.toLowerCase().includes(q)
-  );
+function renderTxRowsHtml(rows){
   if(rows.length === 0){
-    document.getElementById("txBody").innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-faint);padding:24px 12px;">No stock movements recorded for this item yet.</td></tr>`;
-    return;
+    return `<tr><td colspan="7" style="text-align:center;color:var(--text-faint);padding:24px 12px;">No stock movements match.</td></tr>`;
   }
-  document.getElementById("txBody").innerHTML = rows.map(t => `
+  return rows.map(t => `
     <tr>
       <td class="tx-date"><div class="d">${t.date}</div><div class="t">${t.time}</div></td>
       <td>
@@ -738,7 +754,33 @@ function paintTransactions(){
     </tr>
   `).join("");
 }
+
+function paintTransactions(){
+  const transactions = window.__currentTransactions || [];
+  const q = (document.getElementById("txSearch").value || "").trim().toLowerCase();
+  const rows = transactions.filter(t =>
+    !q || t.ref.toLowerCase().includes(q) || t.who.toLowerCase().includes(q) || t.typeLabel.toLowerCase().includes(q)
+  );
+  if(rows.length === 0){
+    document.getElementById("txBody").innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-faint);padding:24px 12px;">No stock movements recorded for this item yet.</td></tr>`;
+    return;
+  }
+  document.getElementById("txBody").innerHTML = renderTxRowsHtml(rows);
+}
 function renderTransactionsSearch(){ paintTransactions(); }
+
+/* ---------- Full transaction history tab (all movements, filterable) ---------- */
+function paintFullTransactions(){
+  const transactions = window.__currentTransactions || [];
+  const q = (document.getElementById("txSearchFull").value || "").trim().toLowerCase();
+  const typeFilter = document.getElementById("txTypeFilterFull").value;
+  const rows = transactions.filter(t =>
+    (!typeFilter || t.type === typeFilter) &&
+    (!q || t.ref.toLowerCase().includes(q) || t.who.toLowerCase().includes(q) || t.typeLabel.toLowerCase().includes(q) || (t.note && t.note.toLowerCase().includes(q)))
+  );
+  document.getElementById("txBodyFull").innerHTML = renderTxRowsHtml(rows);
+}
+
 
 /* ---------- Live sync — this is the core cross-page connection ---------- */
 onSnapshot(doc(db, "stockItems", itemId), (snap)=>{
@@ -815,7 +857,7 @@ function submitEditItem(){
 Object.assign(window, {
   onAdminBtnClick, openAdminModal, closeAdminModal, submitAdminLogin, submitGateLogin, signOutNow,
   switchDetailTab, toggleAvatarMenu,
-  openEditModal, closeEditModal, submitEditItem, renderTransactionsSearch
+  openEditModal, closeEditModal, submitEditItem, renderTransactionsSearch, paintFullTransactions
 });
 </script>
 
