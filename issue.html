@@ -350,7 +350,7 @@
 import {
   db, loginAdmin, logoutAdmin, watchAdmin, statusOf, initialsFromEmail, unitAbbr,
   doc, getDoc, addDoc, onSnapshot, serverTimestamp, runTransaction,
-  collection, query, where
+  collection, query, where, fetchOrBootstrapRole
 } from "./firebase-config.js";
 
 /* ---------- Read item id from query string (optional — may be picked below) ---------- */
@@ -369,23 +369,42 @@ window.itemId = itemId;
    any "admin" affordances elsewhere in the app.
    ========================================================================= */
 let currentUser = null, currentUserEmail = "", storemanName = "";
+let myRole = null, myUid = "";
 let appRevealed = false;
 
-watchAdmin((user)=>{
+watchAdmin(async (user)=>{
   currentUser = user;
   currentUserEmail = user ? user.email : "";
+  myUid = user ? user.uid : "";
   document.getElementById("avatarInitials").textContent = user ? initialsFromEmail(currentUserEmail) : "--";
 
   const gate = document.getElementById("accessGate");
-  if(user){
-    gate.style.display = "none";
-    if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
-    loadStoremanName();
-  } else {
+  const gateErr = document.getElementById("gateError");
+  if(!user){
+    myRole = null;
     gate.style.display = "flex";
     document.querySelector(".app-shell").classList.remove("ready");
     appRevealed = false;
+    return;
   }
+  let roleDoc;
+  try{ roleDoc = await fetchOrBootstrapRole(user); }catch(e){ roleDoc = null; }
+  if(!roleDoc){
+    myRole = null;
+    if(gateErr){
+      gateErr.textContent = "This account isn't set up in Cabro City. Ask the main admin to add you as a team member.";
+      gateErr.style.display = "block";
+    }
+    gate.style.display = "flex";
+    document.querySelector(".app-shell").classList.remove("ready");
+    appRevealed = false;
+    logoutAdmin();
+    return;
+  }
+  myRole = roleDoc.role;
+  gate.style.display = "none";
+  if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
+  loadStoremanName();
 });
 
 // Looks up a friendly display name for the signed-in storeman so it can be

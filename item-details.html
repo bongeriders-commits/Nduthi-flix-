@@ -255,7 +255,7 @@
         <span class="cur" id="bcName">Diesel 50ppm</span>
       </div>
     </div>
-    <button class="btn-outline" onclick="openEditModal()">
+    <button class="btn-outline" data-requires="manage" onclick="openEditModal()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4 11.5-11.5z"/></svg>
       Edit Item
     </button>
@@ -532,7 +532,7 @@
 import {
   db, loginAdmin, logoutAdmin, watchAdmin, statusOf, initialsFromEmail,
   doc, updateDoc, onSnapshot, serverTimestamp,
-  collection, query, where
+  collection, query, where, canManage, fetchOrBootstrapRole
 } from "./firebase-config.js";
 
 /* ---------- Category unit-cost fallback ----------
@@ -559,22 +559,42 @@ if(!itemId){
 
 /* ---------- Admin auth ---------- */
 let isAdmin = false, currentAdminEmail = "";
+let myRole = null, myUid = "";
 let appRevealed = false;
-watchAdmin((user)=>{
+watchAdmin(async (user)=>{
   isAdmin = !!user;
   currentAdminEmail = user ? user.email : "";
+  myUid = user ? user.uid : "";
   document.getElementById("avatarInitials").textContent = isAdmin ? initialsFromEmail(currentAdminEmail) : "--";
 
-  // Whole app is locked behind sign-in — only "added" (Firebase Auth) users get in.
+  // Whole app is locked behind sign-in AND an active team role — see index.html.
   const gate = document.getElementById("accessGate");
-  if(isAdmin){
-    gate.style.display = "none";
-    if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
-  } else {
+  const gateErr = document.getElementById("gateError");
+  if(!isAdmin){
+    myRole = null;
     gate.style.display = "flex";
     document.querySelector(".app-shell").classList.remove("ready");
     appRevealed = false;
+    return;
   }
+  let roleDoc;
+  try{ roleDoc = await fetchOrBootstrapRole(user); }catch(e){ roleDoc = null; }
+  if(!roleDoc){
+    myRole = null;
+    if(gateErr){
+      gateErr.textContent = "This account isn't set up in Cabro City. Ask the main admin to add you as a team member.";
+      gateErr.style.display = "block";
+    }
+    gate.style.display = "flex";
+    document.querySelector(".app-shell").classList.remove("ready");
+    appRevealed = false;
+    logoutAdmin();
+    return;
+  }
+  myRole = roleDoc.role;
+  document.querySelectorAll('[data-requires="manage"]').forEach(el=>{ el.style.display = canManage(myRole) ? "" : "none"; });
+  gate.style.display = "none";
+  if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
 });
 function onAdminBtnClick(){
   if(isAdmin){ if(confirm("Log out?")) logoutAdmin(); }

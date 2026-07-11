@@ -811,7 +811,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
       Transactions
     </button>
-    <button class="nav-item" data-tab="reports" onclick="switchTab('reports')">
+    <button class="nav-item" data-tab="reports" data-requires="manage" onclick="switchTab('reports')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
       Reports
     </button>
@@ -829,7 +829,7 @@
       <div class="drawer-brand">
         <img alt="Cabro City — Paving the Future" class="cc-logo" data-fallback="/cabro-city-logo.png">
       </div>
-      <div class="drawer-sub">STORES MANAGEMENT</div>
+      <div class="drawer-sub">STORES MANAGEMENT <span id="roleBadge" style="opacity:0.7;"></span></div>
     </div>
 
     <div class="drawer-nav">
@@ -842,7 +842,7 @@
         <span class="d-label">Inventory</span>
         <svg class="drawer-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
       </button>
-      <button class="drawer-item" onclick="closeDrawer();openNewItemModal();">
+      <button class="drawer-item" data-requires="manage" onclick="closeDrawer();openNewItemModal();">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v3"/></svg>
         <span class="d-label">Create Product</span>
       </button>
@@ -851,19 +851,23 @@
         <span class="d-label">Transactions</span>
         <svg class="drawer-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
       </button>
-      <button class="drawer-item" data-dtab="reports" onclick="drawerGo('reports')">
+      <button class="drawer-item" data-dtab="reports" data-requires="manage" onclick="drawerGo('reports')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
         <span class="d-label">Reports</span>
         <svg class="drawer-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
       </button>
-      <button class="drawer-item" onclick="closeDrawer();window.location.href='katani-approvals.html'">
+      <button class="drawer-item" data-requires="manage" onclick="closeDrawer();window.location.href='katani-approvals.html'">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
         <span class="d-label">Approvals</span>
         <span class="d-badge" id="drawerApprovalBadge">0</span>
       </button>
-      <button class="drawer-item" onclick="closeDrawer();window.location.href='suppliers.html'">
+      <button class="drawer-item" data-requires="manage" onclick="closeDrawer();window.location.href='suppliers.html'">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1.5"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
         <span class="d-label">Suppliers</span>
+      </button>
+      <button class="drawer-item" data-requires="owner" onclick="closeDrawer();openTeamModal();">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span class="d-label">Team &amp; Roles</span>
       </button>
       <div class="drawer-divider"></div>
       <button class="drawer-item" onclick="closeDrawer()">
@@ -910,6 +914,45 @@
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeAdminModal()">Cancel</button>
       <button class="btn-submit" onclick="submitAdminLogin()">Log In</button>
+    </div>
+  </div>
+</div>
+
+<!-- TEAM & ROLES MODAL (owner only) -->
+<div class="overlay" id="teamOverlay">
+  <div class="modal" style="max-width:420px;">
+    <h3>Team &amp; Roles</h3>
+
+    <div id="teamAddError" style="display:none;color:var(--red);font-size:12.5px;margin:-4px 0 10px;"></div>
+    <div class="field">
+      <label>Full name</label>
+      <input type="text" id="teamName" placeholder="e.g. Peter Kamau">
+    </div>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="teamEmail" placeholder="peter@cabrocity.co.ke">
+    </div>
+    <div class="field">
+      <label>Temporary password</label>
+      <input type="text" id="teamPassword" placeholder="At least 6 characters">
+    </div>
+    <div class="field">
+      <label>Role</label>
+      <select id="teamRole">
+        <option value="admin">Admin — full access, can't manage team</option>
+        <option value="staff">Staff — dashboard, inventory, receive/issue only</option>
+      </select>
+    </div>
+    <div class="modal-actions" style="margin-top:4px;">
+      <button class="btn-submit" style="width:100%;" onclick="submitAddTeamMember()">+ Add Team Member</button>
+    </div>
+
+    <div style="height:1px;background:var(--line);margin:18px 0 12px;"></div>
+    <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-faint);margin-bottom:8px;">Current Team</div>
+    <div id="teamList" style="display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto;"></div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" style="width:100%;" onclick="closeTeamModal()">Close</button>
     </div>
   </div>
 </div>
@@ -1003,30 +1046,136 @@
 /* ---------- Firebase ---------- */
 import {
   db, loginAdmin, logoutAdmin, watchAdmin, unitAbbr as sharedUnitAbbr, initialsFromEmail,
-  collection, doc, addDoc, onSnapshot, serverTimestamp, query, orderBy, limit, runTransaction
+  collection, doc, addDoc, onSnapshot, serverTimestamp, query, orderBy, limit, runTransaction,
+  ROLES, canManage, canManageTeam, fetchOrBootstrapRole, watchTeam, updateTeamMember, createTeamMember
 } from "./firebase-config.js";
 
 let isAdmin = false, currentAdminEmail = "";
+let myRole = null, myUid = "";
 let appRevealed = false;
-watchAdmin((user)=>{
+watchAdmin(async (user)=>{
   isAdmin = !!user;
   currentAdminEmail = user ? user.email : "";
-  document.getElementById("avatarInitials").textContent = isAdmin ? initialsFromEmail(currentAdminEmail) : "--";
-  const logoutLabel = document.getElementById("drawerLogoutLabel");
-  if(logoutLabel) logoutLabel.textContent = isAdmin ? "Log Out (" + currentAdminEmail.split("@")[0] + ")" : "Log Out";
-
-  // The whole app is locked behind sign-in — only "added" (Firebase Auth)
-  // users can see anything past this point.
+  myUid = user ? user.uid : "";
   const gate = document.getElementById("accessGate");
-  if(isAdmin){
-    gate.style.display = "none";
-    revealAppOnceReady();
-  } else {
+  const gateErr = document.getElementById("gateError");
+
+  if(!isAdmin){
+    myRole = null;
+    document.getElementById("avatarInitials").textContent = "--";
     gate.style.display = "flex";
     document.querySelector(".app-shell").classList.remove("ready");
     appRevealed = false;
+    return;
   }
+
+  // Signed into Firebase Auth — now check they actually have an active
+  // role doc (owner/admin/staff). No role doc + team already bootstrapped
+  // means this account was never added as a team member (or was deactivated).
+  let roleDoc;
+  try{
+    roleDoc = await fetchOrBootstrapRole(user);
+  }catch(e){ roleDoc = null; }
+
+  if(!roleDoc){
+    myRole = null;
+    if(gateErr){
+      gateErr.textContent = "This account isn't set up in Cabro City. Ask the main admin to add you as a team member.";
+      gateErr.style.display = "block";
+    }
+    gate.style.display = "flex";
+    document.querySelector(".app-shell").classList.remove("ready");
+    appRevealed = false;
+    logoutAdmin();
+    return;
+  }
+
+  myRole = roleDoc.role;
+  document.getElementById("avatarInitials").textContent = initialsFromEmail(currentAdminEmail);
+  const logoutLabel = document.getElementById("drawerLogoutLabel");
+  if(logoutLabel) logoutLabel.textContent = "Log Out (" + currentAdminEmail.split("@")[0] + ")";
+  applyRolePermissions();
+
+  gate.style.display = "none";
+  revealAppOnceReady();
 });
+function applyRolePermissions(){
+  const manage = canManage(myRole);
+  const owner = canManageTeam(myRole);
+  document.querySelectorAll('[data-requires="manage"]').forEach(el=>{
+    el.style.display = manage ? "" : "none";
+  });
+  document.querySelectorAll('[data-requires="owner"]').forEach(el=>{
+    el.style.display = owner ? "" : "none";
+  });
+  const roleBadge = document.getElementById("roleBadge");
+  if(roleBadge) roleBadge.textContent = myRole ? myRole.charAt(0).toUpperCase()+myRole.slice(1) : "";
+}
+/* ---------- Team & Roles (owner only) ---------- */
+let teamUnsub = null;
+function openTeamModal(){
+  document.getElementById("teamAddError").style.display = "none";
+  document.getElementById("teamOverlay").classList.add("open");
+  if(!teamUnsub){
+    teamUnsub = watchTeam((members)=>renderTeamList(members));
+  }
+}
+function closeTeamModal(){
+  document.getElementById("teamOverlay").classList.remove("open");
+}
+function renderTeamList(members){
+  const box = document.getElementById("teamList");
+  if(!box) return;
+  box.innerHTML = members.map(m=>{
+    const isMe = m.id === myUid;
+    const roleOpts = ["owner","admin","staff"].map(r=>
+      `<option value="${r}" ${m.role===r?"selected":""}>${r.charAt(0).toUpperCase()+r.slice(1)}</option>`
+    ).join("");
+    return `
+    <div style="border:1px solid var(--line);border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:10px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.displayName||m.email}${isMe?" (you)":""}</div>
+        <div style="font-size:11.5px;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.email}</div>
+      </div>
+      <select onchange="changeTeamRole('${m.id}', this.value)" ${m.role==="owner"?"disabled":""} style="font-size:12px;padding:5px 6px;border-radius:6px;border:1px solid var(--line);">
+        ${roleOpts}
+      </select>
+      ${m.role==="owner" ? "" : `<button onclick="toggleTeamActive('${m.id}', ${m.active===false})" style="border:1px solid var(--line);background:${m.active===false?'var(--panel-alt)':'transparent'};color:${m.active===false?'var(--text-dim)':'var(--red,#e13a3a)'};font-size:11px;padding:6px 8px;border-radius:6px;cursor:pointer;white-space:nowrap;">${m.active===false?"Reactivate":"Deactivate"}</button>`}
+    </div>`;
+  }).join("");
+}
+async function changeTeamRole(uid, newRole){
+  try{ await updateTeamMember(uid, { role: newRole }); }
+  catch(e){ alert("Couldn't update role: " + e.message); }
+}
+async function toggleTeamActive(uid, makeActive){
+  try{ await updateTeamMember(uid, { active: makeActive }); }
+  catch(e){ alert("Couldn't update status: " + e.message); }
+}
+async function submitAddTeamMember(){
+  const name = document.getElementById("teamName").value.trim();
+  const email = document.getElementById("teamEmail").value.trim();
+  const password = document.getElementById("teamPassword").value;
+  const role = document.getElementById("teamRole").value;
+  const errBox = document.getElementById("teamAddError");
+  errBox.style.display = "none";
+  if(!email || !password || password.length < 6){
+    errBox.textContent = "Enter a valid email and a password of at least 6 characters.";
+    errBox.style.display = "block";
+    return;
+  }
+  try{
+    await createTeamMember({ email, password, displayName: name, role, createdByUid: myUid });
+    document.getElementById("teamName").value = "";
+    document.getElementById("teamEmail").value = "";
+    document.getElementById("teamPassword").value = "";
+  }catch(e){
+    errBox.textContent = e.code === "auth/email-already-in-use"
+      ? "That email is already registered."
+      : ("Couldn't create user: " + e.message);
+    errBox.style.display = "block";
+  }
+}
 function onAdminBtnClick(){
   if(isAdmin){ if(confirm("Log out?")) logoutAdmin(); }
 }
@@ -1603,7 +1752,8 @@ Object.assign(window, {
   onAdminBtnClick, onDrawerLogoutClick, openAdminModal, closeAdminModal, submitAdminLogin, submitGateLogin,
   closeDrawer, closeModal, closeNewItemModal, drawerGo, drawerIssue, drawerReceive,
   exportIssuedPDF, exportReceivedPDF, openDrawer, openModal, openNewItemModal, openStockAudit,
-  quickIssue, quickReceive, setTxType, submitNewItem, submitTx, switchTab
+  quickIssue, quickReceive, setTxType, submitNewItem, submitTx, switchTab,
+  openTeamModal, closeTeamModal, submitAddTeamMember, changeTeamRole, toggleTeamActive
 });
 </script>
 

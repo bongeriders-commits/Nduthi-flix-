@@ -503,29 +503,48 @@
 import {
   db, loginAdmin, logoutAdmin, watchAdmin, initialsFromEmail, unitAbbr,
   collection, doc, addDoc, updateDoc, onSnapshot, serverTimestamp,
-  query, orderBy, runTransaction, increment
+  query, orderBy, runTransaction, increment, fetchOrBootstrapRole
 } from "./firebase-config.js";
 
 /* ---------- Admin auth (same pattern as the rest of the app) ---------- */
 let isAdmin = false, currentAdminEmail = "";
+let myRole = null, myUid = "";
 let appRevealed = false;
 let grnNoReady = false;
 
-watchAdmin((user)=>{
+watchAdmin(async (user)=>{
   isAdmin = !!user;
   currentAdminEmail = user ? user.email : "";
+  myUid = user ? user.uid : "";
   document.getElementById("avatarInitials").textContent = isAdmin ? initialsFromEmail(currentAdminEmail) : "--";
 
   const gate = document.getElementById("accessGate");
-  if(isAdmin){
-    gate.style.display = "none";
-    if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
-    if(!grnNoReady){ grnNoReady = true; generateGrnNo(); }
-  } else {
+  const gateErr = document.getElementById("gateError");
+  if(!isAdmin){
+    myRole = null;
     gate.style.display = "flex";
     document.querySelector(".app-shell").classList.remove("ready");
     appRevealed = false;
+    return;
   }
+  let roleDoc;
+  try{ roleDoc = await fetchOrBootstrapRole(user); }catch(e){ roleDoc = null; }
+  if(!roleDoc){
+    myRole = null;
+    if(gateErr){
+      gateErr.textContent = "This account isn't set up in Cabro City. Ask the main admin to add you as a team member.";
+      gateErr.style.display = "block";
+    }
+    gate.style.display = "flex";
+    document.querySelector(".app-shell").classList.remove("ready");
+    appRevealed = false;
+    logoutAdmin();
+    return;
+  }
+  myRole = roleDoc.role;
+  gate.style.display = "none";
+  if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
+  if(!grnNoReady){ grnNoReady = true; generateGrnNo(); }
 });
 function signOutNow(){ if(confirm("Sign out?")) logoutAdmin(); }
 function submitGateLogin(){

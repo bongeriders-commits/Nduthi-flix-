@@ -308,7 +308,7 @@
 import {
   db, auth, loginAdmin, logoutAdmin, watchAdmin, statusOf, initialsFromEmail,
   collection, doc, addDoc, updateDoc, getDoc, onSnapshot,
-  serverTimestamp, query, orderBy
+  serverTimestamp, query, orderBy, canManage, fetchOrBootstrapRole
 } from "./firebase-config.js";
 
 const ICONS = {
@@ -322,22 +322,43 @@ const ICONS = {
 
 /* ---------- Admin auth (same pattern as index.html / stock-list.html) ---------- */
 let isAdmin = false, currentAdminEmail = "";
+let myRole = null, myUid = "";
 let appRevealed = false;
-watchAdmin((user)=>{
+watchAdmin(async (user)=>{
   isAdmin = !!user;
   currentAdminEmail = user ? user.email : "";
+  myUid = user ? user.uid : "";
   document.getElementById("avatarInitials").textContent = isAdmin ? initialsFromEmail(currentAdminEmail) : "--";
 
-  // Whole app is locked behind sign-in — only "added" (Firebase Auth) users get in.
+  // Whole app is locked behind sign-in AND an active team role — see index.html.
   const gate = document.getElementById("accessGate");
-  if(isAdmin){
-    gate.style.display = "none";
-    if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
-  } else {
+  const gateErr = document.getElementById("gateError");
+  if(!isAdmin){
+    myRole = null;
     gate.style.display = "flex";
     document.querySelector(".app-shell").classList.remove("ready");
     appRevealed = false;
+    render();
+    return;
   }
+  let roleDoc;
+  try{ roleDoc = await fetchOrBootstrapRole(user); }catch(e){ roleDoc = null; }
+  if(!roleDoc){
+    myRole = null;
+    if(gateErr){
+      gateErr.textContent = "This account isn't set up in Cabro City. Ask the main admin to add you as a team member.";
+      gateErr.style.display = "block";
+    }
+    gate.style.display = "flex";
+    document.querySelector(".app-shell").classList.remove("ready");
+    appRevealed = false;
+    logoutAdmin();
+    return;
+  }
+  myRole = roleDoc.role;
+  document.querySelectorAll('[data-requires="manage"]').forEach(el=>{ el.style.display = canManage(myRole) ? "" : "none"; });
+  gate.style.display = "none";
+  if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
   render();
 });
 window.onAdminBtnClick = function(){
@@ -447,7 +468,7 @@ function render(){
   document.getElementById("sumRejected").textContent = rejectedCount;
 
   const shownPending = pending.filter(a=> activeFilter==="all" || a.type===activeFilter);
-  const disabledAttr = isAdmin ? "" : "disabled";
+  const disabledAttr = canManage(myRole) ? "" : "disabled";
 
   document.getElementById("pendingList").innerHTML = shownPending.length
     ? shownPending.map(a=>`

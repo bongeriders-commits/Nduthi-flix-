@@ -371,28 +371,48 @@
 import {
   db, auth, loginAdmin, logoutAdmin, watchAdmin, statusOf, initialsFromEmail,
   collection, doc, updateDoc, deleteDoc, onSnapshot,
-  serverTimestamp, query, orderBy
+  serverTimestamp, query, orderBy, canManage, fetchOrBootstrapRole
 } from "./firebase-config.js";
 
 let isAdmin = false;
+let myRole = null, myUid = "";
 let currentAdminEmail = "";
 let appRevealed = false;
 
-watchAdmin((user)=>{
+watchAdmin(async (user)=>{
   isAdmin = !!user;
   currentAdminEmail = user ? user.email : "";
+  myUid = user ? user.uid : "";
   document.getElementById("avatarInitials").textContent = isAdmin ? initialsFromEmail(currentAdminEmail) : "--";
 
-  // Whole app is locked behind sign-in — only "added" (Firebase Auth) users get in.
+  // Whole app is locked behind sign-in AND an active team role — see index.html.
   const gate = document.getElementById("accessGate");
-  if(isAdmin){
-    gate.style.display = "none";
-    if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
-  } else {
+  const gateErr = document.getElementById("gateError");
+  if(!isAdmin){
+    myRole = null;
     gate.style.display = "flex";
     document.querySelector(".app-shell").classList.remove("ready");
     appRevealed = false;
+    return;
   }
+  let roleDoc;
+  try{ roleDoc = await fetchOrBootstrapRole(user); }catch(e){ roleDoc = null; }
+  if(!roleDoc){
+    myRole = null;
+    if(gateErr){
+      gateErr.textContent = "This account isn't set up in Cabro City. Ask the main admin to add you as a team member.";
+      gateErr.style.display = "block";
+    }
+    gate.style.display = "flex";
+    document.querySelector(".app-shell").classList.remove("ready");
+    appRevealed = false;
+    logoutAdmin();
+    return;
+  }
+  myRole = roleDoc.role;
+  document.querySelectorAll('[data-requires="manage"]').forEach(el=>{ el.style.display = canManage(myRole) ? "" : "none"; });
+  gate.style.display = "none";
+  if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
 });
 
 function onAdminBtnClick(){
@@ -468,9 +488,10 @@ function renderTable(){
         <td>${formatMin(it)}</td>
         <td><span class="pill ${pillClass(it.status)}">${it.status}</span></td>
         <td class="action-cell">
+          ${canManage(myRole) ? `
           <button class="btn-delete-row" onclick="deleteItem(${start+idx})" aria-label="Delete item" title="Delete item">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-          </button>
+          </button>` : ``}
         </td>
       </tr>
     `).join("");

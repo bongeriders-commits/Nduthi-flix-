@@ -1,14 +1,16 @@
 // firebase-config.js
 // Shared Firebase setup for Cabro City. Loaded as an ES module by every page.
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged,
+  createUserWithEmailAndPassword
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDoc,
+  getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDoc, setDoc,
   onSnapshot, serverTimestamp, query, where, orderBy, limit, runTransaction, increment
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
 
 // ---------- 1. PASTE YOUR FIREBASE CONFIG BELOW ----------
 // Firebase console → Project settings → Your apps → Web app → SDK setup and config
@@ -68,8 +70,84 @@ export function initialsFromEmail(email) {
   return local.slice(0, 2).toUpperCase() || "?";
 }
 
+/* ---------- Roles & Team management ---------- */
+// Three tiers: "owner" (the main admin — full control, incl. managing the
+// team), "admin" (full day-to-day operational control, no team management),
+// "staff" (dashboard + inventory view + receive/issue stock only).
+export const ROLES = { OWNER: "owner", ADMIN: "admin", STAFF: "staff" };
+
+// Roles allowed to create/edit/delete items, resolve approvals, manage suppliers.
+export function canManage(role) {
+  return role === ROLES.OWNER || role === ROLES.ADMIN;
+}
+// Only the owner can add/edit/deactivate team members.
+export function canManageTeam(role) {
+  return role === ROLES.OWNER;
+}
+
+// Fetches (and, on first-ever login, bootstraps) the current user's role doc
+// from Firestore. If the `users` collection is completely empty, the signed-in
+// user becomes the owner automatically — this is how the very first admin
+// account gets promoted without anyone touching the Firebase console.
+export async function fetchOrBootstrapRole(user) {
+  if (!user) return null;
+  const ref = doc(db, "users", user.uid);
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
+    const data = snap.data();
+    if (data.active === false) return null; // deactivated — treat as no access
+    return data;
+  }
+  // No role doc yet — check if this is the very first user in the system.
+  const existing = await getDoc(doc(db, "meta", "teamBootstrap"));
+  if (existing.exists()) return null; // team already bootstrapped, this user just isn't on it
+  const roleDoc = {
+    email: user.email,
+    displayName: user.email.split("@")[0],
+    role: ROLES.OWNER,
+    active: true,
+    createdAt: serverTimestamp(),
+    createdBy: "bootstrap"
+  };
+  await setDoc(ref, roleDoc);
+  await setDoc(doc(db, "meta", "teamBootstrap"), { done: true, ownerUid: user.uid, at: serverTimestamp() });
+  return roleDoc;
+}
+
+export function watchTeam(callback) {
+  const q = query(collection(db, "users"), orderBy("createdAt", "asc"));
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+  });
+}
+
+export async function updateTeamMember(uid, updates) {
+  return updateDoc(doc(db, "users", uid), updates);
+}
+
+// Creates a brand-new team member: a Firebase Auth account + their role doc.
+// Uses a throwaway secondary Firebase App so the *current* admin's session
+// is never disturbed (creating a user with the normal client SDK would
+// otherwise sign the browser in as that new user).
+export async function createTeamMember({ email, password, displayName, role, createdByUid }) {
+  const secondaryApp = initializeApp(auth.app.options, "secondary-" + Date.now());
+  const secondaryAuth = getAuth(secondaryApp);
+  try {
+    const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+    const uid = cred.user.uid;
+    await setDoc(doc(db, "users", uid), {
+      email, displayName: displayName || email.split("@")[0],
+      role, active: true, createdAt: serverTimestamp(), createdBy: createdByUid
+    });
+    await signOut(secondaryAuth);
+    return uid;
+  } finally {
+    await deleteApp(secondaryApp);
+  }
+}
+
 /* ---------- Re-exported Firestore functions ---------- */
 export {
-  collection, doc, addDoc, updateDoc, deleteDoc, getDoc,
+  collection, doc, addDoc, updateDoc, deleteDoc, getDoc, setDoc,
   onSnapshot, serverTimestamp, query, where, orderBy, limit, runTransaction, increment
 };
