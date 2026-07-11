@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suppliers — Cabro City</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#f5590a">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" href="/icon-192.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ffffff;
+    --panel:#f6f6f8;
+    --panel-alt:#eeeef1;
+    --panel-raise:#ffffff;
+    --line:#e2e2e6;
+    --line-soft:#ececf0;
+    --text:#151517;
+    --text-dim:#68686f;
+    --text-faint:#9a9aa2;
+    --oxide:#f5590a;
+    --oxide-dim:#b8420a;
+    --amber:#b45309;
+    --red:#e13a3a;
+    --green:#16a34a;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  html,body{
+    background:#f4f4f6;
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  button,input,select,textarea{font-family:inherit;}
+
+  /* ===== App shell ===== */
+  .app-shell{
+    max-width:1040px;margin:0 auto;min-height:100vh;
+    background:var(--bg);position:relative;
+    padding-bottom:96px;
+    border-left:1px solid var(--line);border-right:1px solid var(--line);
+  }
+  @media(max-width:1060px){ .app-shell{border-left:none;border-right:none;} }
+
+  /* ===== Mobile header ===== */
+  .mobile-header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 20px;border-bottom:1px solid var(--line);
+    position:sticky;top:0;background:#ffffff;z-index:30;
+  }
+  .mh-left{display:flex;align-items:center;gap:14px;}
+  .hamburger{width:22px;height:15px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;background:none;border:none;padding:0;}
+  .hamburger span{display:block;height:2.5px;background:#1a1a1d;border-radius:2px;}
+  .mh-logo{display:flex;align-items:center;gap:10px;cursor:pointer;background:none;border:none;padding:0;}
+  .brand-logo-img{height:36px;width:auto;display:block;}
+  .mh-right{display:flex;align-items:center;gap:18px;}
+  .bell{position:relative;width:23px;height:23px;color:#68686f;background:none;border:none;padding:0;cursor:pointer;}
+  .bell svg{width:100%;height:100%;}
+  .bell .badge-dot{position:absolute;top:-6px;right:-8px;background:#ff7a1f;color:#fff;font-size:10px;font-weight:700;min-width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;padding:0 3px;font-family:'IBM Plex Mono',monospace;box-shadow:0 0 0 2px #ffffff;}
+  .avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#3a3a40,#1c1c1f);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;position:relative;font-family:'Oswald',sans-serif;flex-shrink:0;border:1.5px solid #3a3a40;cursor:pointer;}
+  .avatar .dot{position:absolute;bottom:0;right:0;width:10px;height:10px;border-radius:50%;background:#ff7a1f;border:2px solid #ffffff;}
+
+  /* ===== Page head ===== */
+  .page-head{
+    display:flex;align-items:flex-start;justify-content:space-between;
+    gap:14px;flex-wrap:wrap;
+    padding:22px 20px 16px;
+  }
+  .page-head h1{margin:0;font-size:25px;font-weight:800;letter-spacing:-0.01em;color:var(--text);}
+  .page-head p{margin:5px 0 0;font-size:12.5px;color:var(--text-dim);}
+  .page-head-actions{display:flex;gap:10px;flex-wrap:wrap;}
+  .btn-export{
+    display:flex;align-items:center;gap:8px;
+    background:#ffffff;border:1px solid var(--line);color:var(--text);
+    padding:11px 16px;border-radius:11px;font-size:13px;font-weight:600;
+    cursor:pointer;white-space:nowrap;
+  }
+  .btn-export svg{width:15px;height:15px;color:var(--text-dim);}
+  .btn-add{
+    display:flex;align-items:center;gap:8px;
+    background:var(--oxide);border:none;color:#fff;
+    padding:11px 18px;border-radius:11px;font-size:13px;font-weight:700;
+    cursor:pointer;white-space:nowrap;
+  }
+  .btn-add:hover{background:#ff6b1f;}
+  .btn-add svg{width:15px;height:15px;}
+
+  /* ===== Toolbar ===== */
+  .stock-toolbar{
+    display:flex;gap:10px;padding:0 20px 16px;flex-wrap:wrap;
+    position:relative;
+  }
+  .stock-search{flex:1;min-width:220px;position:relative;}
+  .stock-search input{
+    width:100%;background:#ffffff;border:1px solid var(--line);
+    color:var(--text);padding:12px 40px 12px 16px;border-radius:11px;
+    font-size:13.5px;
+  }
+  .stock-search input::placeholder{color:var(--text-faint);}
+  .stock-search input:focus{outline:2px solid var(--oxide);outline-offset:-1px;}
+  .stock-search svg{
+    position:absolute;right:14px;top:50%;transform:translateY(-50%);
+    width:16px;height:16px;color:var(--text-faint);pointer-events:none;
+  }
+  .btn-filter{
+    display:flex;align-items:center;gap:8px;
+    background:#ffffff;border:1px solid var(--line);color:var(--text);
+    padding:12px 16px;border-radius:11px;font-size:13.5px;font-weight:600;
+    cursor:pointer;white-space:nowrap;
+  }
+  .btn-filter svg{width:15px;height:15px;color:var(--text-dim);}
+  .btn-filter.on{border-color:var(--oxide);color:var(--oxide);}
+
+  .filter-panel{
+    position:absolute;top:52px;right:20px;z-index:25;
+    background:#fff;border:1px solid var(--line);border-radius:12px;
+    box-shadow:0 16px 40px -12px rgba(0,0,0,0.25);
+    padding:14px;width:220px;display:none;
+  }
+  .filter-panel.open{display:block;}
+  .filter-panel h4{margin:0 0 10px;font-size:11px;letter-spacing:0.07em;text-transform:uppercase;color:var(--text-faint);font-family:'Oswald',sans-serif;}
+  .filter-row{display:flex;align-items:center;gap:9px;padding:7px 2px;font-size:13px;color:var(--text);cursor:pointer;}
+  .filter-row input{width:15px;height:15px;accent-color:var(--oxide);}
+  .filter-actions{display:flex;gap:8px;margin-top:10px;}
+  .filter-actions button{flex:1;padding:8px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;}
+  .filter-clear{background:none;border:1px solid var(--line);color:var(--text-dim);}
+  .filter-apply{background:var(--oxide);border:none;color:#fff;}
+
+  /* ===== Table ===== */
+  .table-wrap{margin:0 20px 14px;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;}
+  .table-scroll{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;min-width:760px;}
+  thead th{
+    text-align:left;font-size:11.5px;letter-spacing:0.04em;
+    color:var(--text-dim);padding:13px 18px;
+    border-bottom:1px solid var(--line);background:#fafafb;
+    font-weight:700;white-space:nowrap;
+  }
+  th.sortable{cursor:pointer;user-select:none;}
+  th.sortable .car{display:inline-flex;flex-direction:column;margin-left:4px;vertical-align:middle;line-height:0;}
+  th.sortable .car svg{width:8px;height:8px;display:block;color:var(--text-faint);}
+  th.sortable.sort-asc .car svg:first-child,
+  th.sortable.sort-desc .car svg:last-child{color:var(--oxide);}
+  tbody td{padding:14px 18px;font-size:13.5px;border-bottom:1px solid var(--line-soft);color:var(--text);vertical-align:middle;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:#fbfbfc;}
+  .it-name{font-weight:700;font-size:13.5px;}
+  .it-code{font-size:11.5px;color:var(--text-faint);margin-top:2px;font-family:'IBM Plex Mono',monospace;}
+  .it-contact-main{font-size:13.5px;color:var(--text);}
+  .it-contact-sub{font-size:11.5px;color:var(--text-faint);margin-top:2px;}
+  .pill{display:inline-flex;align-items:center;padding:5px 12px;border-radius:100px;font-size:11.5px;font-weight:700;}
+  .pill.active{background:#dcfce7;color:var(--green);}
+  .pill.inactive{background:#fde2e2;color:var(--red);}
+  .action-cell{position:relative;text-align:right;white-space:nowrap;}
+  .btn-icon-row{background:none;border:none;color:var(--text-faint);cursor:pointer;padding:6px;border-radius:8px;}
+  .btn-icon-row:hover{background:var(--panel-alt);color:var(--text);}
+  .btn-icon-row.danger:hover{background:#fde2e2;color:var(--red);}
+  .btn-icon-row svg{width:16px;height:16px;display:block;}
+  .empty-row td{text-align:center;color:var(--text-faint);padding:40px 18px;font-size:13px;}
+
+  /* ===== Pagination ===== */
+  .pagination{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 6px;gap:12px;flex-wrap:wrap;}
+  .pg-info{font-size:12.5px;color:var(--text-dim);}
+  .pg-controls{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .pg-btn{min-width:34px;height:34px;padding:0 8px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--text);font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .pg-btn:hover:not(.active):not(:disabled){border-color:var(--text-faint);}
+  .pg-btn.active{background:var(--oxide);border-color:var(--oxide);color:#fff;}
+  .pg-btn:disabled{opacity:0.4;cursor:default;}
+  .pg-btn svg{width:14px;height:14px;}
+  .pg-dots{color:var(--text-faint);font-size:12.5px;padding:0 2px;}
+
+  /* ===== Bottom nav ===== */
+  .bottom-nav{
+    position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+    width:100%;max-width:1040px;background:var(--panel);
+    border-top:1px solid var(--line);
+    display:flex;align-items:center;justify-content:space-around;
+    padding:11px 4px 16px;z-index:40;
+  }
+  .nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;color:var(--text-faint);font-size:9.5px;cursor:pointer;flex:1;padding:2px 0;max-width:120px;}
+  .nav-item svg{width:19px;height:19px;}
+  .nav-item.active{color:var(--oxide);}
+
+  /* ===== Modal ===== */
+  .overlay{position:fixed;inset:0;background:rgba(10,10,11,0.55);display:none;align-items:center;justify-content:center;z-index:100;padding:20px;}
+  .overlay.open{display:flex;}
+  .modal{background:#fff;border:1px solid var(--line);border-radius:14px;width:100%;max-width:440px;padding:22px 22px 20px;max-height:88vh;overflow-y:auto;}
+  .modal h3{font-size:16px;margin:0 0 16px;color:var(--text);font-weight:800;}
+  .field{margin-bottom:13px;}
+  .field label{display:block;font-size:11.5px;color:var(--text-dim);font-weight:600;margin-bottom:6px;}
+  .field select,.field input,.field textarea{width:100%;background:var(--panel);border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:8px;font-size:13.5px;}
+  .field textarea{resize:vertical;min-height:60px;}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .modal-actions{display:flex;gap:10px;margin-top:18px;}
+  .btn-cancel{flex:1;padding:11px;border-radius:9px;border:1px solid var(--line);background:transparent;color:var(--text-dim);font-size:13px;font-weight:600;cursor:pointer;}
+  .btn-submit{flex:2;padding:11px;border-radius:9px;border:none;background:var(--oxide);color:#fff;font-size:13px;font-weight:700;cursor:pointer;}
+  .btn-submit:hover{background:#ff6b1f;}
+
+  button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--oxide);outline-offset:2px;}
+
+  .app-shell{display:none;}
+  .app-shell.ready{display:block;}
+
+  /* ---------- Access gate ---------- */
+  #accessGate{position:fixed;inset:0;z-index:9999;background:#fff;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .gate-card{width:100%;max-width:340px;text-align:center;}
+  .gate-card img{height:34px;width:auto;margin:0 auto 22px;display:block;}
+  .gate-card h2{font-family:'Inter',sans-serif;text-transform:none;font-size:17px;font-weight:700;margin-bottom:6px;}
+  .gate-card p{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-bottom:22px;}
+  .gate-card .field{margin-bottom:12px;text-align:left;}
+  .gate-card .field label{display:block;font-size:11px;color:var(--text-dim);margin-bottom:5px;}
+  .gate-card .field input{width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--line);font-size:13.5px;font-family:'Inter',sans-serif;box-sizing:border-box;}
+  .gate-card .btn-submit{width:100%;padding:12px;border-radius:9px;border:1px solid var(--oxide);background:var(--oxide);color:#fff;font-weight:700;font-size:13px;cursor:pointer;margin-top:6px;font-family:'Inter',sans-serif;}
+  .gate-error{color:var(--red);font-size:12px;margin:-4px 0 12px;text-align:left;}
+</style>
+</head>
+<body>
+
+<div id="accessGate" style="display:none;">
+  <div class="gate-card">
+    <img src="/cabro-city-logo.png" alt="Cabro City">
+    <h2>Sign in required</h2>
+    <p>Cabro City is restricted to approved staff. If you don't have an account yet, ask your admin to add one for you.</p>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="gateEmail" placeholder="you@cabrocity.co.ke">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="gatePassword" placeholder="••••••••">
+    </div>
+    <div id="gateError" class="gate-error" style="display:none;"></div>
+    <button class="btn-submit" onclick="submitGateLogin()">Sign In</button>
+  </div>
+</div>
+
+<div class="app-shell">
+
+  <!-- HEADER -->
+  <div class="mobile-header">
+    <div class="mh-left">
+      <button class="hamburger" aria-label="Back to dashboard" onclick="location.href='index.html'"><span></span><span></span><span></span></button>
+      <button class="mh-logo" onclick="location.href='index.html'" aria-label="Cabro City home">
+        <img src="/cabro-city-logo.png" alt="Cabro City — Paving the Future" class="brand-logo-img">
+      </button>
+    </div>
+    <div class="mh-right">
+      <button class="bell" onclick="location.href='index.html'" aria-label="Notifications">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="badge-dot">5</span>
+      </button>
+      <div class="avatar" onclick="location.href='index.html'"><span id="avatarInitials">--</span><span class="dot"></span></div>
+    </div>
+  </div>
+
+  <!-- PAGE HEAD -->
+  <div class="page-head">
+    <div>
+      <h1>Suppliers</h1>
+      <p>Manage and view all your suppliers</p>
+    </div>
+    <div class="page-head-actions">
+      <button class="btn-export" onclick="exportSuppliersCSV()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+        Export
+      </button>
+      <button class="btn-add" onclick="openSupplierModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        Add Supplier
+      </button>
+    </div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="stock-toolbar">
+    <div class="stock-search">
+      <input type="text" id="searchInput" placeholder="Search supplier by name, contact or category..." oninput="onSearch()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    </div>
+    <button class="btn-filter" id="filterBtn" onclick="toggleFilterPanel()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+      Filter
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="filter-panel" id="filterPanel">
+      <h4>Status</h4>
+      <label class="filter-row"><input type="checkbox" class="statusFilter" value="Active" checked> Active</label>
+      <label class="filter-row"><input type="checkbox" class="statusFilter" value="Inactive" checked> Inactive</label>
+      <div class="filter-actions">
+        <button class="filter-clear" onclick="clearFilters()">Clear</button>
+        <button class="filter-apply" onclick="applyFilters()">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" data-key="name" onclick="toggleSort('name')">Supplier<span class="car"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5l5 6H7z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 19l-5-6h10z"/></svg></span></th>
+            <th>Contact</th>
+            <th class="sortable" data-key="category" onclick="toggleSort('category')">Category<span class="car"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5l5 6H7z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 19l-5-6h10z"/></svg></span></th>
+            <th class="sortable" data-key="status" onclick="toggleSort('status')">Status<span class="car"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5l5 6H7z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 19l-5-6h10z"/></svg></span></th>
+            <th class="sortable" data-key="lastSupplySort" onclick="toggleSort('lastSupplySort')">Last Supply<span class="car"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5l5 6H7z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 19l-5-6h10z"/></svg></span></th>
+            <th style="text-align:right;">Action</th>
+          </tr>
+        </thead>
+        <tbody id="supplierTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PAGINATION -->
+  <div class="pagination">
+    <div class="pg-info" id="pgInfo"></div>
+    <div class="pg-controls" id="pgControls"></div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <button class="nav-item" onclick="location.href='index.html'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+      Dashboard
+    </button>
+    <button class="nav-item active" onclick="location.href='stock-list.html'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>
+      Inventory
+    </button>
+    <button class="nav-item" onclick="location.href='index.html#transactions'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+      Transactions
+    </button>
+    <button class="nav-item" onclick="location.href='index.html#reports'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+      Reports
+    </button>
+  </div>
+
+</div>
+
+
+<!-- ADD / EDIT SUPPLIER MODAL -->
+<div class="overlay" id="supplierOverlay">
+  <div class="modal">
+    <h3 id="supplierModalTitle">Add Supplier</h3>
+    <div class="field">
+      <label>Supplier Name <span style="color:var(--red);">*</span></label>
+      <input type="text" id="supName" placeholder="e.g. Total Kenya Limited">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Contact Person</label>
+        <input type="text" id="supContactPerson" placeholder="e.g. James Mwangi">
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <input type="text" id="supCategory" placeholder="e.g. Fuel & Lubricants" list="categoryList">
+        <datalist id="categoryList"></datalist>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Phone <span style="color:var(--red);">*</span></label>
+        <input type="tel" id="supPhone" placeholder="0722 123 456">
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="supEmail" placeholder="orders@supplier.co.ke">
+      </div>
+    </div>
+    <div class="field">
+      <label>Status</label>
+      <select id="supStatus">
+        <option value="Active">Active</option>
+        <option value="Inactive">Inactive</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Notes</label>
+      <textarea id="supNotes" placeholder="Payment terms, delivery notes, etc. (optional)"></textarea>
+    </div>
+    <div id="supplierError" style="display:none;color:var(--red);font-size:12.5px;margin:-4px 0 10px;"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeSupplierModal()">Cancel</button>
+      <button class="btn-submit" id="supplierSubmitBtn" onclick="submitSupplier()">Save Supplier</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN LOGIN MODAL -->
+<div class="overlay" id="adminOverlay">
+  <div class="modal">
+    <h3>Admin Login</h3>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="adminEmail" placeholder="you@cabrocity.co.ke">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="adminPassword" placeholder="••••••••">
+    </div>
+    <div id="adminError" style="display:none;color:var(--red);font-size:12.5px;margin:-4px 0 10px;"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeAdminModal()">Cancel</button>
+      <button class="btn-submit" onclick="submitAdminLogin()">Log In</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+/* ---------- Firebase ---------- */
+import {
+  db, loginAdmin, logoutAdmin, watchAdmin, initialsFromEmail,
+  collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot,
+  serverTimestamp, query, orderBy, runTransaction
+} from "./firebase-config.js";
+
+let isAdmin = false;
+let currentAdminEmail = "";
+let appRevealed = false;
+
+watchAdmin((user)=>{
+  isAdmin = !!user;
+  currentAdminEmail = user ? user.email : "";
+  document.getElementById("avatarInitials").textContent = isAdmin ? initialsFromEmail(currentAdminEmail) : "--";
+
+  const gate = document.getElementById("accessGate");
+  if(isAdmin){
+    gate.style.display = "none";
+    if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
+  } else {
+    gate.style.display = "flex";
+    document.querySelector(".app-shell").classList.remove("ready");
+    appRevealed = false;
+  }
+});
+
+function submitGateLogin(){
+  const email = document.getElementById("gateEmail").value.trim();
+  const password = document.getElementById("gatePassword").value;
+  const errBox = document.getElementById("gateError");
+  errBox.style.display = "none";
+  loginAdmin(email, password).catch(()=>{
+    errBox.textContent = "Sign-in failed — check your email and password, or ask your admin for access.";
+    errBox.style.display = "block";
+  });
+}
+function openAdminModal(){
+  document.getElementById("adminError").style.display = "none";
+  document.getElementById("adminOverlay").classList.add("open");
+}
+function closeAdminModal(){ document.getElementById("adminOverlay").classList.remove("open"); }
+function submitAdminLogin(){
+  const email = document.getElementById("adminEmail").value.trim();
+  const password = document.getElementById("adminPassword").value;
+  const errBox = document.getElementById("adminError");
+  loginAdmin(email, password).then(()=>{
+    closeAdminModal();
+  }).catch(()=>{
+    errBox.textContent = "Login failed — check email and password.";
+    errBox.style.display = "block";
+  });
+}
+function requireAdmin(){
+  if(isAdmin) return true;
+  openAdminModal();
+  return false;
+}
+
+/* ---------- Data (live from Firestore) ---------- */
+let suppliers = [];
+let filtered = [];
+let currentPage = 1;
+const PAGE_SIZE = 10;
+let sortKey = null, sortDir = 1;
+let allowedStatuses = new Set(["Active","Inactive"]);
+let editingId = null; // set when the modal is editing an existing supplier
+
+/* ---------- Helpers ---------- */
+function escapeHtml(s){
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function fmtDate(d){
+  if(!d) return "—";
+  return d.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
+}
+function pillClass(status){ return status === "Active" ? "active" : "inactive"; }
+
+/* ---------- Render ---------- */
+function renderTable(){
+  const start = (currentPage-1)*PAGE_SIZE;
+  const pageItems = filtered.slice(start, start+PAGE_SIZE);
+  const body = document.getElementById("supplierTableBody");
+
+  if(pageItems.length === 0){
+    body.innerHTML = `<tr class="empty-row"><td colspan="6">No suppliers match your search or filters.</td></tr>`;
+  } else {
+    body.innerHTML = pageItems.map(s => `
+      <tr>
+        <td>
+          <div class="it-name">${escapeHtml(s.name)}</div>
+          <div class="it-code">${escapeHtml(s.code)}</div>
+        </td>
+        <td>
+          <div class="it-contact-main">${escapeHtml(s.phone) || "—"}</div>
+          <div class="it-contact-sub">${escapeHtml(s.email) || (s.contactPerson ? escapeHtml(s.contactPerson) : "")}</div>
+        </td>
+        <td>${escapeHtml(s.category) || "—"}</td>
+        <td><span class="pill ${pillClass(s.status)}">${s.status}</span></td>
+        <td>${fmtDate(s.lastSupply)}</td>
+        <td class="action-cell">
+          <button class="btn-icon-row" onclick="editSupplier('${s.id}')" aria-label="Edit supplier" title="Edit supplier">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="btn-icon-row danger" onclick="deleteSupplier('${s.id}')" aria-label="Delete supplier" title="Delete supplier">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+          </button>
+        </td>
+      </tr>
+    `).join("");
+  }
+  renderPagination();
+}
+
+/* ---------- Pagination ---------- */
+function renderPagination(){
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if(currentPage > totalPages) currentPage = totalPages;
+  const start = total === 0 ? 0 : (currentPage-1)*PAGE_SIZE + 1;
+  const end = Math.min(currentPage*PAGE_SIZE, total);
+
+  document.getElementById("pgInfo").textContent = `Showing ${start} to ${end} of ${total} suppliers`;
+
+  const controls = document.getElementById("pgControls");
+  let pages = [];
+  pages.push(1);
+  if(totalPages > 1){
+    for(let p=currentPage-1;p<=currentPage+1;p++){ if(p>1 && p<totalPages) pages.push(p); }
+    pages.push(totalPages);
+  }
+  pages = [...new Set(pages)].sort((a,b)=>a-b);
+
+  let html = `<button class="pg-btn" ${currentPage<=1?"disabled":""} onclick="goPage(${currentPage-1})" aria-label="Previous page">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+  </button>`;
+  let prev = 0;
+  pages.forEach(p=>{
+    if(prev && p - prev > 1) html += `<span class="pg-dots">…</span>`;
+    html += `<button class="pg-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`;
+    prev = p;
+  });
+  html += `<button class="pg-btn" ${currentPage>=totalPages?"disabled":""} onclick="goPage(${currentPage+1})" aria-label="Next page">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+  </button>`;
+  controls.innerHTML = html;
+}
+function goPage(p){
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  if(p<1 || p>totalPages) return;
+  currentPage = p;
+  renderTable();
+  document.querySelector(".table-wrap").scrollIntoView({behavior:"smooth", block:"nearest"});
+}
+
+/* ---------- Search / filter / sort ---------- */
+function applyPipeline(){
+  const q = document.getElementById("searchInput").value.trim().toLowerCase();
+  filtered = suppliers.filter(s=>{
+    const matchesQuery = !q ||
+      s.name.toLowerCase().includes(q) ||
+      (s.contactPerson||"").toLowerCase().includes(q) ||
+      (s.phone||"").toLowerCase().includes(q) ||
+      (s.email||"").toLowerCase().includes(q) ||
+      (s.category||"").toLowerCase().includes(q) ||
+      s.code.toLowerCase().includes(q);
+    const matchesStatus = allowedStatuses.has(s.status);
+    return matchesQuery && matchesStatus;
+  });
+  if(sortKey){
+    filtered.sort((a,b)=>{
+      let av = a[sortKey], bv = b[sortKey];
+      if(sortKey === "lastSupplySort"){ av = av || 0; bv = bv || 0; }
+      else if(typeof av === "string"){ av = av.toLowerCase(); bv = (bv||"").toLowerCase(); }
+      if(av < bv) return -1*sortDir;
+      if(av > bv) return 1*sortDir;
+      return 0;
+    });
+  }
+  currentPage = 1;
+  renderTable();
+}
+function onSearch(){ applyPipeline(); }
+function toggleSort(key){
+  if(sortKey === key){ sortDir *= -1; } else { sortKey = key; sortDir = 1; }
+  document.querySelectorAll("th.sortable").forEach(th=>{
+    th.classList.remove("sort-asc","sort-desc");
+    if(th.dataset.key === sortKey) th.classList.add(sortDir===1 ? "sort-asc" : "sort-desc");
+  });
+  applyPipeline();
+}
+function toggleFilterPanel(){ document.getElementById("filterPanel").classList.toggle("open"); }
+function clearFilters(){ document.querySelectorAll(".statusFilter").forEach(cb=>cb.checked=true); }
+function applyFilters(){
+  allowedStatuses = new Set([...document.querySelectorAll(".statusFilter:checked")].map(cb=>cb.value));
+  document.getElementById("filterBtn").classList.toggle("on", allowedStatuses.size < 2);
+  document.getElementById("filterPanel").classList.remove("open");
+  applyPipeline();
+}
+document.addEventListener("click", (e)=>{
+  const panel = document.getElementById("filterPanel");
+  const btn = document.getElementById("filterBtn");
+  if(panel.classList.contains("open") && !panel.contains(e.target) && !btn.contains(e.target)){
+    panel.classList.remove("open");
+  }
+});
+
+/* ---------- Add / Edit modal ---------- */
+function openSupplierModal(){
+  if(!requireAdmin()) return;
+  editingId = null;
+  document.getElementById("supplierModalTitle").textContent = "Add Supplier";
+  document.getElementById("supplierSubmitBtn").textContent = "Save Supplier";
+  document.getElementById("supName").value = "";
+  document.getElementById("supContactPerson").value = "";
+  document.getElementById("supCategory").value = "";
+  document.getElementById("supPhone").value = "";
+  document.getElementById("supEmail").value = "";
+  document.getElementById("supStatus").value = "Active";
+  document.getElementById("supNotes").value = "";
+  document.getElementById("supplierError").style.display = "none";
+  document.getElementById("supplierOverlay").classList.add("open");
+}
+function closeSupplierModal(){ document.getElementById("supplierOverlay").classList.remove("open"); }
+function editSupplier(id){
+  if(!requireAdmin()) return;
+  const s = suppliers.find(x=>x.id===id);
+  if(!s) return;
+  editingId = id;
+  document.getElementById("supplierModalTitle").textContent = "Edit Supplier";
+  document.getElementById("supplierSubmitBtn").textContent = "Update Supplier";
+  document.getElementById("supName").value = s.name || "";
+  document.getElementById("supContactPerson").value = s.contactPerson || "";
+  document.getElementById("supCategory").value = s.category || "";
+  document.getElementById("supPhone").value = s.phone || "";
+  document.getElementById("supEmail").value = s.email || "";
+  document.getElementById("supStatus").value = s.status || "Active";
+  document.getElementById("supNotes").value = s.notes || "";
+  document.getElementById("supplierError").style.display = "none";
+  document.getElementById("supplierOverlay").classList.add("open");
+}
+async function nextSupplierCode(){
+  const counterRef = doc(db, "counters", "supplier");
+  const seq = await runTransaction(db, async (tx)=>{
+    const snap = await tx.get(counterRef);
+    const next = (snap.exists() ? (snap.data().seq || 0) : 0) + 1;
+    tx.set(counterRef, { seq: next, updatedAt: serverTimestamp() }, { merge: true });
+    return next;
+  });
+  return `SUP-${String(seq).padStart(4,"0")}`;
+}
+async function submitSupplier(){
+  if(!requireAdmin()) return;
+  const errBox = document.getElementById("supplierError");
+  errBox.style.display = "none";
+
+  const name = document.getElementById("supName").value.trim();
+  const phone = document.getElementById("supPhone").value.trim();
+  const contactPerson = document.getElementById("supContactPerson").value.trim();
+  const category = document.getElementById("supCategory").value.trim();
+  const email = document.getElementById("supEmail").value.trim();
+  const status = document.getElementById("supStatus").value;
+  const notes = document.getElementById("supNotes").value.trim();
+
+  if(!name){ errBox.textContent = "Supplier name is required."; errBox.style.display = "block"; return; }
+  if(!phone){ errBox.textContent = "Phone number is required."; errBox.style.display = "block"; return; }
+
+  const btn = document.getElementById("supplierSubmitBtn");
+  btn.disabled = true;
+  try{
+    if(editingId){
+      await updateDoc(doc(db, "suppliers", editingId), {
+        name, phone, contactPerson, category, email, status, notes,
+        updatedAt: serverTimestamp(), updatedBy: currentAdminEmail
+      });
+    } else {
+      const code = await nextSupplierCode();
+      await addDoc(collection(db, "suppliers"), {
+        code, name, phone, contactPerson, category, email, status, notes,
+        lastSupplyAt: null,
+        createdAt: serverTimestamp(), createdBy: currentAdminEmail
+      });
+    }
+    closeSupplierModal();
+  } catch(err){
+    errBox.textContent = "Could not save supplier: " + err.message;
+    errBox.style.display = "block";
+  } finally {
+    btn.disabled = false;
+  }
+}
+function deleteSupplier(id){
+  if(!requireAdmin()) return;
+  const s = suppliers.find(x=>x.id===id);
+  if(!s) return;
+  if(confirm(`Remove "${s.name}" (${s.code}) from your suppliers list?`)){
+    deleteDoc(doc(db, "suppliers", id)).catch(err=>alert("Delete failed: "+err.message));
+  }
+}
+
+/* ---------- Export ---------- */
+function exportSuppliersCSV(){
+  const rows = [["Code","Name","Contact Person","Phone","Email","Category","Status","Last Supply"]];
+  filtered.forEach(s=>{
+    rows.push([s.code, s.name, s.contactPerson||"", s.phone||"", s.email||"", s.category||"", s.status, fmtDate(s.lastSupply)]);
+  });
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const blob = new Blob([csv], {type:"text/csv"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "suppliers.csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ---------- Live sync ---------- */
+onSnapshot(query(collection(db, "suppliers"), orderBy("name")), (snap)=>{
+  const categories = new Set();
+  suppliers = snap.docs.map(d=>{
+    const data = d.data();
+    if(data.category) categories.add(data.category);
+    const lastSupply = data.lastSupplyAt && data.lastSupplyAt.toDate ? data.lastSupplyAt.toDate() : null;
+    return {
+      id: d.id,
+      code: data.code || d.id,
+      name: data.name || "Unnamed supplier",
+      contactPerson: data.contactPerson || "",
+      phone: data.phone || "",
+      email: data.email || "",
+      category: data.category || "",
+      status: data.status || "Active",
+      notes: data.notes || "",
+      lastSupply,
+      lastSupplySort: lastSupply ? lastSupply.getTime() : 0
+    };
+  });
+  document.getElementById("categoryList").innerHTML =
+    [...categories].map(c=>`<option value="${escapeHtml(c)}"></option>`).join("");
+  applyPipeline();
+}, (err)=>{ console.error("suppliers listener error:", err); });
+
+/* ---------- Expose functions used by inline handlers ---------- */
+Object.assign(window, {
+  submitGateLogin, openAdminModal, closeAdminModal, submitAdminLogin,
+  onSearch, toggleSort, toggleFilterPanel, clearFilters, applyFilters,
+  openSupplierModal, closeSupplierModal, editSupplier, submitSupplier, deleteSupplier,
+  exportSuppliersCSV, goPage
+});
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(() => console.log('SW registered'))
+        .catch((err) => console.error('SW registration failed:', err));
+    });
+  }
+</script>
+
+</body>
+</html>

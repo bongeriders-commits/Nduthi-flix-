@@ -396,10 +396,22 @@
     </div>
   </div>
   <div class="tab-panel" id="tab-purchase">
-    <div class="placeholder-view">
-      <div class="p-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-9M14 17H5M6 4L3 7l3 3M18 20l3-3-3-3"/></svg></div>
-      <h3>Purchase history</h3>
-      <p>Purchase orders and supplier pricing history for this item will appear here.</p>
+    <div class="tx-list-head">
+      <h3>Purchase History</h3>
+    </div>
+    <div class="table-scroll" style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;min-width:520px;">
+        <thead>
+          <tr>
+            <th style="text-align:left;font-size:11.5px;color:var(--text-dim);padding:10px 12px;border-bottom:1px solid var(--line);background:var(--panel);font-weight:700;">Date</th>
+            <th style="text-align:left;font-size:11.5px;color:var(--text-dim);padding:10px 12px;border-bottom:1px solid var(--line);background:var(--panel);font-weight:700;">Supplier</th>
+            <th style="text-align:left;font-size:11.5px;color:var(--text-dim);padding:10px 12px;border-bottom:1px solid var(--line);background:var(--panel);font-weight:700;">GRN Ref</th>
+            <th style="text-align:right;font-size:11.5px;color:var(--text-dim);padding:10px 12px;border-bottom:1px solid var(--line);background:var(--panel);font-weight:700;">Qty Received</th>
+            <th style="text-align:right;font-size:11.5px;color:var(--text-dim);padding:10px 12px;border-bottom:1px solid var(--line);background:var(--panel);font-weight:700;">Unit Cost</th>
+          </tr>
+        </thead>
+        <tbody id="purchaseHistoryBody"></tbody>
+      </table>
     </div>
   </div>
   <div class="tab-panel" id="tab-attachments">
@@ -731,6 +743,7 @@ function renderTransactionsAndStats(){
   window.__currentTransactions = rows;
   paintTransactions();
   paintFullTransactions();
+  paintPurchaseHistory();
 }
 
 function fmtQty(n){ return fmtNum(n) + " " + curUnitAbbr; }
@@ -779,6 +792,26 @@ function paintFullTransactions(){
     (!q || t.ref.toLowerCase().includes(q) || t.who.toLowerCase().includes(q) || t.typeLabel.toLowerCase().includes(q) || (t.note && t.note.toLowerCase().includes(q)))
   );
   document.getElementById("txBodyFull").innerHTML = renderTxRowsHtml(rows);
+}
+
+/* ---------- Purchase history — every GRN receipt for this item, live from stockTransactions ---------- */
+function paintPurchaseHistory(){
+  const receipts = (window.__currentTransactions || []).filter(t => t.type === "in");
+  const body = document.getElementById("purchaseHistoryBody");
+  if(!body) return;
+  if(receipts.length === 0){
+    body.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-faint);padding:24px 12px;font-size:13px;">No purchases recorded for this item yet.</td></tr>`;
+    return;
+  }
+  body.innerHTML = receipts.map(t => `
+    <tr>
+      <td style="padding:12px;font-size:13px;border-bottom:1px solid var(--line-soft);">${t.date}</td>
+      <td style="padding:12px;font-size:13px;border-bottom:1px solid var(--line-soft);font-weight:600;">${t.who}</td>
+      <td style="padding:12px;font-size:12.5px;color:var(--text-dim);border-bottom:1px solid var(--line-soft);">${t.note || "—"}</td>
+      <td style="padding:12px;font-size:13px;border-bottom:1px solid var(--line-soft);text-align:right;">+${fmtNum(t.qty)} ${curUnitAbbr}</td>
+      <td style="padding:12px;font-size:13px;border-bottom:1px solid var(--line-soft);text-align:right;">${t.unitCost.toFixed(2)}</td>
+    </tr>
+  `).join("");
 }
 
 

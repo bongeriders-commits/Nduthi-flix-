@@ -586,16 +586,21 @@ onSnapshot(query(collection(db, "stockItems"), orderBy("name")), (snap)=>{
   renderPickerList();
 }, (err)=>{ console.error("stockItems listener error:", err); });
 
-/* ---------- Live supplier suggestions from past GRNs ---------- */
-onSnapshot(query(collection(db, "grns"), orderBy("createdAt","desc")), (snap)=>{
-  const names = new Set();
+/* ---------- Live supplier suggestions from the Suppliers directory ---------- */
+let supplierByName = {}; // lowercased name -> supplier doc id, so submitGRN can update lastSupplyAt
+onSnapshot(query(collection(db, "suppliers"), orderBy("name")), (snap)=>{
+  supplierByName = {};
+  const names = [];
   snap.docs.forEach(d=>{
-    const s = (d.data().supplier || "").trim();
-    if(s) names.add(s);
+    const data = d.data();
+    const name = (data.name || "").trim();
+    if(!name) return;
+    if(data.status === "Active") names.push(name);
+    supplierByName[name.toLowerCase()] = d.id;
   });
   document.getElementById("supplierList").innerHTML =
-    [...names].map(n=>`<option value="${escapeHtml(n)}"></option>`).join("");
-}, (err)=>{ console.error("grns listener error:", err); });
+    names.map(n=>`<option value="${escapeHtml(n)}"></option>`).join("");
+}, (err)=>{ console.error("suppliers listener error:", err); });
 
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -882,6 +887,15 @@ async function submitGRN(){
       status: "submitted",
       createdAt: serverTimestamp(), createdBy: currentAdminEmail
     });
+
+    // 4. If the supplier is a known entry in the Suppliers directory, mark
+    //    today as their last supply date so suppliers.html stays current.
+    const supplierId = supplierByName[h.supplier.toLowerCase()];
+    if(supplierId){
+      await updateDoc(doc(db, "suppliers", supplierId), {
+        lastSupplyAt: serverTimestamp()
+      }).catch(err=>console.error("Could not update supplier lastSupplyAt:", err));
+    }
 
     showMsg(`${window.__grnNo} submitted — stock balances updated.`, true);
     setTimeout(()=>{ location.href = "stock-list.html"; }, 1200);
