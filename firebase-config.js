@@ -4,7 +4,7 @@
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged,
-  createUserWithEmailAndPassword
+  createUserWithEmailAndPassword, EmailAuthProvider, reauthenticateWithCredential, updatePassword
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDoc, getDocs, setDoc,
@@ -38,6 +38,18 @@ export function logoutAdmin() {
 // callback(user) fires immediately with current state, then on every change
 export function watchAdmin(callback) {
   return onAuthStateChanged(auth, (user) => callback(user));
+}
+
+/* ---------- Change PIN (Firebase Auth password, presented as "PIN") ----------
+   Every team member logs in with an email + PIN (a plain password under the
+   hood). Changing it requires re-proving the current one first — Firebase
+   won't let a stale session change credentials without a fresh sign-in. */
+export async function changeMyPin(currentPin, newPin) {
+  const user = auth.currentUser;
+  if (!user) throw new Error("You're signed out — log in again first.");
+  const cred = EmailAuthProvider.credential(user.email, currentPin);
+  await reauthenticateWithCredential(user, cred);
+  await updatePassword(user, newPin);
 }
 
 /* ---------- Shared item helpers ---------- */

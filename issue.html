@@ -56,6 +56,18 @@
   .avatar-menu button{width:100%;text-align:left;background:none;border:none;padding:9px 10px;font-size:12.5px;color:var(--text);border-radius:7px;cursor:pointer;}
   .avatar-menu button:hover{background:var(--panel-alt);}
 
+  /* ---------- Change PIN modal ---------- */
+  .cp-overlay{position:fixed;inset:0;z-index:200;background:rgba(10,10,11,0.72);display:none;align-items:center;justify-content:center;padding:20px;}
+  .cp-overlay.open{display:flex;}
+  .cp-modal{background:#fff;border:1px solid var(--line);border-radius:12px;width:100%;max-width:360px;padding:22px 22px 20px;}
+  .cp-modal h3{font-size:16px;font-weight:700;margin-bottom:16px;}
+  .cp-modal .field{margin-bottom:14px;}
+  .cp-modal .field label{display:block;font-size:11px;color:var(--text-dim);margin-bottom:5px;}
+  .cp-modal .field input{width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--line);font-size:13.5px;box-sizing:border-box;}
+  .cp-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:6px;}
+  .cp-btn-cancel{padding:10px 16px;border-radius:9px;border:1px solid var(--line);background:#fff;font-size:13px;cursor:pointer;}
+  .cp-btn-submit{padding:10px 16px;border-radius:9px;border:1px solid var(--oxide);background:var(--oxide);color:#fff;font-weight:700;font-size:13px;cursor:pointer;}
+
   /* ===== Page head ===== */
   .page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:20px 20px 4px;}
   .page-head h1{margin:0;font-size:20px;font-weight:800;letter-spacing:-0.01em;}
@@ -208,8 +220,34 @@
         <svg class="avatar-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
       </button>
       <div class="avatar-menu" id="avatarMenu">
-        <button onclick="location.href='index.html'">Home</button>
+        <button id="avatarHomeBtn" onclick="location.href='index.html'">Home</button>
+        <button onclick="openChangePinModal()">Change PIN</button>
         <button onclick="signOutNow()">Sign out</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHANGE PIN MODAL -->
+  <div class="cp-overlay" id="changePinOverlay">
+    <div class="cp-modal">
+      <h3>Change PIN</h3>
+      <div class="field">
+        <label>Current PIN</label>
+        <input type="password" id="cpCurrent" placeholder="••••••••">
+      </div>
+      <div class="field">
+        <label>New PIN</label>
+        <input type="password" id="cpNew" placeholder="At least 6 characters">
+      </div>
+      <div class="field">
+        <label>Confirm New PIN</label>
+        <input type="password" id="cpConfirm" placeholder="Repeat new PIN">
+      </div>
+      <div id="cpError" style="display:none;color:var(--red);font-size:12.5px;margin:-4px 0 10px;"></div>
+      <div id="cpSuccess" style="display:none;color:#1a8f4c;font-size:12.5px;margin:-4px 0 10px;"></div>
+      <div class="cp-modal-actions">
+        <button class="cp-btn-cancel" onclick="closeChangePinModal()">Cancel</button>
+        <button class="cp-btn-submit" id="cpSubmitBtn" onclick="submitChangePin()">Save</button>
       </div>
     </div>
   </div>
@@ -350,7 +388,7 @@
 import {
   db, loginAdmin, logoutAdmin, watchAdmin, initialsFromEmail, unitAbbr,
   doc, getDoc, addDoc, onSnapshot, serverTimestamp, runTransaction,
-  collection, query, where, fetchOrBootstrapRole, isIssueOnly, syncPublicItemStatus
+  collection, query, where, fetchOrBootstrapRole, isIssueOnly, syncPublicItemStatus, changeMyPin
 } from "./firebase-config.js";
 
 /* ---------- Read item id from query string (optional — may be picked below) ---------- */
@@ -402,6 +440,8 @@ watchAdmin(async (user)=>{
     return;
   }
   myRole = roleDoc.role;
+  const homeBtn = document.getElementById("avatarHomeBtn");
+  if(homeBtn) homeBtn.style.display = isIssueOnly(myRole) ? "none" : "";
   gate.style.display = "none";
   if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
   loadStoremanName();
@@ -450,6 +490,52 @@ document.addEventListener("click", (e)=>{
     menu.classList.remove("open");
   }
 });
+
+/* ---------- Change PIN modal ---------- */
+function openChangePinModal(){
+  document.getElementById("avatarMenu").classList.remove("open");
+  document.getElementById("cpCurrent").value = "";
+  document.getElementById("cpNew").value = "";
+  document.getElementById("cpConfirm").value = "";
+  document.getElementById("cpError").style.display = "none";
+  document.getElementById("cpSuccess").style.display = "none";
+  document.getElementById("changePinOverlay").classList.add("open");
+}
+function closeChangePinModal(){ document.getElementById("changePinOverlay").classList.remove("open"); }
+document.getElementById("changePinOverlay").addEventListener("click", (e)=>{
+  if(e.target.id==="changePinOverlay") closeChangePinModal();
+});
+function submitChangePin(){
+  const current = document.getElementById("cpCurrent").value;
+  const next = document.getElementById("cpNew").value;
+  const confirmPin = document.getElementById("cpConfirm").value;
+  const errBox = document.getElementById("cpError");
+  const okBox = document.getElementById("cpSuccess");
+  errBox.style.display = "none";
+  okBox.style.display = "none";
+
+  if(!current){ errBox.textContent = "Enter your current PIN."; errBox.style.display = "block"; return; }
+  if(!next || next.length < 6){ errBox.textContent = "New PIN must be at least 6 characters."; errBox.style.display = "block"; return; }
+  if(next !== confirmPin){ errBox.textContent = "New PIN and confirmation don't match."; errBox.style.display = "block"; return; }
+
+  const btn = document.getElementById("cpSubmitBtn");
+  btn.disabled = true; btn.textContent = "Saving…";
+  changeMyPin(current, next).then(()=>{
+    okBox.textContent = "PIN updated.";
+    okBox.style.display = "block";
+    document.getElementById("cpCurrent").value = "";
+    document.getElementById("cpNew").value = "";
+    document.getElementById("cpConfirm").value = "";
+  }).catch(err=>{
+    const msg = (err.code === "auth/wrong-password" || err.code === "auth/invalid-credential")
+      ? "Current PIN is incorrect."
+      : (err.message || "Could not update PIN.");
+    errBox.textContent = msg;
+    errBox.style.display = "block";
+  }).finally(()=>{
+    btn.disabled = false; btn.textContent = "Save";
+  });
+}
 
 /* ---------- Formatting ---------- */
 function fmtNum(n){ return Math.round(n).toLocaleString(); }
@@ -795,7 +881,7 @@ window.generateSummaryPDF = function generateSummaryPDF(){
   doc.save(`${liveData ? liveData.code : "item"}-issue-summary.pdf`);
 };
 
-Object.assign(window, { toggleAvatarMenu, signOutNow, submitGateLogin });
+Object.assign(window, { toggleAvatarMenu, signOutNow, submitGateLogin, openChangePinModal, closeChangePinModal, submitChangePin });
 </script>
 
 <script>
