@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script src="/logo-data.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Katani Quarry — Approvals</title>
@@ -224,7 +223,7 @@
 
 <div id="accessGate" style="display:none;">
   <div class="gate-card">
-    <img alt="Cabro City" class="cc-logo" data-fallback="/cabro-city-logo.png">
+    <img alt="Cabro City" class="cc-logo" src="/cabro-city-logo.png">
     <h2>Sign in required</h2>
     <p>Cabro City is restricted to approved staff. If you don't have an account yet, ask your admin to add one for you.</p>
     <div class="field">
@@ -591,19 +590,24 @@ render();
 </script>
 
 <script>
-(function(){
-  var uri = window.CABRO_LOGO_URI;
-  document.querySelectorAll("img.cc-logo").forEach(function(img){
-    img.src = uri || img.getAttribute("data-fallback");
-  });
-})();
-</script>
-<script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/service-worker.js')
-        .then(() => console.log('SW registered'))
+        .then((reg) => {
+          // Ask the browser to check for a new service-worker.js right away
+          // instead of waiting up to 24h — this is what makes a fresh
+          // deploy show up without the user having to know to hard-refresh.
+          reg.update();
+        })
         .catch((err) => console.error('SW registration failed:', err));
+
+      // A new SW just activated (see service-worker.js activate handler) —
+      // reload once so this tab picks up the new page code immediately.
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'SW_UPDATED') {
+          window.location.reload();
+        }
+      });
     });
   }
 </script>

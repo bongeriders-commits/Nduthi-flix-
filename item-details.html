@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script src="/logo-data.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Item Details — Cabro City</title>
@@ -198,7 +197,7 @@
 
 <div id="accessGate" style="display:none;">
   <div class="gate-card">
-    <img alt="Cabro City" class="cc-logo" data-fallback="/cabro-city-logo.png">
+    <img alt="Cabro City" class="cc-logo" src="/cabro-city-logo.png">
     <h2>Sign in required</h2>
     <p>Cabro City is restricted to approved staff. If you don't have an account yet, ask your admin to add one for you.</p>
     <div class="field">
@@ -223,7 +222,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
       </button>
       <button class="mh-logo" onclick="location.href='index.html'" aria-label="Cabro City home">
-        <img alt="Cabro City — Paving the Future" class="brand-logo-img cc-logo" data-fallback="/cabro-city-logo.png">
+        <img alt="Cabro City — Paving the Future" class="brand-logo-img cc-logo" src="/cabro-city-logo.png">
       </button>
     </div>
     <div class="mh-right">
@@ -787,6 +786,14 @@ function renderTransactionsAndStats(){
 
 function fmtQty(n){ return fmtNum(n) + " " + curUnitAbbr; }
 
+// Escapes user-supplied text before it's dropped into innerHTML — the
+// "who" and "note" fields on a transaction are free text typed by
+// whoever performed the receive/issue (any active user), so they must
+// never be rendered raw here.
+function escapeHtml(s){
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
 function renderTxRowsHtml(rows){
   if(rows.length === 0){
     return `<tr><td colspan="7" style="text-align:center;color:var(--text-faint);padding:24px 12px;">No stock movements match.</td></tr>`;
@@ -798,7 +805,7 @@ function renderTxRowsHtml(rows){
         <span class="tx-type ${t.type}">${t.typeLabel}</span>
         <span class="tx-type-label">${t.typeSub}</span>
       </td>
-      <td class="tx-ref"><div class="r">${t.ref}</div><div class="s">${t.who}</div></td>
+      <td class="tx-ref"><div class="r">${t.ref}</div><div class="s">${escapeHtml(t.who)}</div></td>
       <td class="qty ${t.type}">${t.type==='in'?'+':'-'}${fmtNum(Math.abs(t.qty))} ${curUnitAbbr}</td>
       <td>${fmtNum(t.balance)} ${curUnitAbbr}</td>
       <td>${t.unitCost.toFixed(2)}</td>
@@ -845,8 +852,8 @@ function paintPurchaseHistory(){
   body.innerHTML = receipts.map(t => `
     <tr>
       <td style="padding:12px;font-size:13px;border-bottom:1px solid var(--line-soft);">${t.date}</td>
-      <td style="padding:12px;font-size:13px;border-bottom:1px solid var(--line-soft);font-weight:600;">${t.who}</td>
-      <td style="padding:12px;font-size:12.5px;color:var(--text-dim);border-bottom:1px solid var(--line-soft);">${t.note || "—"}</td>
+      <td style="padding:12px;font-size:13px;border-bottom:1px solid var(--line-soft);font-weight:600;">${escapeHtml(t.who)}</td>
+      <td style="padding:12px;font-size:12.5px;color:var(--text-dim);border-bottom:1px solid var(--line-soft);">${escapeHtml(t.note || "—")}</td>
       <td style="padding:12px;font-size:13px;border-bottom:1px solid var(--line-soft);text-align:right;">+${fmtNum(t.qty)} ${curUnitAbbr}</td>
       <td style="padding:12px;font-size:13px;border-bottom:1px solid var(--line-soft);text-align:right;">${t.unitCost.toFixed(2)}</td>
     </tr>
@@ -950,19 +957,24 @@ Object.assign(window, {
 </script>
 
 <script>
-(function(){
-  var uri = window.CABRO_LOGO_URI;
-  document.querySelectorAll("img.cc-logo").forEach(function(img){
-    img.src = uri || img.getAttribute("data-fallback");
-  });
-})();
-</script>
-<script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/service-worker.js')
-        .then(() => console.log('SW registered'))
+        .then((reg) => {
+          // Ask the browser to check for a new service-worker.js right away
+          // instead of waiting up to 24h — this is what makes a fresh
+          // deploy show up without the user having to know to hard-refresh.
+          reg.update();
+        })
         .catch((err) => console.error('SW registration failed:', err));
+
+      // A new SW just activated (see service-worker.js activate handler) —
+      // reload once so this tab picks up the new page code immediately.
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'SW_UPDATED') {
+          window.location.reload();
+        }
+      });
     });
   }
 </script>

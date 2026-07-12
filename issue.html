@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script src="/logo-data.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Issue Stock — Cabro City</title>
@@ -182,7 +181,7 @@
 
 <div id="accessGate" style="display:none;">
   <div class="gate-card">
-    <img alt="Cabro City" class="cc-logo" data-fallback="/cabro-city-logo.png">
+    <img alt="Cabro City" class="cc-logo" src="/cabro-city-logo.png">
     <h2>Sign in required</h2>
     <p>Issuing stock is restricted to approved store staff. If you don't have an account yet, ask your admin to add one for you.</p>
     <div class="field">
@@ -207,7 +206,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
       </button>
       <button class="mh-logo" onclick="location.href='index.html'" aria-label="Cabro City home">
-        <img alt="Cabro City — Paving the Future" class="brand-logo-img cc-logo" data-fallback="/cabro-city-logo.png">
+        <img alt="Cabro City — Paving the Future" class="brand-logo-img cc-logo" src="/cabro-city-logo.png">
       </button>
     </div>
     <div class="mh-right">
@@ -624,6 +623,15 @@ function backToPicker(){
 window.backToPicker = backToPicker;
 
 /* ---------- Item picker (used when issue.html is opened without ?id=) ---------- */
+// Escapes user-supplied text before it's dropped into innerHTML — item
+// names and the free-text "who"/"machine" fields (issueTo/collectedBy,
+// typed by any active user including storeman/receiver) must never be
+// rendered raw, or a low-trust role could plant a stored-XSS payload
+// that runs in an owner/admin's session later.
+function escapeHtml(s){
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
 let allItems = [];
 if(!itemId){
   document.getElementById("pickerCard").style.display = "block";
@@ -653,8 +661,8 @@ window.renderPicker = function renderPicker(){
     return `
       <div class="tx-row" style="cursor:pointer;" onclick="selectItem('${it.id}')">
         <div class="tx-mid" style="padding:0;">
-          <div class="r">${it.name || "—"}</div>
-          <div class="s">${it.code || "—"} · ${it.uom || ""}</div>
+          <div class="r">${escapeHtml(it.name || "—")}</div>
+          <div class="s">${escapeHtml(it.code || "—")} · ${escapeHtml(it.uom || "")}</div>
         </div>
         <div class="tx-right">
           <span class="pill ${pillClass(status)}" style="font-size:10px;padding:3px 9px;">${status}</span>
@@ -693,7 +701,7 @@ function renderRecentIssues(){
         </div>
         <div class="tx-mid">
           <div class="r">${ref}</div>
-          <div class="s">${t.machine || "—"} · ${t.who || "—"}</div>
+          <div class="s">${escapeHtml(t.machine || "—")} · ${escapeHtml(t.who || "—")}</div>
           <span class="tag">ISSUED</span>
         </div>
         <div class="tx-right">
@@ -891,19 +899,24 @@ Object.assign(window, { toggleAvatarMenu, signOutNow, submitGateLogin, openChang
 </script>
 
 <script>
-(function(){
-  var uri = window.CABRO_LOGO_URI;
-  document.querySelectorAll("img.cc-logo").forEach(function(img){
-    img.src = uri || img.getAttribute("data-fallback");
-  });
-})();
-</script>
-<script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/service-worker.js')
-        .then(() => console.log('SW registered'))
+        .then((reg) => {
+          // Ask the browser to check for a new service-worker.js right away
+          // instead of waiting up to 24h — this is what makes a fresh
+          // deploy show up without the user having to know to hard-refresh.
+          reg.update();
+        })
         .catch((err) => console.error('SW registration failed:', err));
+
+      // A new SW just activated (see service-worker.js activate handler) —
+      // reload once so this tab picks up the new page code immediately.
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'SW_UPDATED') {
+          window.location.reload();
+        }
+      });
     });
   }
 </script>

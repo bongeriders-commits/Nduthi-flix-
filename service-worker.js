@@ -1,6 +1,6 @@
 // Cabro City — service worker
-// Bump CACHE_NAME to force all clients to refresh cached assets.
-const CACHE_NAME = "cabro-city-v3";
+// Bump CACHE_NAME on every deploy to force all clients onto fresh assets.
+const CACHE_NAME = "cabro-city-v4";
 
 const PRECACHE_URLS = [
   "/",
@@ -13,7 +13,6 @@ const PRECACHE_URLS = [
   "/settings",
   "/audit",
   "/manifest.json",
-  "/logo-data.js",
   "/cabro-city-logo.png",
   "/icon-192.png",
   "/icon-512.png"
@@ -32,25 +31,56 @@ self.addEventListener("activate", (event) => {
       Promise.all(
         keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
       )
+    ).then(() => self.clients.claim())
+     .then(() =>
+      // A new SW just took over — tell every open tab so it can reload
+      // itself onto the fresh version instead of silently staying on
+      // whatever page code it already had loaded in memory.
+      self.clients.matchAll({ type: "window" }).then((clients) =>
+        clients.forEach((client) => client.postMessage({ type: "SW_UPDATED" }))
+      )
     )
   );
-  self.clients.claim();
 });
 
-// Network-first for Firebase/Firestore traffic, cache-first for the app shell.
-self.addEventListener("fetch", (event) => {
-  const url = new URL(event.request.url);
-
-  if (
+// Never touch Firebase/Firestore traffic — always go straight to network.
+function isFirebaseRequest(url) {
+  return (
     url.hostname.includes("firestore.googleapis.com") ||
     url.hostname.includes("firebaseio.com") ||
     url.hostname.includes("googleapis.com") ||
     url.hostname.includes("firebasestorage") ||
     url.hostname.includes("gstatic.com")
-  ) {
+  );
+}
+
+self.addEventListener("fetch", (event) => {
+  const url = new URL(event.request.url);
+  if (isFirebaseRequest(url)) return;
+
+  // Page navigations (typing a URL, clicking a link, hamburger nav, etc.)
+  // go network-first: whoever opens a page always gets the latest deployed
+  // HTML/JS if they're online, so a new release shows up immediately
+  // instead of "until I refresh". Cache is only the offline fallback, and
+  // a short timeout keeps a slow network from stalling the page indefinitely.
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      Promise.race([
+        fetch(event.request).then((res) => {
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, res.clone()));
+          return res;
+        }),
+        new Promise((resolve) =>
+          setTimeout(() => caches.match(event.request).then(resolve), 2500)
+        )
+      ]).catch(() => caches.match(event.request))
+    );
     return;
   }
 
+  // Static assets (images/icons/manifest) — cache-first, they're already
+  // fingerprint-free but served with long immutable Cache-Control, and
+  // rarely change, so instant-from-cache is the right tradeoff here.
   event.respondWith(
     caches.match(event.request).then((cached) => {
       const fetchPromise = fetch(event.request)

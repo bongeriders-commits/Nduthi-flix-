@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script src="/logo-data.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Audit Trail — Cabro City</title>
@@ -58,8 +57,8 @@
     position:sticky;top:0;background:#ffffff;z-index:30;
   }
   .mh-left{display:flex;align-items:center;gap:14px;}
-  .hamburger{width:22px;height:15px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;background:none;border:none;padding:0;}
-  .hamburger span{display:block;height:2.5px;background:#1a1a1d;border-radius:2px;}
+  .back-btn{background:none;border:none;color:var(--text);cursor:pointer;padding:4px;display:flex;}
+  .back-btn svg{width:22px;height:22px;}
   .mh-logo{display:flex;align-items:center;gap:10px;cursor:pointer;background:none;border:none;padding:0;}
   .brand-logo-img{height:36px;width:auto;display:block;}
   .mh-right{display:flex;align-items:center;gap:18px;}
@@ -279,7 +278,7 @@
 
 <div id="accessGate" style="display:none;">
   <div class="gate-card">
-    <img alt="Cabro City" class="cc-logo" data-fallback="/cabro-city-logo.png">
+    <img alt="Cabro City" class="cc-logo" src="/cabro-city-logo.png">
     <h2>Sign in required</h2>
     <p>Cabro City is restricted to approved staff. If you don't have an account yet, ask your admin to add one for you.</p>
     <div class="field">
@@ -300,9 +299,11 @@
   <!-- HEADER -->
   <div class="mobile-header">
     <div class="mh-left">
-      <button class="hamburger" aria-label="Back to home" onclick="location.href='index.html'"><span></span><span></span><span></span></button>
+      <button class="back-btn" aria-label="Back to home" onclick="location.href='index.html'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
       <button class="mh-logo" onclick="location.href='index.html'" aria-label="Cabro City home">
-        <img alt="Cabro City — Paving the Future" class="brand-logo-img cc-logo" data-fallback="/cabro-city-logo.png">
+        <img alt="Cabro City — Paving the Future" class="brand-logo-img cc-logo" src="/cabro-city-logo.png">
       </button>
     </div>
     <div class="mh-right">
@@ -825,18 +826,23 @@ Object.assign(window, {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/service-worker.js')
-        .then(() => console.log('SW registered'))
+        .then((reg) => {
+          // Ask the browser to check for a new service-worker.js right away
+          // instead of waiting up to 24h — this is what makes a fresh
+          // deploy show up without the user having to know to hard-refresh.
+          reg.update();
+        })
         .catch((err) => console.error('SW registration failed:', err));
+
+      // A new SW just activated (see service-worker.js activate handler) —
+      // reload once so this tab picks up the new page code immediately.
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'SW_UPDATED') {
+          window.location.reload();
+        }
+      });
     });
   }
-</script>
-<script>
-(function(){
-  var uri = window.CABRO_LOGO_URI;
-  document.querySelectorAll("img.cc-logo").forEach(function(img){
-    img.src = uri || img.getAttribute("data-fallback");
-  });
-})();
 </script>
 </body>
 </html>
