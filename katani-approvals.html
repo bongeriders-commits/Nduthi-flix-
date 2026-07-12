@@ -308,7 +308,8 @@
 import {
   db, auth, loginAdmin, logoutAdmin, watchAdmin, statusOf, initialsFromEmail,
   collection, doc, addDoc, updateDoc, getDoc, onSnapshot,
-  serverTimestamp, query, orderBy, canManage, fetchOrBootstrapRole
+  serverTimestamp, query, orderBy, canManage, isIssueOnly, isReceiveIssueOnly,
+  syncPublicItem, syncPublicItemStatus, fetchOrBootstrapRole
 } from "./firebase-config.js";
 
 const ICONS = {
@@ -356,6 +357,11 @@ watchAdmin(async (user)=>{
     return;
   }
   myRole = roleDoc.role;
+
+  // Storeman and receiver are limited to issuing/receiving stock only.
+  if(isIssueOnly(myRole)){ window.location.replace("issue.html"); return; }
+  if(isReceiveIssueOnly(myRole)){ window.location.replace("index.html"); return; }
+
   document.querySelectorAll('[data-requires="manage"]').forEach(el=>{ el.style.display = canManage(myRole) ? "" : "none"; });
   gate.style.display = "none";
   if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
@@ -522,14 +528,17 @@ window.resolveApproval = async function(id, status){
   try{
     if(status === "approved"){
       if(a.type === "new-item"){
-        await addDoc(collection(db, "stockItems"), {
+        const newItemData = {
           name: a.itemName,
           category: a.category || "",
           uom: a.uom || "",
           balance: a.startBalance || 0,
           min: a.minThreshold || 0,
           status: statusOf(a.startBalance || 0, a.minThreshold || 0)
-        });
+        };
+        const ref = await addDoc(collection(db, "stockItems"), newItemData);
+        syncPublicItem(ref.id, { name: newItemData.name, code: newItemData.code, uom: newItemData.uom, balance: newItemData.balance, min: newItemData.min })
+          .catch(err=>console.error("public mirror sync failed:", err));
       } else if(a.type === "discrepancy" && a.itemId){
         const itemSnap = await getDoc(doc(db, "stockItems", a.itemId));
         const min = itemSnap.exists() ? (itemSnap.data().min || 0) : 0;
@@ -537,6 +546,8 @@ window.resolveApproval = async function(id, status){
           balance: a.actualCount,
           status: statusOf(a.actualCount, min)
         });
+        syncPublicItemStatus(a.itemId, a.actualCount, min)
+          .catch(err=>console.error("public mirror status sync failed:", err));
       } else if(a.type === "threshold" && a.itemId){
         const itemSnap = await getDoc(doc(db, "stockItems", a.itemId));
         const balance = itemSnap.exists() ? (itemSnap.data().balance || 0) : 0;
@@ -544,6 +555,8 @@ window.resolveApproval = async function(id, status){
           min: a.newMin,
           status: statusOf(balance, a.newMin)
         });
+        syncPublicItemStatus(a.itemId, balance, a.newMin)
+          .catch(err=>console.error("public mirror status sync failed:", err));
       }
     }
 

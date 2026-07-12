@@ -371,7 +371,7 @@
 import {
   db, auth, loginAdmin, logoutAdmin, watchAdmin, statusOf, initialsFromEmail,
   collection, doc, updateDoc, deleteDoc, onSnapshot,
-  serverTimestamp, query, orderBy, canManage, fetchOrBootstrapRole
+  serverTimestamp, query, orderBy, canManage, isIssueOnly, isReceiveIssueOnly, deletePublicItem, fetchOrBootstrapRole
 } from "./firebase-config.js";
 
 let isAdmin = false;
@@ -410,6 +410,12 @@ watchAdmin(async (user)=>{
     return;
   }
   myRole = roleDoc.role;
+
+  // Storeman must never see stock balances; receiver is limited to
+  // receive/issue only — neither gets the inventory list.
+  if(isIssueOnly(myRole)){ window.location.replace("issue.html"); return; }
+  if(isReceiveIssueOnly(myRole)){ window.location.replace("index.html"); return; }
+
   document.querySelectorAll('[data-requires="manage"]').forEach(el=>{ el.style.display = canManage(myRole) ? "" : "none"; });
   gate.style.display = "none";
   if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
@@ -611,7 +617,9 @@ function deleteItem(idx){
   if(!requireAdmin()) return;
   const it = items[idx];
   if(confirm(`Remove "${it.name}" (${it.code}) from the stock list?`)){
-    deleteDoc(doc(db, "stockItems", it.id)).catch(err=>alert("Delete failed: "+err.message));
+    deleteDoc(doc(db, "stockItems", it.id)).then(()=>{
+      deletePublicItem(it.id).catch(err=>console.error("public mirror cleanup failed:", err));
+    }).catch(err=>alert("Delete failed: "+err.message));
     // no local splice needed — onSnapshot will refresh the table
   }
 }

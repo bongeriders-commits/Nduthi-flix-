@@ -348,9 +348,9 @@
 <script type="module">
 /* ---------- Firebase ---------- */
 import {
-  db, loginAdmin, logoutAdmin, watchAdmin, statusOf, initialsFromEmail, unitAbbr,
+  db, loginAdmin, logoutAdmin, watchAdmin, initialsFromEmail, unitAbbr,
   doc, getDoc, addDoc, onSnapshot, serverTimestamp, runTransaction,
-  collection, query, where, fetchOrBootstrapRole
+  collection, query, where, fetchOrBootstrapRole, isIssueOnly, syncPublicItemStatus
 } from "./firebase-config.js";
 
 /* ---------- Read item id from query string (optional — may be picked below) ---------- */
@@ -474,7 +474,11 @@ function watchItem(id){
   if(unsubItem) unsubItem();
   if(unsubTx) unsubTx();
 
-  unsubItem = onSnapshot(doc(db, "stockItems", id), (snap)=>{
+  // Reads stockItemsPublic (no balance/min field ever) — liveData never
+  // carries a quantity for a storeman. The one real stockItems read that
+  // remains happens only inside submitIssue()'s transaction, at the moment
+  // of submission, to validate and write the deduction.
+  unsubItem = onSnapshot(doc(db, "stockItemsPublic", id), (snap)=>{
     if(!snap.exists()){
       alert("This item no longer exists — it may have been deleted.");
       backToPicker();
@@ -484,7 +488,7 @@ function watchItem(id){
     curUnitAbbr = unitAbbr(liveData.uom);
     document.getElementById("itName").textContent = liveData.name || "—";
     document.getElementById("itCode").textContent = liveData.code || "—";
-    const status = statusOf(liveData.balance, liveData.min);
+    const status = liveData.status || "Active";
     const stEl = document.getElementById("itStatus");
     stEl.textContent = status === "Active" ? "Active Item" : status;
     stEl.className = "pill " + pillClass(status);
@@ -537,10 +541,10 @@ window.backToPicker = backToPicker;
 let allItems = [];
 if(!itemId){
   document.getElementById("pickerCard").style.display = "block";
-  onSnapshot(query(collection(db, "stockItems")), (snap)=>{
+  onSnapshot(query(collection(db, "stockItemsPublic")), (snap)=>{
     allItems = snap.docs.map(d=>({ id:d.id, ...d.data() }));
     renderPicker();
-  }, (err)=>{ console.error("stockItems listener error:", err); });
+  }, (err)=>{ console.error("stockItemsPublic listener error:", err); });
 } else {
   watchItem(itemId);
   document.getElementById("itemSummaryBlock").style.display = "block";
@@ -559,7 +563,7 @@ window.renderPicker = function renderPicker(){
     return;
   }
   box.innerHTML = list.map(it=>{
-    const status = statusOf(it.balance, it.min);
+    const status = it.status || "Active";
     return `
       <div class="tx-row" style="cursor:pointer;" onclick="selectItem('${it.id}')">
         <div class="tx-mid" style="padding:0;">
@@ -648,16 +652,24 @@ window.submitIssue = function submitIssue(){
   btn.disabled = true;
 
   const itemRef = doc(db, "stockItems", itemId);
-  let newBalanceAfter = null;
+  let newBalanceAfter = null, newMin = null;
 
   runTransaction(db, async (tx)=>{
     const snap = await tx.get(itemRef);
     if(!snap.exists()) throw new Error("This item no longer exists.");
     const curBalance = snap.data().balance || 0;
-    if(qty > curBalance) throw new Error(`Only ${fmtNum(curBalance)} ${curUnitAbbr} in stock — cannot issue ${qty}.`);
+    newMin = snap.data().min || 0;
+    if(qty > curBalance){
+      // Storeman never sees the exact figure — just that it's not enough.
+      throw new Error(isIssueOnly(myRole)
+        ? "Not enough stock to issue that quantity."
+        : `Only ${fmtNum(curBalance)} ${curUnitAbbr} in stock — cannot issue ${qty}.`);
+    }
     newBalanceAfter = curBalance - qty;
     tx.update(itemRef, { balance: newBalanceAfter, updatedAt: serverTimestamp(), updatedBy: currentUserEmail });
   }).then(()=>{
+    syncPublicItemStatus(itemId, newBalanceAfter, newMin)
+      .catch(err=>console.error("public mirror status sync failed:", err));
     return addDoc(collection(db, "stockTransactions"), {
       itemId, itemName: liveData.name, type: "out", qty, unit: curUnitAbbr,
       machine: issueTo, who: collectedBy, note: purpose + (remarks ? (" — " + remarks) : ""),

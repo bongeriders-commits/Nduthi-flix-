@@ -803,7 +803,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
       Home
     </button>
-    <button class="nav-item" data-tab="inventory" onclick="switchTab('inventory')">
+    <button class="nav-item" data-tab="inventory" data-requires="inventory" onclick="switchTab('inventory')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>
       Inventory
     </button>
@@ -837,7 +837,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
         <span class="d-label">Home</span>
       </button>
-      <button class="drawer-item" data-dtab="inventory" onclick="drawerGo('inventory')">
+      <button class="drawer-item" data-dtab="inventory" data-requires="inventory" onclick="drawerGo('inventory')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>
         <span class="d-label">Inventory</span>
         <svg class="drawer-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
@@ -868,6 +868,10 @@
       <button class="drawer-item" data-requires="owner" onclick="closeDrawer();openTeamModal();">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <span class="d-label">Team &amp; Roles</span>
+      </button>
+      <button class="drawer-item" data-requires="manage" id="syncMirrorBtn" onclick="syncAllItemsToPublicMirror()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        <span class="d-label">Sync Item Mirror</span>
       </button>
       <div class="drawer-divider"></div>
       <button class="drawer-item" onclick="closeDrawer()">
@@ -941,6 +945,8 @@
       <select id="teamRole">
         <option value="admin">Admin — full access, can't manage team</option>
         <option value="staff">Staff — dashboard, inventory, receive/issue only</option>
+        <option value="storeman">Storeman — issue stock only, no quantities visible</option>
+        <option value="receiver">Receiver — receive &amp; issue stock only</option>
       </select>
     </div>
     <div class="modal-actions" style="margin-top:4px;">
@@ -1047,7 +1053,8 @@
 import {
   db, loginAdmin, logoutAdmin, watchAdmin, unitAbbr as sharedUnitAbbr, initialsFromEmail,
   collection, doc, addDoc, onSnapshot, serverTimestamp, query, orderBy, limit, runTransaction,
-  ROLES, canManage, canManageTeam, fetchOrBootstrapRole, watchTeam, updateTeamMember, createTeamMember
+  ROLES, canManage, canManageTeam, isIssueOnly, isReceiveIssueOnly, syncPublicItem, syncPublicItemStatus, getDocs,
+  fetchOrBootstrapRole, watchTeam, updateTeamMember, createTeamMember
 } from "./firebase-config.js";
 
 let isAdmin = false, currentAdminEmail = "";
@@ -1091,6 +1098,14 @@ watchAdmin(async (user)=>{
   }
 
   myRole = roleDoc.role;
+
+  // Storeman can only ever use the dedicated Issue Stock page — never the
+  // dashboard, since the dashboard surfaces item/stock quantities.
+  if(isIssueOnly(myRole)){
+    window.location.replace("issue.html");
+    return;
+  }
+
   document.getElementById("avatarInitials").textContent = initialsFromEmail(currentAdminEmail);
   const logoutLabel = document.getElementById("drawerLogoutLabel");
   if(logoutLabel) logoutLabel.textContent = "Log Out (" + currentAdminEmail.split("@")[0] + ")";
@@ -1108,6 +1123,14 @@ function applyRolePermissions(){
   document.querySelectorAll('[data-requires="owner"]').forEach(el=>{
     el.style.display = owner ? "" : "none";
   });
+
+  // Receiver: home page is a launcher for Receive/Issue only — no inventory
+  // browsing, reports, or transaction history.
+  const receiverOnly = isReceiveIssueOnly(myRole);
+  document.querySelectorAll('[data-requires="inventory"]').forEach(el=>{
+    el.style.display = receiverOnly ? "none" : "";
+  });
+
   const roleBadge = document.getElementById("roleBadge");
   if(roleBadge) roleBadge.textContent = myRole ? myRole.charAt(0).toUpperCase()+myRole.slice(1) : "";
 }
@@ -1128,7 +1151,7 @@ function renderTeamList(members){
   if(!box) return;
   box.innerHTML = members.map(m=>{
     const isMe = m.id === myUid;
-    const roleOpts = ["owner","admin","staff"].map(r=>
+    const roleOpts = ["owner","admin","staff","storeman","receiver"].map(r=>
       `<option value="${r}" ${m.role===r?"selected":""}>${r.charAt(0).toUpperCase()+r.slice(1)}</option>`
     ).join("");
     return `
@@ -1390,14 +1413,18 @@ function submitTx(){
   }
 
   const itemRef = doc(db, "stockItems", itemId);
+  let newBalanceAfter = null;
   runTransaction(db, async (tx)=>{
     const snap = await tx.get(itemRef);
     if(!snap.exists()) throw new Error("Item no longer exists.");
     const curBalance = snap.data().balance || 0;
     const newBalance = type==="in" ? curBalance + qty : curBalance - qty;
     if(newBalance < 0) throw new Error(`Only ${curBalance} ${it.unit} in stock — cannot issue ${qty}.`);
+    newBalanceAfter = newBalance;
     tx.update(itemRef, { balance: newBalance, updatedAt: serverTimestamp(), updatedBy: currentAdminEmail });
   }).then(()=>{
+    syncPublicItemStatus(itemId, newBalanceAfter, it.min)
+      .catch(err=>console.error("public mirror status sync failed:", err));
     return addDoc(collection(db, "stockTransactions"), {
       itemId, itemName: it.name, type, qty, unit: it.unit,
       who: who || "", machine: machine || "", note: note || "",
@@ -1411,6 +1438,35 @@ function submitTx(){
     errBox.textContent = err.message || "Could not save transaction.";
     errBox.style.display = "block";
   });
+}
+
+/* ---------- One-time / re-runnable: backfill stockItemsPublic ----------
+   Items created before the storeman/receiver roles existed have no
+   stockItemsPublic mirror doc yet, so the issue.html picker (and anyone on
+   a restricted role) won't see them. Safe to run any time — it's an
+   upsert, not an append, so running it twice just re-syncs everything. */
+async function syncAllItemsToPublicMirror(){
+  if(!requireAdmin()) return;
+  const btn = document.getElementById("syncMirrorBtn");
+  if(btn){ btn.disabled = true; btn.textContent = "Syncing…"; }
+  try{
+    const snap = await getDocs(collection(db, "stockItems"));
+    let count = 0;
+    for(const d of snap.docs){
+      const data = d.data();
+      await syncPublicItem(d.id, {
+        name: data.name, code: data.code, uom: data.uom,
+        balance: data.balance, min: data.min
+      });
+      count++;
+    }
+    alert(`Synced ${count} item(s) to the public mirror.`);
+  }catch(err){
+    alert("Sync failed: " + err.message);
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = "Sync Item Mirror"; }
+    closeDrawer();
+  }
 }
 
 /* ---------- New Item Modal ---------- */
@@ -1444,11 +1500,13 @@ function submitNewItem(){
   if(isNaN(min) || min<0){ errBox.textContent = "Enter a valid minimum threshold."; errBox.style.display="block"; return; }
 
   const nextNum = items.length + 1;
-  addDoc(collection(db, "stockItems"), {
+  const newItemData = {
     code: "ITEM-" + String(nextNum).padStart(4, "0"),
     name, category: cat, uom: unit, min, balance: qty,
     updatedAt: serverTimestamp(), updatedBy: currentAdminEmail
-  }).then(()=>{
+  };
+  addDoc(collection(db, "stockItems"), newItemData).then((ref)=>{
+    syncPublicItem(ref.id, newItemData).catch(err=>console.error("public mirror sync failed:", err));
     closeNewItemModal();
   }).catch(err=>{
     errBox.textContent = "Could not add item: " + err.message;
@@ -1519,6 +1577,12 @@ function exportIssuedPDF(){ buildReportPDF("out"); }
 
 /* ---------- Tabs ---------- */
 function switchTab(name){
+  // Belt-and-braces: even if triggered outside the hidden nav buttons,
+  // receiver can't land on Inventory/Reports (real enforcement is in
+  // Firestore rules, but keep the UI consistent too).
+  if(isReceiveIssueOnly(myRole) && (name==="inventory" || name==="reports")){
+    name = "dashboard";
+  }
   document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
   document.getElementById("tab-"+name).classList.add("active");
   document.querySelectorAll(".nav-item").forEach(n=>n.classList.toggle("active", n.dataset.tab===name));
@@ -1581,13 +1645,12 @@ function renderDashboard(){
 
   document.getElementById("discrepancyCount").textContent = pending.length;
 
-  document.getElementById("statGrid").innerHTML = `
-    <div class="stat-card" onclick="location.href='stock-list.html'" style="cursor:pointer;">
-      <div class="s-icon amber">${ICONS.box}</div>
-      <div class="s-label">TOTAL ITEMS</div>
-      <div class="s-value">${totalItems}</div>
-      <div class="s-sub neutral">Active items</div>
-    </div>
+  // Receiver sees a stripped dashboard: just the two launcher cards for
+  // Receive/Issue stock — no item counts, low/out-of-stock, or approval
+  // figures, since that role isn't permitted to view inventory quantities.
+  const receiverOnly = isReceiveIssueOnly(myRole);
+
+  const receiveIssueCards = `
     <div class="stat-card" onclick="location.href='grn.html'" style="cursor:pointer;">
       <div class="s-icon green">${ICONS.down}</div>
       <div class="s-label">RECEIVED TODAY</div>
@@ -1600,6 +1663,16 @@ function renderDashboard(){
       <div class="s-value">${issuesToday.length}</div>
       <div class="s-sub neutral">Tap to issue stock</div>
     </div>
+  `;
+
+  document.getElementById("statGrid").innerHTML = receiverOnly ? receiveIssueCards : `
+    <div class="stat-card" onclick="location.href='stock-list.html'" style="cursor:pointer;">
+      <div class="s-icon amber">${ICONS.box}</div>
+      <div class="s-label">TOTAL ITEMS</div>
+      <div class="s-value">${totalItems}</div>
+      <div class="s-sub neutral">Active items</div>
+    </div>
+    ${receiveIssueCards}
     <div class="stat-card">
       <div class="s-icon amber">${ICONS.warn}</div>
       <div class="s-label">LOW STOCK</div>
@@ -1753,7 +1826,8 @@ Object.assign(window, {
   closeDrawer, closeModal, closeNewItemModal, drawerGo, drawerIssue, drawerReceive,
   exportIssuedPDF, exportReceivedPDF, openDrawer, openModal, openNewItemModal, openStockAudit,
   quickIssue, quickReceive, setTxType, submitNewItem, submitTx, switchTab,
-  openTeamModal, closeTeamModal, submitAddTeamMember, changeTeamRole, toggleTeamActive
+  openTeamModal, closeTeamModal, submitAddTeamMember, changeTeamRole, toggleTeamActive,
+  syncAllItemsToPublicMirror
 });
 </script>
 

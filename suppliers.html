@@ -427,7 +427,7 @@
 import {
   db, loginAdmin, logoutAdmin, watchAdmin, initialsFromEmail,
   collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot,
-  serverTimestamp, query, orderBy, runTransaction, canManage, fetchOrBootstrapRole
+  serverTimestamp, query, orderBy, runTransaction, canManage, isIssueOnly, isReceiveIssueOnly, fetchOrBootstrapRole
 } from "./firebase-config.js";
 
 let isAdmin = false;
@@ -465,6 +465,11 @@ watchAdmin(async (user)=>{
     return;
   }
   myRole = roleDoc.role;
+
+  // Storeman and receiver are limited to issuing/receiving stock only.
+  if(isIssueOnly(myRole)){ window.location.replace("issue.html"); return; }
+  if(isReceiveIssueOnly(myRole)){ window.location.replace("index.html"); return; }
+
   document.querySelectorAll('[data-requires="manage"]').forEach(el=>{ el.style.display = canManage(myRole) ? "" : "none"; });
   gate.style.display = "none";
   if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }

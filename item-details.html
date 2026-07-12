@@ -532,7 +532,7 @@
 import {
   db, loginAdmin, logoutAdmin, watchAdmin, statusOf, initialsFromEmail,
   doc, updateDoc, onSnapshot, serverTimestamp,
-  collection, query, where, canManage, fetchOrBootstrapRole
+  collection, query, where, canManage, isIssueOnly, isReceiveIssueOnly, syncPublicItem, fetchOrBootstrapRole
 } from "./firebase-config.js";
 
 /* ---------- Category unit-cost fallback ----------
@@ -592,6 +592,12 @@ watchAdmin(async (user)=>{
     return;
   }
   myRole = roleDoc.role;
+
+  // Storeman must never see stock balances; receiver is limited to
+  // receive/issue only — neither gets item detail pages.
+  if(isIssueOnly(myRole)){ window.location.replace("issue.html"); return; }
+  if(isReceiveIssueOnly(myRole)){ window.location.replace("index.html"); return; }
+
   document.querySelectorAll('[data-requires="manage"]').forEach(el=>{ el.style.display = canManage(myRole) ? "" : "none"; });
   gate.style.display = "none";
   if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
@@ -906,6 +912,8 @@ function submitEditItem(){
     updatedAt: serverTimestamp(),
     updatedBy: currentAdminEmail
   }).then(()=>{
+    syncPublicItem(itemId, { name, code: liveData.code, uom, balance, min })
+      .catch(err=>console.error("public mirror sync failed:", err));
     closeEditModal();
   }).catch(err=>{
     errBox.textContent = "Save failed: " + err.message;

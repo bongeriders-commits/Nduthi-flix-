@@ -3,15 +3,21 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     /* ---------- Role helpers ---------- */
-    // Reads the caller's own /users/{uid} doc. Firestore rules cache get()
-    // calls within a single request, so this is cheap to call repeatedly.
+    // Five roles: owner, admin, staff, storeman (issue-only), receiver
+    // (receive+issue only). Storeman/receiver page access is enforced
+    // client-side (see issue.html / index.html / grn.html). Balance
+    // visibility for storeman is enforced two ways: (1) the picker reads
+    // stockItemsPublic (no balance field, ever), and (2) the one real
+    // stockItems read that remains — the specific item they select, at the
+    // moment they submit — is unavoidable without a server-side function,
+    // since Firestore rules can't validate "not more than what's in stock"
+    // without the write itself referencing the current balance.
     function myRole() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
     function isSignedIn() {
       return request.auth != null;
     }
-    // Signed in AND has an active role doc (owner/admin/staff).
     function isActiveUser() {
       return isSignedIn()
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
@@ -20,17 +26,14 @@ service cloud.firestore {
     function isOwner() {
       return isActiveUser() && myRole().role == "owner";
     }
-    // Owner or Admin — full day-to-day management rights.
     function canManage() {
       return isActiveUser() && myRole().role in ["owner", "admin"];
     }
+    function affectedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
 
     // ---------- Team / role documents ----------
-    // Every signed-in user may read their OWN role doc (needed to gate the
-    // app after login). Only the owner can read the full team list, and
-    // only the owner can create/edit/deactivate team members. The very
-    // first-ever user is allowed to create their own "owner" doc once
-    // (app-side bootstrap flow) as long as the team is still empty.
     match /users/{uid} {
       allow get: if isSignedIn() && (request.auth.uid == uid || isOwner());
       allow list: if isOwner();
@@ -39,38 +42,58 @@ service cloud.firestore {
                         && request.resource.data.role == "owner"
                         && !exists(/databases/$(database)/documents/meta/teamBootstrap));
       allow update: if isOwner();
-      allow delete: if false; // deactivate (active:false) instead of deleting
+      allow delete: if false;
     }
 
-    // One-time bootstrap marker — written once when the first owner account
-    // is created, read by anyone signed in so they know whether bootstrap
-    // has already happened.
     match /meta/teamBootstrap {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && !exists(/databases/$(database)/documents/meta/teamBootstrap);
       allow update, delete: if false;
     }
 
-    // Stock items — any active team member (owner/admin/staff) can read.
-    // Only owner/admin can create, edit, or delete an item.
+    // ---------------------------------------------------------------------
+    // Stock items — the real record, incl. `balance`. Any active team
+    // member can still read/get a single item by id (needed to validate
+    // and write a receive/issue transaction), but nothing in the app lists
+    // this whole collection anymore for storeman/receiver — the picker in
+    // issue.html now reads from stockItemsPublic below instead, which
+    // never carries a balance field. Staff/storeman/receiver can move
+    // balance via receive/issue (only those 3 fields), everything else
+    // (create, delete, full edit) is owner/admin.
+    // ---------------------------------------------------------------------
     match /stockItems/{itemId} {
       allow read: if isActiveUser();
-      allow create, update, delete: if canManage();
+      allow create, delete: if canManage();
+      allow update: if canManage() || (
+        isActiveUser() &&
+        affectedKeys().hasOnly(['balance', 'updatedAt', 'updatedBy'])
+      );
     }
 
-    // Stock in/out transaction log — read by any active team member.
-    // Created by any active team member (staff log receive/issue too),
-    // never edited or deleted (keeps an honest audit trail).
+    // ---------------------------------------------------------------------
+    // Stock items (public mirror) — same items, minus `balance`/`min`.
+    // This is what issue.html's item picker reads for search/select, so a
+    // storeman browsing for an item to issue never receives any quantity
+    // data at all, even in a background listener. Kept in sync by the app:
+    // owner/admin write the full doc on create/edit; any active user (incl.
+    // storeman/receiver) may patch only `status` after a receive/issue, so
+    // the Active/Low/Out pill stays current without ever exposing a number.
+    // ---------------------------------------------------------------------
+    match /stockItemsPublic/{itemId} {
+      allow read: if isActiveUser();
+      allow create, delete: if canManage();
+      allow update: if canManage() || (
+        isActiveUser() &&
+        affectedKeys().hasOnly(['status', 'updatedAt'])
+      );
+    }
+
     match /stockTransactions/{txId} {
       allow read: if isActiveUser();
       allow create: if isActiveUser();
       allow update, delete: if false;
     }
 
-    // Approval requests (discrepancies, new-item requests, threshold changes) —
-    // readable/creatable by any active team member. Only owner/admin can
-    // resolve (approve/reject) a request; a request can never be edited
-    // back to "pending" or deleted once created.
     match /approvals/{approvalId} {
       allow read: if isActiveUser();
       allow create: if isActiveUser()
@@ -81,29 +104,32 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Suppliers directory — read by any active team member (GRN needs it
-    // for supplier suggestions), created/edited/deleted only by owner/admin.
+    // ---------------------------------------------------------------------
+    // Suppliers — staff can only touch the auto lastSupplyAt stamp (set
+    // when they submit a GRN); everything else is owner/admin. Storeman
+    // and receiver never reach suppliers.html client-side, but since reads
+    // are allow-by-active-user, they could still read this collection
+    // directly if they wanted — nothing sensitive lives here though.
+    // ---------------------------------------------------------------------
     match /suppliers/{supplierId} {
       allow read: if isActiveUser();
-      allow create, update, delete: if canManage();
+      allow create, delete: if canManage();
+      allow update: if canManage() || (
+        isActiveUser() &&
+        affectedKeys().hasOnly(['lastSupplyAt'])
+      );
     }
 
-    // Goods Received Notes — the permanent record of every receipt.
-    // Read/created by any active team member (staff receive stock too),
-    // never edited or deleted once submitted (keeps an honest audit trail).
     match /grns/{grnId} {
       allow read: if isActiveUser();
       allow create: if isActiveUser();
       allow update, delete: if false;
     }
 
-    // Sequence counters (GRN numbers, supplier codes, etc.) — read/write
-    // by any active team member via a transaction.
     match /counters/{counterId} {
       allow read, write: if isActiveUser();
     }
 
-    // Everything else stays locked down by default.
     match /{document=**} {
       allow read, write: if false;
     }

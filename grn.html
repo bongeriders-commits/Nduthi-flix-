@@ -502,8 +502,8 @@
 /* ---------- Firebase ---------- */
 import {
   db, loginAdmin, logoutAdmin, watchAdmin, initialsFromEmail, unitAbbr,
-  collection, doc, addDoc, updateDoc, onSnapshot, serverTimestamp,
-  query, orderBy, runTransaction, increment, fetchOrBootstrapRole
+  collection, doc, addDoc, updateDoc, getDoc, onSnapshot, serverTimestamp,
+  query, orderBy, runTransaction, increment, isIssueOnly, syncPublicItemStatus, fetchOrBootstrapRole
 } from "./firebase-config.js";
 
 /* ---------- Admin auth (same pattern as the rest of the app) ---------- */
@@ -542,6 +542,10 @@ watchAdmin(async (user)=>{
     return;
   }
   myRole = roleDoc.role;
+
+  // Storeman can issue stock only — receiving (GRN) is off-limits.
+  if(isIssueOnly(myRole)){ window.location.replace("issue.html"); return; }
+
   gate.style.display = "none";
   if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
   if(!grnNoReady){ grnNoReady = true; generateGrnNo(); }
@@ -963,6 +967,14 @@ async function submitGRN(){
         updatedAt: serverTimestamp(),
         updatedBy: currentAdminEmail
       });
+      // Keep the balance-free public mirror's status pill current.
+      try{
+        const freshSnap = await getDoc(itemRef);
+        if(freshSnap.exists()){
+          const d = freshSnap.data();
+          await syncPublicItemStatus(r.itemId, d.balance || 0, d.min || 0);
+        }
+      }catch(err){ console.error("public mirror status sync failed:", err); }
     }
     // 2. Log a stockTransactions entry per item — this is what item-details.html
     //    reads live, so every received item instantly shows up there as a GRN movement.

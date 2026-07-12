@@ -7,7 +7,7 @@ import {
   createUserWithEmailAndPassword
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDoc, setDoc,
+  getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDoc, getDocs, setDoc,
   onSnapshot, serverTimestamp, query, where, orderBy, limit, runTransaction, increment
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -60,6 +60,29 @@ export function unitAbbr(uom) {
   return "pc";
 }
 
+/* ---------- Stock items — public mirror (no balance/min) ----------
+   stockItemsPublic/{itemId} carries only what's safe to list for a
+   storeman/receiver picker: name, code, uom, status. Owner/admin write
+   the full doc whenever an item is created/edited; any active user may
+   patch just `status` after a receive/issue so the pill stays live
+   without ever exposing a balance number. See firestore.rules.txt. */
+export async function syncPublicItem(itemId, { name, code, uom, balance, min }) {
+  await setDoc(doc(db, "stockItemsPublic", itemId), {
+    name: name || "", code: code || "", uom: uom || "",
+    status: statusOf(balance, min),
+    updatedAt: serverTimestamp()
+  });
+}
+export async function syncPublicItemStatus(itemId, balance, min) {
+  await updateDoc(doc(db, "stockItemsPublic", itemId), {
+    status: statusOf(balance, min),
+    updatedAt: serverTimestamp()
+  });
+}
+export async function deletePublicItem(itemId) {
+  await deleteDoc(doc(db, "stockItemsPublic", itemId));
+}
+
 // Turns "john.mutua@cabrocity.co.ke" into "JM" for the header avatar.
 // Falls back gracefully for single-word or missing addresses.
 export function initialsFromEmail(email) {
@@ -71,10 +94,16 @@ export function initialsFromEmail(email) {
 }
 
 /* ---------- Roles & Team management ---------- */
-// Three tiers: "owner" (the main admin — full control, incl. managing the
+// Five tiers: "owner" (the main admin — full control, incl. managing the
 // team), "admin" (full day-to-day operational control, no team management),
-// "staff" (dashboard + inventory view + receive/issue stock only).
-export const ROLES = { OWNER: "owner", ADMIN: "admin", STAFF: "staff" };
+// "staff" (dashboard + inventory view + receive/issue stock only),
+// "storeman" (issue stock only — no inventory/balance visibility anywhere),
+// "receiver" (receive + issue stock only — no inventory browsing, reports,
+// suppliers, approvals or team management).
+export const ROLES = {
+  OWNER: "owner", ADMIN: "admin", STAFF: "staff",
+  STOREMAN: "storeman", RECEIVER: "receiver"
+};
 
 // Roles allowed to create/edit/delete items, resolve approvals, manage suppliers.
 export function canManage(role) {
@@ -83,6 +112,23 @@ export function canManage(role) {
 // Only the owner can add/edit/deactivate team members.
 export function canManageTeam(role) {
   return role === ROLES.OWNER;
+}
+// Storeman is locked to the issue.html workflow only — no dashboard,
+// inventory list, item details, GRN, suppliers, approvals, etc. — and must
+// never see current stock balances/quantities anywhere in the app.
+export function isIssueOnly(role) {
+  return role === ROLES.STOREMAN;
+}
+// Receiver is locked to grn.html + issue.html only (receive & issue stock),
+// nothing else — no inventory browsing, reports, suppliers, or approvals.
+export function isReceiveIssueOnly(role) {
+  return role === ROLES.RECEIVER;
+}
+// True for roles allowed to browse the inventory list / item detail pages
+// and see stock balances (owner, admin, staff). False for the two
+// restricted roles above.
+export function canViewInventory(role) {
+  return !isIssueOnly(role) && !isReceiveIssueOnly(role);
 }
 
 // Fetches (and, on first-ever login, bootstraps) the current user's role doc
@@ -148,6 +194,6 @@ export async function createTeamMember({ email, password, displayName, role, cre
 
 /* ---------- Re-exported Firestore functions ---------- */
 export {
-  collection, doc, addDoc, updateDoc, deleteDoc, getDoc, setDoc,
+  collection, doc, addDoc, updateDoc, deleteDoc, getDoc, getDocs, setDoc,
   onSnapshot, serverTimestamp, query, where, orderBy, limit, runTransaction, increment
 };
