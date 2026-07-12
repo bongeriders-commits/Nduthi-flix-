@@ -253,7 +253,7 @@
       <div class="field">
         <label>Dispatching Branch <span class="req">*</span></label>
         <div class="input-wrap no-icon">
-          <input type="text" id="branchFrom" value="Katani" placeholder="e.g. Katani">
+          <input type="text" id="branchFrom" readonly style="background:var(--panel,#f6f6f8);cursor:not-allowed;">
         </div>
       </div>
 
@@ -412,7 +412,8 @@
 import {
   db, loginAdmin, logoutAdmin, watchAdmin, initialsFromEmail, unitAbbr,
   doc, getDoc, addDoc, onSnapshot, serverTimestamp, runTransaction,
-  collection, query, orderBy, limit, fetchOrBootstrapRole, changeMyPin, logAudit
+  collection, query, where, orderBy, limit, fetchOrBootstrapRole, changeMyPin, logAudit,
+  isBranchLocked, setActiveBranch, getActiveBranchId, getActiveBranchName, getBranch
 } from "./firebase-config.js";
 
 /* =========================================================================
@@ -457,8 +458,24 @@ watchAdmin(async (user)=>{
   }
   myRole = roleDoc.role;
   myName = roleDoc.displayName || nameFromEmail(currentUserEmail);
+
+  // Dispatch is used by every role, including the two branch-locked ones —
+  // resolve their store from the role doc. All-branch roles (owner/admin)
+  // must have already picked one via branch-select.html.
+  if(isBranchLocked(myRole)){
+    if(roleDoc.branchId){
+      try{ const b = await getBranch(roleDoc.branchId); setActiveBranch(roleDoc.branchId, b ? b.name : ""); }
+      catch(e){ setActiveBranch(roleDoc.branchId, ""); }
+    }
+  } else if(!getActiveBranchId()){
+    window.location.replace("branch-select.html?next=dispatch.html");
+    return;
+  }
+
   gate.style.display = "none";
   if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
+  const branchFromInput = document.getElementById("branchFrom");
+  if(branchFromInput) branchFromInput.value = getActiveBranchName() || "";
   loadItemNames();
   watchRecentDispatches();
 });
@@ -569,7 +586,7 @@ window.onPurposeChange = function onPurposeChange(){
 /* ---------- Known item names (existing stock, for the datalist + matching) ---------- */
 let knownItems = []; // [{id, name, uom}] from stockItemsPublic
 function loadItemNames(){
-  onSnapshot(query(collection(db, "stockItemsPublic")), (snap)=>{
+  onSnapshot(query(collection(db, "stockItemsPublic"), where("branchId", "==", getActiveBranchId())), (snap)=>{
     knownItems = snap.docs.map(d=>({ id:d.id, name:d.data().name || "", uom:d.data().uom || "" }));
     const dl = document.getElementById("itemNamesList");
     dl.innerHTML = knownItems.map(it=>`<option value="${escapeHtml(it.name)}">`).join("");
@@ -715,7 +732,7 @@ window.submitDispatch = async function submitDispatch(){
     const dateStr = new Date(dispatchDate + "T00:00:00").toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
 
     const dispatchDoc = {
-      branchFrom, purpose, destination, riderName, deliveryMode, numberPlate,
+      branchFrom, purpose, destination, riderName, deliveryMode, numberPlate, branchId: getActiveBranchId(),
       dispatchDate, securityName, notes,
       items: dispatchRows.map(r=>({ itemId: r.itemId, name: r.name, qty: r.qty, unit: r.unit, tracked: r.tracked })),
       createdAt: serverTimestamp(), createdBy: currentUserEmail, createdByName: myName, createdByRole: myRole
@@ -727,7 +744,7 @@ window.submitDispatch = async function submitDispatch(){
     // Activity keep seeing dispatches, same as an issue.
     await Promise.all(dispatchRows.filter(r=>r.tracked).map(r=>
       addDoc(collection(db, "stockTransactions"), {
-        itemId: r.itemId, itemName: r.name, type: "out", qty: r.qty, unit: r.unit,
+        itemId: r.itemId, itemName: r.name, type: "out", qty: r.qty, unit: r.unit, branchId: getActiveBranchId(),
         machine: destination, who: riderName,
         note: `Dispatch ${ref} — ${purpose === "transfer" ? "Transfer to " : "Repair at "}${destination}`,
         issueTime: "", createdAt: serverTimestamp(), createdBy: currentUserEmail, createdByName: myName
@@ -767,7 +784,7 @@ window.submitDispatch = async function submitDispatch(){
 /* ---------- Recent dispatches list ---------- */
 let rawDispatches = [];
 function watchRecentDispatches(){
-  onSnapshot(query(collection(db, "dispatches"), orderBy("createdAt","desc"), limit(15)), (snap)=>{
+  onSnapshot(query(collection(db, "dispatches"), where("branchId", "==", getActiveBranchId()), orderBy("createdAt","desc"), limit(15)), (snap)=>{
     rawDispatches = snap.docs.map(d=>{
       const data = d.data();
       const ts = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : null;

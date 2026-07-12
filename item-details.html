@@ -532,7 +532,8 @@
 import {
   db, loginAdmin, logoutAdmin, watchAdmin, statusOf, initialsFromEmail,
   doc, updateDoc, onSnapshot, serverTimestamp,
-  collection, query, where, canManage, isIssueOnly, isReceiveIssueOnly, syncPublicItem, fetchOrBootstrapRole, logAudit
+  collection, query, where, canManage, isIssueOnly, isReceiveIssueOnly, syncPublicItem, fetchOrBootstrapRole, logAudit,
+  isBranchLocked, setActiveBranch, getActiveBranchId, getBranch
 } from "./firebase-config.js";
 
 /* ---------- Category unit-cost fallback ----------
@@ -603,6 +604,16 @@ watchAdmin(async (user)=>{
   // receive/issue only — neither gets item detail pages.
   if(isIssueOnly(myRole)){ window.location.replace("issue.html"); return; }
   if(isReceiveIssueOnly(myRole)){ window.location.replace("index.html"); return; }
+
+  if(isBranchLocked(myRole)){
+    if(roleDoc.branchId){
+      try{ const b = await getBranch(roleDoc.branchId); setActiveBranch(roleDoc.branchId, b ? b.name : ""); }
+      catch(e){ setActiveBranch(roleDoc.branchId, ""); }
+    }
+  } else if(!getActiveBranchId()){
+    window.location.replace("branch-select.html?next=" + encodeURIComponent("item-details.html" + location.search));
+    return;
+  }
 
   document.querySelectorAll('[data-requires="manage"]').forEach(el=>{ el.style.display = canManage(myRole) ? "" : "none"; });
   gate.style.display = "none";
@@ -869,7 +880,13 @@ onSnapshot(doc(db, "stockItems", itemId), (snap)=>{
     location.href = "stock-list.html";
     return;
   }
-  renderItem(snap.data());
+  const data = snap.data();
+  if(data.branchId && getActiveBranchId() && data.branchId !== getActiveBranchId()){
+    alert("This item belongs to a different store — switch stores to view it.");
+    location.href = "stock-list.html";
+    return;
+  }
+  renderItem(data);
 }, (err)=>{
   console.error("item listener error:", err);
 });
@@ -930,7 +947,7 @@ function submitEditItem(){
     updatedAt: serverTimestamp(),
     updatedBy: currentAdminEmail
   }).then(()=>{
-    syncPublicItem(itemId, { name, code: liveData.code, uom, balance, min })
+    syncPublicItem(itemId, { name, code: liveData.code, uom, balance, min, branchId: liveData.branchId })
       .catch(err=>console.error("public mirror sync failed:", err));
     const after = { name, category, uom, min, balance, price };
     const changes = Object.keys(after).filter(k => String(before[k]) !== String(after[k]));

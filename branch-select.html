@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Choose Store — Cabro City</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#f5590a">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" href="/icon-192.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ffffff; --panel:#f6f6f8; --panel-raise:#ffffff;
+    --line:#e2e2e6; --text:#151517; --text-dim:#68686f; --text-faint:#9a9aa2;
+    --oxide:#f5590a; --oxide-dim:#b8420a; --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  html,body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  h1,h2,.disp{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.04em;margin:0;}
+
+  #wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .card{width:100%;max-width:420px;text-align:center;}
+  .card img{height:34px;width:auto;margin:0 auto 20px;display:block;}
+  .card h2{font-family:'Inter',sans-serif;text-transform:none;font-size:17px;font-weight:700;margin-bottom:6px;}
+  .card p{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-bottom:24px;}
+
+  .branch-list{display:flex;flex-direction:column;gap:10px;text-align:left;}
+  .branch-item{
+    display:flex;align-items:center;gap:12px;
+    padding:14px 16px;border:1px solid var(--line);border-radius:var(--radius);
+    background:var(--panel-raise);cursor:pointer;transition:border-color .15s,background .15s;
+  }
+  .branch-item:active{background:var(--panel);}
+  .branch-icon{
+    width:38px;height:38px;flex-shrink:0;border-radius:9px;
+    background:var(--oxide);color:#fff;display:flex;align-items:center;justify-content:center;
+    font-family:'Oswald',sans-serif;font-weight:700;font-size:14px;
+  }
+  .branch-info{flex:1;min-width:0;}
+  .branch-name{font-size:14px;font-weight:600;color:var(--text);}
+  .branch-code{font-size:11.5px;color:var(--text-faint);font-family:'IBM Plex Mono',monospace;margin-top:2px;}
+  .branch-arrow{color:var(--text-faint);flex-shrink:0;}
+  .branch-arrow svg{width:18px;height:18px;}
+
+  .empty-state{font-size:12.5px;color:var(--text-dim);padding:20px 0;}
+  .loading{font-size:12.5px;color:var(--text-dim);padding:20px 0;}
+  .err{color:#e13a3a;font-size:12px;margin-bottom:14px;}
+
+  .logout-link{
+    margin-top:22px;font-size:12px;color:var(--text-dim);text-decoration:underline;
+    background:none;border:none;cursor:pointer;font-family:'Inter',sans-serif;
+  }
+</style>
+</head>
+<body>
+
+<div id="wrap">
+  <div class="card">
+    <img alt="Cabro City" src="/cabro-city-logo.png">
+    <h2 id="titleText">Choose a store</h2>
+    <p id="subText">You manage more than one Cabro City store — pick which one to work in. You can switch stores anytime from the menu.</p>
+    <div id="errBox" class="err" style="display:none;"></div>
+    <div id="branchList" class="branch-list">
+      <div class="loading">Loading stores…</div>
+    </div>
+    <button class="logout-link" onclick="doLogout()">Log out instead</button>
+  </div>
+</div>
+
+<script type="module">
+import {
+  watchAdmin, logoutAdmin, fetchOrBootstrapRole, isBranchLocked, canManage,
+  fetchBranches, setActiveBranch, getActiveBranchId
+} from "./firebase-config.js";
+
+const branchListEl = document.getElementById("branchList");
+const errBox = document.getElementById("errBox");
+
+function showError(msg){
+  errBox.textContent = msg;
+  errBox.style.display = "block";
+  branchListEl.innerHTML = "";
+}
+
+// Same escapeHtml pattern used across the app — branch names/codes are
+// admin-entered text, so they're escaped before hitting innerHTML.
+function escapeHtml(str){
+  if(str === null || str === undefined) return "";
+  return String(str).replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
+}
+function initialsOf(name){
+  const parts = (name || "").trim().split(/\s+/).filter(Boolean);
+  if(parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return (name || "?").slice(0,2).toUpperCase();
+}
+
+function goToApp(){
+  const params = new URLSearchParams(window.location.search);
+  window.location.replace(params.get("next") || "index.html");
+}
+
+let loadedBranches = [];
+
+function pickBranchById(branchId){
+  const branch = loadedBranches.find(b => b.id === branchId);
+  if(!branch) return;
+  setActiveBranch(branch.id, branch.name);
+  goToApp();
+}
+window.pickBranchById = pickBranchById;
+
+window.doLogout = function(){
+  logoutAdmin().then(()=> window.location.replace("index.html"));
+};
+
+watchAdmin(async (user)=>{
+  if(!user){
+    window.location.replace("index.html");
+    return;
+  }
+
+  let roleDoc;
+  try{ roleDoc = await fetchOrBootstrapRole(user); }
+  catch(e){ roleDoc = null; }
+
+  if(!roleDoc){
+    // Not a recognised team member at all — send back to the main gate,
+    // which will show the "not set up" message and sign them out.
+    window.location.replace("index.html");
+    return;
+  }
+
+  // Branch-locked roles (staff/storeman/receiver) never see this page —
+  // their assigned branch is set automatically the moment they land
+  // anywhere in the app. If one somehow ends up here, bounce them home.
+  if(isBranchLocked(roleDoc.role)){
+    window.location.replace("index.html");
+    return;
+  }
+
+  let branches = [];
+  try{ branches = await fetchBranches(); }
+  catch(e){
+    showError("Couldn't load stores — check your connection and reload.");
+    return;
+  }
+  loadedBranches = branches;
+
+  if(branches.length === 0){
+    branchListEl.innerHTML = `<div class="empty-state">No stores have been set up yet. Add one from Settings → Branches, or ask the owner to.</div>`;
+    return;
+  }
+
+  if(branches.length === 1){
+    // Only one store exists — no real choice to make, skip straight in.
+    pickBranchById(branches[0].id);
+    return;
+  }
+
+  branchListEl.innerHTML = branches.map(b => `
+    <div class="branch-item" onclick="pickBranchById('${b.id}')">
+      <div class="branch-icon">${escapeHtml(initialsOf(b.name))}</div>
+      <div class="branch-info">
+        <div class="branch-name">${escapeHtml(b.name)}</div>
+        ${b.code ? `<div class="branch-code">${escapeHtml(b.code)}</div>` : ""}
+      </div>
+      <div class="branch-arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </div>
+    </div>
+  `).join("");
+});
+</script>
+</body>
+</html>

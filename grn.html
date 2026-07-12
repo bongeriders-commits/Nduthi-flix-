@@ -502,7 +502,8 @@
 import {
   db, loginAdmin, logoutAdmin, watchAdmin, initialsFromEmail, unitAbbr,
   collection, doc, addDoc, updateDoc, getDoc, onSnapshot, serverTimestamp,
-  query, orderBy, runTransaction, increment, isIssueOnly, syncPublicItemStatus, fetchOrBootstrapRole, logAudit
+  query, where, orderBy, runTransaction, increment, isIssueOnly, syncPublicItemStatus, fetchOrBootstrapRole, logAudit,
+  isBranchLocked, canManage, setActiveBranch, getActiveBranchId, getBranch
 } from "./firebase-config.js";
 
 /* ---------- Admin auth (same pattern as the rest of the app) ---------- */
@@ -546,9 +547,26 @@ watchAdmin(async (user)=>{
   // Storeman can issue stock only — receiving (GRN) is off-limits.
   if(isIssueOnly(myRole)){ window.location.replace("issue.html"); return; }
 
+  // Branch-locked roles (receiver/staff) always work in their assigned
+  // store. All-branch roles (owner/admin) may land here directly (e.g. a
+  // bookmark) without ever passing through the branch-select gate — send
+  // them there first rather than silently operating on no store at all.
+  if(isBranchLocked(myRole)){
+    if(roleDoc.branchId){
+      try{
+        const b = await getBranch(roleDoc.branchId);
+        setActiveBranch(roleDoc.branchId, b ? b.name : "");
+      }catch(e){ setActiveBranch(roleDoc.branchId, ""); }
+    }
+  } else if(!getActiveBranchId()){
+    window.location.replace("branch-select.html?next=grn.html");
+    return;
+  }
+
   gate.style.display = "none";
   if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
   if(!grnNoReady){ grnNoReady = true; generateGrnNo(); }
+  startGrnItemsListener();
 });
 function signOutNow(){ if(confirm("Sign out?")) logoutAdmin(); }
 function submitGateLogin(){
@@ -623,7 +641,11 @@ let items = [];
 // item id is passed as ?item=<id> — pre-load it as the first GRN row.
 const prefillItemId = new URLSearchParams(location.search).get("item");
 let prefillApplied = false;
-onSnapshot(query(collection(db, "stockItems"), orderBy("name")), (snap)=>{
+let grnItemsListenerStarted = false;
+function startGrnItemsListener(){
+  if(grnItemsListenerStarted) return;
+  grnItemsListenerStarted = true;
+  onSnapshot(query(collection(db, "stockItems"), where("branchId", "==", getActiveBranchId()), orderBy("name")), (snap)=>{
   items = snap.docs.map(d=>{
     const data = d.data();
     return {
@@ -643,6 +665,7 @@ onSnapshot(query(collection(db, "stockItems"), orderBy("name")), (snap)=>{
   onItemSearchInput();
   renderPickerList();
 }, (err)=>{ console.error("stockItems listener error:", err); });
+}
 
 /* ---------- Live supplier suggestions from the Suppliers directory ---------- */
 let supplierByName = {}; // lowercased name -> supplier doc id, so submitGRN can update lastSupplyAt
@@ -942,7 +965,7 @@ function saveDraft(){
   const totalQty = rows.reduce((s,r)=>s+r.received,0);
   const totalAmount = rows.reduce((s,r)=>s+(r.received*r.unitCost),0);
   addDoc(collection(db, "grns"), {
-    grnNo: window.__grnNo, ...h,
+    grnNo: window.__grnNo, ...h, branchId: getActiveBranchId(),
     items: rows,
     totalItems: rows.length, totalQty, totalAmount,
     attachments: attachments.map(a=>({name:a.name, size:a.size})),
@@ -988,7 +1011,7 @@ async function submitGRN(){
     //    reads live, so every received item instantly shows up there as a GRN movement.
     for(const r of rows){
       await addDoc(collection(db, "stockTransactions"), {
-        itemId: r.itemId, itemName: r.name, type: "in",
+        itemId: r.itemId, itemName: r.name, type: "in", branchId: getActiveBranchId(),
         qty: r.received, unit: r.unit,
         who: h.supplier, note: `GRN ${window.__grnNo}`,
         createdAt: serverTimestamp(), createdBy: currentAdminEmail
@@ -998,7 +1021,7 @@ async function submitGRN(){
     const totalQty = rows.reduce((s,r)=>s+r.received,0);
     const totalAmount = rows.reduce((s,r)=>s+(r.received*r.unitCost),0);
     await addDoc(collection(db, "grns"), {
-      grnNo: window.__grnNo, ...h,
+      grnNo: window.__grnNo, ...h, branchId: getActiveBranchId(),
       items: rows,
       totalItems: rows.length, totalQty, totalAmount,
       attachments: attachments.map(a=>({name:a.name, size:a.size})),

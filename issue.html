@@ -391,7 +391,8 @@
 import {
   db, loginAdmin, logoutAdmin, watchAdmin, initialsFromEmail, unitAbbr,
   doc, getDoc, addDoc, onSnapshot, serverTimestamp, runTransaction,
-  collection, query, where, fetchOrBootstrapRole, isIssueOnly, syncPublicItemStatus, changeMyPin, logAudit
+  collection, query, where, fetchOrBootstrapRole, isIssueOnly, syncPublicItemStatus, changeMyPin, logAudit,
+  isBranchLocked, setActiveBranch, getBranch
 } from "./firebase-config.js";
 
 /* ---------- Read item id from query string (optional — may be picked below) ---------- */
@@ -443,25 +444,28 @@ watchAdmin(async (user)=>{
     return;
   }
   myRole = roleDoc.role;
+
+  // This page only ever serves branch-locked roles (storeman here, receiver
+  // on grn.html) — their assigned store comes straight off their own role
+  // doc, no picker needed. Falls back gracefully if branchId is unset so an
+  // account created before multi-branch existed doesn't get stuck.
+  if(isBranchLocked(myRole) && roleDoc.branchId){
+    try{
+      const b = await getBranch(roleDoc.branchId);
+      setActiveBranch(roleDoc.branchId, b ? b.name : "");
+    }catch(e){ setActiveBranch(roleDoc.branchId, ""); }
+  }
+
   const homeBtn = document.getElementById("avatarHomeBtn");
   if(homeBtn) homeBtn.style.display = isIssueOnly(myRole) ? "none" : "";
   gate.style.display = "none";
   if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
-  loadStoremanName();
+  // roleDoc.displayName is already the source of truth for this user's
+  // real name (set at account creation or via Team Management's rename) —
+  // no separate lookup needed.
+  storemanName = roleDoc.displayName || nameFromEmail(currentUserEmail);
+  initIssuePage();
 });
-
-// Looks up a friendly display name for the signed-in storeman so it can be
-// printed on the PDF slip. Falls back to a name derived from the email if
-// no "users/{email}" profile document exists yet.
-async function loadStoremanName(){
-  storemanName = nameFromEmail(currentUserEmail);
-  try{
-    const snap = await getDoc(doc(db, "users", currentUserEmail));
-    if(snap.exists() && snap.data().name){
-      storemanName = snap.data().name;
-    }
-  }catch(e){ /* no users collection yet — fine, use the fallback */ }
-}
 function nameFromEmail(email){
   if(!email) return "Storeman";
   const local = email.split("@")[0];
@@ -574,6 +578,11 @@ function watchItem(id){
       return;
     }
     liveData = snap.data();
+    if(liveData.branchId && getActiveBranchId() && liveData.branchId !== getActiveBranchId()){
+      alert("This item belongs to a different store.");
+      backToPicker();
+      return;
+    }
     curUnitAbbr = unitAbbr(liveData.uom);
     document.getElementById("itName").textContent = liveData.name || "—";
     document.getElementById("itCode").textContent = liveData.code || "—";
@@ -637,17 +646,22 @@ function escapeHtml(s){
 }
 
 let allItems = [];
-if(!itemId){
-  document.getElementById("pickerCard").style.display = "block";
-  onSnapshot(query(collection(db, "stockItemsPublic")), (snap)=>{
-    allItems = snap.docs.map(d=>({ id:d.id, ...d.data() }));
-    renderPicker();
-  }, (err)=>{ console.error("stockItemsPublic listener error:", err); });
-} else {
-  watchItem(itemId);
-  document.getElementById("itemSummaryBlock").style.display = "block";
-  document.getElementById("issueFormCard").style.display = "block";
-  document.getElementById("recentCard").style.display = "block";
+let issuePageInitStarted = false;
+function initIssuePage(){
+  if(issuePageInitStarted) return;
+  issuePageInitStarted = true;
+  if(!itemId){
+    document.getElementById("pickerCard").style.display = "block";
+    onSnapshot(query(collection(db, "stockItemsPublic"), where("branchId", "==", getActiveBranchId())), (snap)=>{
+      allItems = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+      renderPicker();
+    }, (err)=>{ console.error("stockItemsPublic listener error:", err); });
+  } else {
+    watchItem(itemId);
+    document.getElementById("itemSummaryBlock").style.display = "block";
+    document.getElementById("issueFormCard").style.display = "block";
+    document.getElementById("recentCard").style.display = "block";
+  }
 }
 
 window.renderPicker = function renderPicker(){
@@ -769,7 +783,7 @@ window.submitIssue = function submitIssue(){
     syncPublicItemStatus(itemId, newBalanceAfter, newMin)
       .catch(err=>console.error("public mirror status sync failed:", err));
     return addDoc(collection(db, "stockTransactions"), {
-      itemId, itemName: liveData.name, type: "out", qty, unit: curUnitAbbr,
+      itemId, itemName: liveData.name, type: "out", qty, unit: curUnitAbbr, branchId: getActiveBranchId(),
       machine: issueTo, who: collectedBy, note: purpose + (remarks ? (" — " + remarks) : ""),
       issueTime, createdAt: serverTimestamp(), createdBy: currentUserEmail, createdByName: storemanName
     });

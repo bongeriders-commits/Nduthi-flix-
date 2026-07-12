@@ -66,7 +66,8 @@ service cloud.firestore {
       allow create, delete: if canManage();
       allow update: if canManage() || (
         isActiveUser() &&
-        affectedKeys().hasOnly(['balance', 'updatedAt', 'updatedBy'])
+        affectedKeys().hasOnly(['balance', 'updatedAt', 'updatedBy']) &&
+        resource.data.branchId == myRole().branchId
       );
     }
 
@@ -84,13 +85,14 @@ service cloud.firestore {
       allow create, delete: if canManage();
       allow update: if canManage() || (
         isActiveUser() &&
-        affectedKeys().hasOnly(['status', 'updatedAt'])
+        affectedKeys().hasOnly(['status', 'updatedAt']) &&
+        resource.data.branchId == myRole().branchId
       );
     }
 
     match /stockTransactions/{txId} {
       allow read: if isActiveUser();
-      allow create: if isActiveUser();
+      allow create: if isActiveUser() && (canManage() || request.resource.data.branchId == myRole().branchId);
       allow update, delete: if false;
     }
 
@@ -120,9 +122,23 @@ service cloud.firestore {
       );
     }
 
+    // ---------------------------------------------------------------------
+    // Branches — the list of physical stores (multi-site support).
+    // Any active user can read it (needed for the branch-select gate and
+    // for a branch-locked user's own assigned store to resolve), but only
+    // owner/admin can create branches or deactivate one. Branches are never
+    // hard-deleted — deactivateBranch just flips `active:false` so past
+    // records that reference the branchId still resolve.
+    // ---------------------------------------------------------------------
+    match /branches/{branchId} {
+      allow read: if isActiveUser();
+      allow create, update: if canManage();
+      allow delete: if false;
+    }
+
     match /grns/{grnId} {
       allow read: if isActiveUser();
-      allow create: if isActiveUser();
+      allow create: if isActiveUser() && (canManage() || request.resource.data.branchId == myRole().branchId);
       allow update, delete: if false;
     }
 
@@ -130,13 +146,13 @@ service cloud.firestore {
     // Dispatches — release notes for items sent out for repair or
     // transferred to another branch. Open to every active team member,
     // including storeman, same as stockTransactions/grns: any signed-in,
-    // active user can create one; nothing can be edited or deleted once
-    // written, since it's a paper-trail record backing a printed release
-    // note that's already been signed.
+    // active user can create one for their own branch; nothing can be
+    // edited or deleted once written, since it's a paper-trail record
+    // backing a printed release note that's already been signed.
     // ---------------------------------------------------------------------
     match /dispatches/{dispatchId} {
       allow read: if isActiveUser();
-      allow create: if isActiveUser();
+      allow create: if isActiveUser() && (canManage() || request.resource.data.branchId == myRole().branchId);
       allow update, delete: if false;
     }
 

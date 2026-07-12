@@ -874,6 +874,7 @@
         <img alt="Cabro City — Paving the Future" class="cc-logo" src="/cabro-city-logo.png">
       </div>
       <div class="drawer-sub">STORES MANAGEMENT <span id="roleBadge" style="opacity:0.7;"></span></div>
+      <div id="branchBadge" style="font-size:11px;color:var(--oxide);font-weight:600;margin-top:4px;display:none;"></div>
     </div>
 
     <div class="drawer-nav">
@@ -929,6 +930,10 @@
       <button class="drawer-item" data-requires="manage" onclick="closeDrawer();window.location.href='audit.html'">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
         <span class="d-label">Audit Trail</span>
+      </button>
+      <button class="drawer-item" data-requires="manage" onclick="closeDrawer();switchStore();">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 21l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        <span class="d-label">Switch Store</span>
       </button>
       <div class="drawer-divider"></div>
       <button class="drawer-item" onclick="closeDrawer();openChangePinModal();">
@@ -1019,12 +1024,16 @@
     </div>
     <div class="field">
       <label>Role</label>
-      <select id="teamRole">
+      <select id="teamRole" onchange="onTeamRoleChange()">
         <option value="admin">Admin — full access, can't manage team</option>
         <option value="staff">Staff — dashboard, inventory, receive/issue only</option>
         <option value="storeman">Storeman — issue stock only, no quantities visible</option>
         <option value="receiver">Receiver — receive &amp; issue stock only</option>
       </select>
+    </div>
+    <div class="field" id="teamBranchField" style="display:none;">
+      <label>Store</label>
+      <select id="teamBranch"></select>
     </div>
     <div class="modal-actions" style="margin-top:4px;">
       <button class="btn-submit" style="width:100%;" onclick="submitAddTeamMember()">+ Add Team Member</button>
@@ -1179,7 +1188,8 @@ import {
   db, loginAdmin, logoutAdmin, watchAdmin, unitAbbr as sharedUnitAbbr, initialsFromEmail,
   collection, doc, addDoc, onSnapshot, serverTimestamp, query, where, orderBy, limit, runTransaction,
   ROLES, canManage, canManageTeam, isIssueOnly, isReceiveIssueOnly, syncPublicItem, syncPublicItemStatus, getDocs, changeMyPin,
-  fetchOrBootstrapRole, watchTeam, updateTeamMember, createTeamMember, logAudit, statusOf as sharedStatusOf
+  fetchOrBootstrapRole, watchTeam, updateTeamMember, createTeamMember, logAudit, statusOf as sharedStatusOf,
+  isBranchLocked, setActiveBranch, getActiveBranchId, getActiveBranchName, getBranch, fetchBranches, createBranch, setBranchActive
 } from "./firebase-config.js";
 
 let isAdmin = false, currentAdminEmail = "", currentAdminName = "";
@@ -1225,6 +1235,23 @@ watchAdmin(async (user)=>{
   myRole = roleDoc.role;
   currentAdminName = roleDoc.displayName || currentAdminEmail;
 
+  // Multi-branch gate: owner/admin pick a store on branch-select.html (once
+  // per session — the choice lives in sessionStorage and clears on logout).
+  // Branch-locked roles (staff/storeman/receiver) never see a picker — their
+  // assigned branchId on the users/{uid} doc becomes the active store
+  // automatically, every time they land here.
+  if(isBranchLocked(myRole)){
+    let branchName = "";
+    if(roleDoc.branchId){
+      try{ const b = await getBranch(roleDoc.branchId); branchName = b ? b.name : ""; }
+      catch(e){ branchName = ""; }
+    }
+    setActiveBranch(roleDoc.branchId || "", branchName);
+  } else if(!getActiveBranchId()){
+    window.location.replace("branch-select.html");
+    return;
+  }
+
   // Storeman can only ever use the dedicated Issue Stock page — never the
   // dashboard, since the dashboard surfaces item/stock quantities.
   if(isIssueOnly(myRole)){
@@ -1239,6 +1266,7 @@ watchAdmin(async (user)=>{
 
   gate.style.display = "none";
   revealAppOnceReady();
+  startDashboardListeners();
 });
 function applyRolePermissions(){
   const manage = canManage(myRole);
@@ -1259,6 +1287,23 @@ function applyRolePermissions(){
 
   const roleBadge = document.getElementById("roleBadge");
   if(roleBadge) roleBadge.textContent = myRole ? myRole.charAt(0).toUpperCase()+myRole.slice(1) : "";
+
+  const branchBadge = document.getElementById("branchBadge");
+  if(branchBadge){
+    const name = getActiveBranchName();
+    if(name){
+      branchBadge.textContent = "📍 " + name;
+      branchBadge.style.display = "";
+    } else {
+      branchBadge.style.display = "none";
+    }
+  }
+}
+function switchStore(){
+  // Only owner/admin ever see the "Switch Store" item (data-requires="manage"),
+  // and branch-select.html itself re-checks the role, so a branch-locked
+  // user landing here directly would just get bounced straight back.
+  window.location.href = "branch-select.html";
 }
 /* ---------- Team & Roles (owner only) ---------- */
 let teamUnsub = null;
@@ -1268,11 +1313,36 @@ function openTeamModal(){
   if(!teamUnsub){
     teamUnsub = watchTeam((members)=>renderTeamList(members));
   }
+  loadTeamBranchOptions();
+  onTeamRoleChange();
+}
+let teamBranchOptionsLoaded = false;
+let cachedBranches = [];
+let lastTeamMembers = null;
+async function loadTeamBranchOptions(){
+  if(teamBranchOptionsLoaded) return;
+  const sel = document.getElementById("teamBranch");
+  try{
+    cachedBranches = await fetchBranches();
+    sel.innerHTML = cachedBranches.length
+      ? cachedBranches.map(b=>`<option value="${b.id}">${escapeHtml(b.name)}</option>`).join("")
+      : `<option value="">No stores set up yet</option>`;
+    teamBranchOptionsLoaded = true;
+    if(lastTeamMembers) renderTeamList(lastTeamMembers);
+  }catch(e){
+    sel.innerHTML = `<option value="">Couldn't load stores</option>`;
+  }
+}
+function onTeamRoleChange(){
+  const role = document.getElementById("teamRole").value;
+  const field = document.getElementById("teamBranchField");
+  field.style.display = isBranchLocked(role) ? "" : "none";
 }
 function closeTeamModal(){
   document.getElementById("teamOverlay").classList.remove("open");
 }
 function renderTeamList(members){
+  lastTeamMembers = members;
   const box = document.getElementById("teamList");
   if(!box) return;
   box.innerHTML = members.map(m=>{
@@ -1280,21 +1350,46 @@ function renderTeamList(members){
     const roleOpts = ["owner","admin","staff","storeman","receiver"].map(r=>
       `<option value="${r}" ${m.role===r?"selected":""}>${r.charAt(0).toUpperCase()+r.slice(1)}</option>`
     ).join("");
+    const branchOpts = cachedBranches.length
+      ? `<option value="">No store</option>` + cachedBranches.map(b=>`<option value="${b.id}" ${m.branchId===b.id?"selected":""}>${escapeHtml(b.name)}</option>`).join("")
+      : `<option value="">No stores set up yet</option>`;
+    const showBranchRow = isBranchLocked(m.role);
     return `
-    <div style="border:1px solid var(--line);border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:10px;">
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:5px;">
-          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(m.displayName||m.email)}${isMe?" (you)":""}</span>
-          <button onclick="renameTeamMember('${m.id}', '${(m.displayName||"").replace(/'/g,"\\'")}', '${m.email.replace(/'/g,"\\'")}')" title="Edit name" style="border:none;background:none;color:var(--text-dim);cursor:pointer;padding:2px;font-size:12px;line-height:1;flex-shrink:0;">✎</button>
+    <div style="border:1px solid var(--line);border-radius:9px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:5px;">
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(m.displayName||m.email)}${isMe?" (you)":""}</span>
+            <button onclick="renameTeamMember('${m.id}', '${(m.displayName||"").replace(/'/g,"\\'")}', '${m.email.replace(/'/g,"\\'")}')" title="Edit name" style="border:none;background:none;color:var(--text-dim);cursor:pointer;padding:2px;font-size:12px;line-height:1;flex-shrink:0;">✎</button>
+          </div>
+          <div style="font-size:11.5px;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(m.email)}</div>
         </div>
-        <div style="font-size:11.5px;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(m.email)}</div>
+        <select onchange="changeTeamRole('${m.id}', this.value, '${(m.displayName||m.email).replace(/'/g,"\\'")}', '${m.role}')" ${m.role==="owner"?"disabled":""} style="font-size:12px;padding:5px 6px;border-radius:6px;border:1px solid var(--line);">
+          ${roleOpts}
+        </select>
+        ${m.role==="owner" ? "" : `<button onclick="toggleTeamActive('${m.id}', ${m.active===false}, '${(m.displayName||m.email).replace(/'/g,"\\'")}')" style="border:1px solid var(--line);background:${m.active===false?'var(--panel-alt)':'transparent'};color:${m.active===false?'var(--text-dim)':'var(--red,#e13a3a)'};font-size:11px;padding:6px 8px;border-radius:6px;cursor:pointer;white-space:nowrap;">${m.active===false?"Reactivate":"Deactivate"}</button>`}
       </div>
-      <select onchange="changeTeamRole('${m.id}', this.value, '${(m.displayName||m.email).replace(/'/g,"\\'")}', '${m.role}')" ${m.role==="owner"?"disabled":""} style="font-size:12px;padding:5px 6px;border-radius:6px;border:1px solid var(--line);">
-        ${roleOpts}
-      </select>
-      ${m.role==="owner" ? "" : `<button onclick="toggleTeamActive('${m.id}', ${m.active===false}, '${(m.displayName||m.email).replace(/'/g,"\\'")}')" style="border:1px solid var(--line);background:${m.active===false?'var(--panel-alt)':'transparent'};color:${m.active===false?'var(--text-dim)':'var(--red,#e13a3a)'};font-size:11px;padding:6px 8px;border-radius:6px;cursor:pointer;white-space:nowrap;">${m.active===false?"Reactivate":"Deactivate"}</button>`}
+      ${showBranchRow ? `
+      <div style="display:flex;align-items:center;gap:8px;padding-left:2px;">
+        <span style="font-size:11px;color:var(--text-dim);white-space:nowrap;">📍 Store:</span>
+        <select onchange="changeTeamBranch('${m.id}', this.value, '${(m.displayName||m.email).replace(/'/g,"\\'")}')" style="flex:1;font-size:12px;padding:5px 6px;border-radius:6px;border:1px solid var(--line);">
+          ${branchOpts}
+        </select>
+      </div>` : ""}
     </div>`;
   }).join("");
+}
+async function changeTeamBranch(uid, branchId, memberName){
+  try{
+    await updateTeamMember(uid, { branchId: branchId || "" });
+    logAudit({
+      actorUid: myUid, actorName: currentAdminName || currentAdminEmail, actorRole: myRole,
+      action: "team.branch_change", entityType: "user", entityId: uid, entityLabel: memberName,
+      summary: `Set ${memberName}'s store`,
+      meta: { branchId }
+    });
+  }
+  catch(e){ alert("Couldn't update store: " + e.message); }
 }
 async function changeTeamRole(uid, newRole, memberName, oldRole){
   try{
@@ -1340,6 +1435,7 @@ async function submitAddTeamMember(){
   const email = document.getElementById("teamEmail").value.trim();
   const password = document.getElementById("teamPassword").value;
   const role = document.getElementById("teamRole").value;
+  const branchId = document.getElementById("teamBranch").value;
   const errBox = document.getElementById("teamAddError");
   errBox.style.display = "none";
   if(!email || !password || password.length < 6){
@@ -1347,13 +1443,18 @@ async function submitAddTeamMember(){
     errBox.style.display = "block";
     return;
   }
+  if(isBranchLocked(role) && !branchId){
+    errBox.textContent = "Pick which store this person belongs to.";
+    errBox.style.display = "block";
+    return;
+  }
   try{
-    await createTeamMember({ email, password, displayName: name, role, createdByUid: myUid });
+    await createTeamMember({ email, password, displayName: name, role, branchId, createdByUid: myUid });
     logAudit({
       actorUid: myUid, actorName: currentAdminName || currentAdminEmail, actorRole: myRole,
       action: "team.add", entityType: "user", entityLabel: name || email,
       summary: `Added ${name || email} to the team as ${role}`,
-      meta: { email, role }
+      meta: { email, role, branchId: branchId || "" }
     });
     document.getElementById("teamName").value = "";
     document.getElementById("teamEmail").value = "";
@@ -1618,7 +1719,7 @@ function submitTx(){
     syncPublicItemStatus(itemId, newBalanceAfter, it.min)
       .catch(err=>console.error("public mirror status sync failed:", err));
     return addDoc(collection(db, "stockTransactions"), {
-      itemId, itemName: it.name, type, qty, unit: it.unit,
+      itemId, itemName: it.name, type, qty, unit: it.unit, branchId: getActiveBranchId(),
       who: who || "", machine: machine || "", note: note || "",
       createdAt: serverTimestamp(), createdBy: currentAdminEmail
     });
@@ -1654,7 +1755,7 @@ async function syncAllItemsToPublicMirror(){
       const data = d.data();
       await syncPublicItem(d.id, {
         name: data.name, code: data.code, uom: data.uom,
-        balance: data.balance, min: data.min
+        balance: data.balance, min: data.min, branchId: data.branchId
       });
       count++;
     }
@@ -1750,7 +1851,7 @@ function submitNewItem(){
   const nextNum = items.length + 1;
   const newItemData = {
     code: "ITEM-" + String(nextNum).padStart(4, "0"),
-    name, category: cat, uom: unit, min, balance: qty,
+    name, category: cat, uom: unit, min, balance: qty, branchId: getActiveBranchId(),
     updatedAt: serverTimestamp(), updatedBy: currentAdminEmail
   };
   addDoc(collection(db, "stockItems"), newItemData).then((ref)=>{
@@ -2105,8 +2206,13 @@ function relativeDay(d){
 }
 
 let latestTxByItem = {}; // itemName -> most recent transaction, for the "last movement" column
+let dashboardListenersStarted = false;
+function startDashboardListeners(){
+  if(dashboardListenersStarted) return;
+  dashboardListenersStarted = true;
+  const branchId = getActiveBranchId();
 
-onSnapshot(query(collection(db, "stockItems"), orderBy("name")), (snap)=>{
+onSnapshot(query(collection(db, "stockItems"), where("branchId", "==", branchId), orderBy("name")), (snap)=>{
   itemIdByName = {};
   items = snap.docs.map(d=>{
     const data = d.data();
@@ -2132,7 +2238,7 @@ onSnapshot(query(collection(db, "stockItems"), orderBy("name")), (snap)=>{
   renderFuelFeed();
 }, (err)=>{ console.error("stockItems listener error:", err); });
 
-onSnapshot(query(collection(db, "stockTransactions"), orderBy("createdAt", "desc"), limit(50)), (snap)=>{
+onSnapshot(query(collection(db, "stockTransactions"), where("branchId", "==", branchId), orderBy("createdAt", "desc"), limit(50)), (snap)=>{
   latestTxByItem = {};
   activity = snap.docs.map(d=>{
     const t = d.data();
@@ -2152,6 +2258,8 @@ onSnapshot(query(collection(db, "stockTransactions"), orderBy("createdAt", "desc
   renderDashboard();
   renderFuelFeed();
 }, (err)=>{ console.error("stockTransactions listener error:", err); });
+
+}
 
 /* ---------- Open a tab from a URL hash (e.g. stock-list.html links here with #transactions) ---------- */
 (function(){
@@ -2177,7 +2285,7 @@ Object.assign(window, {
   closeDrawer, closeModal, closeNewItemModal, drawerGo, drawerIssue, drawerReceive,
   exportIssuedPDF, exportReceivedPDF, openDrawer, openModal, openNewItemModal, openStockAudit,
   quickIssue, quickReceive, setTxType, submitNewItem, submitTx, switchTab,
-  openTeamModal, closeTeamModal, submitAddTeamMember, changeTeamRole, toggleTeamActive, renameTeamMember,
+  openTeamModal, closeTeamModal, submitAddTeamMember, changeTeamRole, changeTeamBranch, toggleTeamActive, renameTeamMember, onTeamRoleChange, switchStore,
   syncAllItemsToPublicMirror, openChangePinModal, closeChangePinModal, submitChangePin,
   openStockCountModal, closeStockCountModal, scBackToSearch, scHandleSearch, scSelectItem, scGoToGRN
 });

@@ -33,6 +33,7 @@ export function loginAdmin(email, password) {
   return signInWithEmailAndPassword(auth, email, password);
 }
 export function logoutAdmin() {
+  clearActiveBranch();
   return signOut(auth);
 }
 // callback(user) fires immediately with current state, then on every change
@@ -78,9 +79,9 @@ export function unitAbbr(uom) {
    the full doc whenever an item is created/edited; any active user may
    patch just `status` after a receive/issue so the pill stays live
    without ever exposing a balance number. See firestore.rules.txt. */
-export async function syncPublicItem(itemId, { name, code, uom, balance, min }) {
+export async function syncPublicItem(itemId, { name, code, uom, balance, min, branchId }) {
   await setDoc(doc(db, "stockItemsPublic", itemId), {
-    name: name || "", code: code || "", uom: uom || "",
+    name: name || "", code: code || "", uom: uom || "", branchId: branchId || "",
     status: statusOf(balance, min),
     updatedAt: serverTimestamp()
   });
@@ -143,6 +144,55 @@ export function canViewInventory(role) {
   return !isIssueOnly(role) && !isReceiveIssueOnly(role);
 }
 
+/* ---------- Multi-branch (multi-site) support ----------
+   owner/admin are "all-branch" roles: after login they land on
+   branch-select.html and pick which store's data to view. Every other
+   role (staff, storeman, receiver) is locked to a single branch stored on
+   their users/{uid} doc (`branchId`) and is dropped straight into that
+   store with no picker. The chosen/assigned branch for the current
+   session lives in sessionStorage (not localStorage) so it resets on
+   logout and never silently carries over into a fresh session. */
+export function isBranchLocked(role) {
+  return !canManage(role);
+}
+const ACTIVE_BRANCH_ID_KEY = "cabroActiveBranchId";
+const ACTIVE_BRANCH_NAME_KEY = "cabroActiveBranchName";
+export function getActiveBranchId() {
+  return sessionStorage.getItem(ACTIVE_BRANCH_ID_KEY) || "";
+}
+export function getActiveBranchName() {
+  return sessionStorage.getItem(ACTIVE_BRANCH_NAME_KEY) || "";
+}
+export function setActiveBranch(branchId, branchName) {
+  sessionStorage.setItem(ACTIVE_BRANCH_ID_KEY, branchId || "");
+  sessionStorage.setItem(ACTIVE_BRANCH_NAME_KEY, branchName || "");
+}
+export function clearActiveBranch() {
+  sessionStorage.removeItem(ACTIVE_BRANCH_ID_KEY);
+  sessionStorage.removeItem(ACTIVE_BRANCH_NAME_KEY);
+}
+// Active (non-archived) branches, alphabetical — used by both the
+// branch-select gate and the "add team member" branch dropdown.
+export async function fetchBranches() {
+  const snap = await getDocs(query(collection(db, "branches"), orderBy("name")));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(b => b.active !== false);
+}
+export async function createBranch({ name, code, createdByUid }) {
+  const ref = await addDoc(collection(db, "branches"), {
+    name, code: code || "", active: true,
+    createdAt: serverTimestamp(), createdBy: createdByUid
+  });
+  return ref.id;
+}
+export async function setBranchActive(branchId, active) {
+  await updateDoc(doc(db, "branches", branchId), { active });
+}
+export async function getBranch(branchId) {
+  if (!branchId) return null;
+  const snap = await getDoc(doc(db, "branches", branchId));
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+}
+
 // Fetches (and, on first-ever login, bootstraps) the current user's role doc
 // from Firestore. If the `users` collection is completely empty, the signed-in
 // user becomes the owner automatically — this is how the very first admin
@@ -187,7 +237,7 @@ export async function updateTeamMember(uid, updates) {
 // Uses a throwaway secondary Firebase App so the *current* admin's session
 // is never disturbed (creating a user with the normal client SDK would
 // otherwise sign the browser in as that new user).
-export async function createTeamMember({ email, password, displayName, role, createdByUid }) {
+export async function createTeamMember({ email, password, displayName, role, branchId, createdByUid }) {
   const secondaryApp = initializeApp(auth.app.options, "secondary-" + Date.now());
   const secondaryAuth = getAuth(secondaryApp);
   try {
@@ -195,7 +245,8 @@ export async function createTeamMember({ email, password, displayName, role, cre
     const uid = cred.user.uid;
     await setDoc(doc(db, "users", uid), {
       email, displayName: displayName || email.split("@")[0],
-      role, active: true, createdAt: serverTimestamp(), createdBy: createdByUid
+      role, branchId: isBranchLocked(role) ? (branchId || "") : "",
+      active: true, createdAt: serverTimestamp(), createdBy: createdByUid
     });
     await signOut(secondaryAuth);
     return uid;

@@ -372,7 +372,8 @@
 import {
   db, auth, loginAdmin, logoutAdmin, watchAdmin, statusOf, initialsFromEmail,
   collection, doc, updateDoc, deleteDoc, onSnapshot,
-  serverTimestamp, query, orderBy, canManage, isIssueOnly, isReceiveIssueOnly, deletePublicItem, fetchOrBootstrapRole, logAudit
+  serverTimestamp, query, where, orderBy, canManage, isIssueOnly, isReceiveIssueOnly, deletePublicItem, fetchOrBootstrapRole, logAudit,
+  isBranchLocked, setActiveBranch, getActiveBranchId, getBranch
 } from "./firebase-config.js";
 
 let isAdmin = false;
@@ -418,9 +419,24 @@ watchAdmin(async (user)=>{
   if(isIssueOnly(myRole)){ window.location.replace("issue.html"); return; }
   if(isReceiveIssueOnly(myRole)){ window.location.replace("index.html"); return; }
 
+  // Each branch has its own separate item catalog. Staff is branch-locked
+  // (uses their assigned store); owner/admin must have already picked one
+  // via branch-select.html — if they land here directly with none chosen
+  // (e.g. a bookmark), send them there first rather than showing nothing.
+  if(isBranchLocked(myRole)){
+    if(roleDoc.branchId){
+      try{ const b = await getBranch(roleDoc.branchId); setActiveBranch(roleDoc.branchId, b ? b.name : ""); }
+      catch(e){ setActiveBranch(roleDoc.branchId, ""); }
+    }
+  } else if(!getActiveBranchId()){
+    window.location.replace("branch-select.html?next=stock-list.html");
+    return;
+  }
+
   document.querySelectorAll('[data-requires="manage"]').forEach(el=>{ el.style.display = canManage(myRole) ? "" : "none"; });
   gate.style.display = "none";
   if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
+  startItemsListener();
 });
 
 function onAdminBtnClick(){
@@ -633,7 +649,11 @@ function deleteItem(idx){
 }
 
 /* ---------- Live sync ---------- */
-onSnapshot(query(collection(db, "stockItems"), orderBy("name")), (snap)=>{
+let itemsListenerStarted = false;
+function startItemsListener(){
+  if(itemsListenerStarted) return;
+  itemsListenerStarted = true;
+  onSnapshot(query(collection(db, "stockItems"), where("branchId", "==", getActiveBranchId()), orderBy("name")), (snap)=>{
   items = snap.docs.map(d=>{
     const data = d.data();
     return {
@@ -651,6 +671,7 @@ onSnapshot(query(collection(db, "stockItems"), orderBy("name")), (snap)=>{
 }, (err)=>{
   console.error("stockItems listener error:", err);
 });
+}
 
 /* ---------- Expose functions used by inline onclick handlers ---------- */
 Object.assign(window, {

@@ -400,6 +400,38 @@
       </div>
 
       <!-- 4. TEAM & ACCESS -->
+      <div class="sec" data-sec="branches">
+        <div class="sec-head" onclick="toggleSec(this)">
+          <div class="sec-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg></div>
+          <div><h2>Branches</h2><div class="sec-sub">The stores this account manages</div></div>
+          <svg class="sec-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div class="sec-body">
+          <div id="branchList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;"></div>
+          <div class="field">
+            <label>New branch name</label>
+            <input type="text" id="newBranchName" placeholder="e.g. Mlolongo">
+          </div>
+          <div class="field">
+            <label>Short code (optional)</label>
+            <input type="text" id="newBranchCode" placeholder="e.g. MLG">
+          </div>
+          <button class="btn-outline" style="width:100%;margin-top:4px;" onclick="submitAddBranch()">+ Add Branch</button>
+          <div id="branchAddError" style="display:none;color:var(--red);font-size:12.5px;margin-top:8px;"></div>
+
+          <div id="unassignedItemsBox" style="display:none;margin-top:18px;padding-top:16px;border-top:1px dashed var(--line);">
+            <div style="font-size:12.5px;color:var(--text-dim);margin-bottom:10px;">
+              <b id="unassignedCount">0</b> existing item(s) have no store assigned yet — they won't appear anywhere until you assign them. This only needs doing once.
+            </div>
+            <div class="field">
+              <label>Assign all unassigned items to</label>
+              <select id="migrateBranchSelect"></select>
+            </div>
+            <button class="btn-outline" style="width:100%;" onclick="submitMigrateItems()">Assign Items</button>
+          </div>
+        </div>
+      </div>
+
       <div class="sec" data-sec="team">
         <div class="sec-head" onclick="toggleSec(this)">
           <div class="sec-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
@@ -537,7 +569,7 @@
 import {
   db, auth, loginAdmin, logoutAdmin, watchAdmin, initialsFromEmail,
   doc, getDoc, setDoc, serverTimestamp, canManage, canManageTeam, fetchOrBootstrapRole,
-  collection, getDocs, syncPublicItem
+  collection, getDocs, syncPublicItem, fetchBranches, createBranch, setBranchActive, logAudit
 } from "./firebase-config.js";
 
 let myRole = null, myUid = "";
@@ -586,7 +618,127 @@ watchAdmin(async (user)=>{
 
   applyAccessMode();
   await loadSettings();
+  await loadBranches();
 });
+
+function escapeHtml(str){
+  if(str === null || str === undefined) return "";
+  return String(str).replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
+}
+
+async function loadBranches(){
+  const box = document.getElementById("branchList");
+  if(!box) return;
+  box.innerHTML = `<div style="font-size:12px;color:var(--text-dim);">Loading…</div>`;
+  try{
+    const branches = await fetchBranches();
+    if(branches.length === 0){
+      box.innerHTML = `<div style="font-size:12px;color:var(--text-dim);">No branches yet — add your first one below.</div>`;
+    } else {
+      box.innerHTML = branches.map(b => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--line);border-radius:8px;">
+          <div>
+            <div style="font-size:13px;font-weight:600;">${escapeHtml(b.name)}</div>
+            ${b.code ? `<div style="font-size:11px;color:var(--text-faint);">${escapeHtml(b.code)}</div>` : ""}
+          </div>
+          ${canManage(myRole) ? `<button class="btn-outline" style="padding:6px 10px;font-size:11.5px;" onclick="deactivateBranch('${b.id}','${b.name.replace(/'/g,"\\'")}')">Remove</button>` : ""}
+        </div>
+      `).join("");
+    }
+    const sel = document.getElementById("migrateBranchSelect");
+    if(sel){
+      sel.innerHTML = branches.length
+        ? branches.map(b=>`<option value="${b.id}">${escapeHtml(b.name)}</option>`).join("")
+        : `<option value="">Add a branch first</option>`;
+    }
+    await checkUnassignedItems();
+  }catch(e){
+    box.innerHTML = `<div style="font-size:12px;color:var(--red);">Couldn't load branches.</div>`;
+  }
+}
+
+// One-time migration helper: items created before multi-branch existed
+// have no branchId, so every branch-scoped query in the app skips them
+// entirely. This surfaces how many are stranded and lets an owner/admin
+// bulk-assign them all to one store in a single pass.
+async function checkUnassignedItems(){
+  const box = document.getElementById("unassignedItemsBox");
+  if(!box || !canManage(myRole)) return;
+  try{
+    const snap = await getDocs(collection(db, "stockItems"));
+    const unassigned = snap.docs.filter(d => !d.data().branchId);
+    if(unassigned.length === 0){ box.style.display = "none"; return; }
+    document.getElementById("unassignedCount").textContent = unassigned.length;
+    box.style.display = "block";
+    window.__unassignedItemIds = unassigned.map(d => d.id);
+  }catch(e){ /* non-fatal — migration box just won't show */ }
+}
+
+async function submitMigrateItems(){
+  const branchId = document.getElementById("migrateBranchSelect").value;
+  if(!branchId){ alert("Add a branch first."); return; }
+  const ids = window.__unassignedItemIds || [];
+  if(ids.length === 0) return;
+  if(!confirm(`Assign ${ids.length} item(s) to this store? This can't be undone in bulk.`)) return;
+  try{
+    for(const id of ids){
+      await setDoc(doc(db, "stockItems", id), { branchId }, { merge: true });
+      await setDoc(doc(db, "stockItemsPublic", id), { branchId }, { merge: true }).catch(()=>{});
+    }
+    logAudit({
+      actorUid: myUid, actorName: currentAdminName || currentAdminEmail, actorRole: myRole,
+      action: "branch.migrateItems", entityType: "branch", entityId: branchId,
+      summary: `Assigned ${ids.length} previously-unassigned item(s) to a branch`
+    });
+    alert(`Done — ${ids.length} item(s) assigned.`);
+    await checkUnassignedItems();
+  }catch(e){
+    alert("Migration failed: " + e.message);
+  }
+}
+
+async function submitAddBranch(){
+  const errBox = document.getElementById("branchAddError");
+  errBox.style.display = "none";
+  const name = document.getElementById("newBranchName").value.trim();
+  const code = document.getElementById("newBranchCode").value.trim();
+  if(!name){
+    errBox.textContent = "Enter a branch name.";
+    errBox.style.display = "block";
+    return;
+  }
+  try{
+    await createBranch({ name, code, createdByUid: myUid });
+    logAudit({
+      actorUid: myUid, actorName: currentAdminName || currentAdminEmail, actorRole: myRole,
+      action: "branch.add", entityType: "branch", entityLabel: name,
+      summary: `Added branch "${name}"`, meta: { code }
+    });
+    document.getElementById("newBranchName").value = "";
+    document.getElementById("newBranchCode").value = "";
+    await loadBranches();
+  }catch(e){
+    errBox.textContent = "Couldn't add branch: " + e.message;
+    errBox.style.display = "block";
+  }
+}
+
+async function deactivateBranch(branchId, name){
+  if(!confirm(`Remove "${name}" from the branch list? Team members assigned to it will need to be reassigned.`)) return;
+  try{
+    await setBranchActive(branchId, false);
+    logAudit({
+      actorUid: myUid, actorName: currentAdminName || currentAdminEmail, actorRole: myRole,
+      action: "branch.remove", entityType: "branch", entityLabel: name,
+      summary: `Removed branch "${name}"`
+    });
+    await loadBranches();
+  }catch(e){
+    alert("Couldn't remove branch: " + e.message);
+  }
+}
 
 // Locks every business-data field (sections 1-4) and the Save bar / data
 // export & sync actions for anyone who isn't owner/admin. Appearance
@@ -632,6 +784,9 @@ function toggleSec(headEl){
   headEl.parentElement.classList.toggle("open");
 }
 window.toggleSec = toggleSec;
+window.submitAddBranch = submitAddBranch;
+window.deactivateBranch = deactivateBranch;
+window.submitMigrateItems = submitMigrateItems;
 // open the first section by default
 document.addEventListener("DOMContentLoaded", ()=>{
   const first = document.querySelector(".sec");
@@ -920,7 +1075,7 @@ async function syncAllItemsToPublicMirrorFromSettings(){
     let count = 0;
     for(const d of snap.docs){
       const data = d.data();
-      await syncPublicItem(d.id, { name: data.name, code: data.code, uom: data.uom, balance: data.balance, min: data.min });
+      await syncPublicItem(d.id, { name: data.name, code: data.code, uom: data.uom, balance: data.balance, min: data.min, branchId: data.branchId });
       count++;
     }
     showToast(`Synced ${count} item(s) to the public mirror`);

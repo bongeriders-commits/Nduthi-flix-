@@ -308,7 +308,7 @@ import {
   db, auth, loginAdmin, logoutAdmin, watchAdmin, statusOf, initialsFromEmail,
   collection, doc, addDoc, updateDoc, getDoc, onSnapshot,
   serverTimestamp, query, orderBy, canManage, isIssueOnly, isReceiveIssueOnly,
-  syncPublicItem, syncPublicItemStatus, fetchOrBootstrapRole, logAudit
+  syncPublicItem, syncPublicItemStatus, fetchOrBootstrapRole, logAudit, getActiveBranchId
 } from "./firebase-config.js";
 
 const ICONS = {
@@ -534,10 +534,11 @@ window.resolveApproval = async function(id, status){
           uom: a.uom || "",
           balance: a.startBalance || 0,
           min: a.minThreshold || 0,
+          branchId: getActiveBranchId(),
           status: statusOf(a.startBalance || 0, a.minThreshold || 0)
         };
         const ref = await addDoc(collection(db, "stockItems"), newItemData);
-        syncPublicItem(ref.id, { name: newItemData.name, code: newItemData.code, uom: newItemData.uom, balance: newItemData.balance, min: newItemData.min })
+        syncPublicItem(ref.id, { name: newItemData.name, code: newItemData.code, uom: newItemData.uom, balance: newItemData.balance, min: newItemData.min, branchId: newItemData.branchId })
           .catch(err=>console.error("public mirror sync failed:", err));
       } else if(a.type === "discrepancy" && a.itemId){
         const itemSnap = await getDoc(doc(db, "stockItems", a.itemId));
