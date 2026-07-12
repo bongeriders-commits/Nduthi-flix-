@@ -432,7 +432,8 @@
     <div class="placeholder-view">
       <div class="p-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></div>
       <h3>Additional information</h3>
-      <p>Notes, custom fields, and audit history for this item will appear here.</p>
+      <p>Notes and custom fields for this item will appear here.</p>
+      <p><a href="#" id="itemAuditLink" style="color:var(--oxide);font-weight:600;text-decoration:none;">View full audit history for this item &rarr;</a></p>
     </div>
   </div>
 
@@ -532,7 +533,7 @@
 import {
   db, loginAdmin, logoutAdmin, watchAdmin, statusOf, initialsFromEmail,
   doc, updateDoc, onSnapshot, serverTimestamp,
-  collection, query, where, canManage, isIssueOnly, isReceiveIssueOnly, syncPublicItem, fetchOrBootstrapRole
+  collection, query, where, canManage, isIssueOnly, isReceiveIssueOnly, syncPublicItem, fetchOrBootstrapRole, logAudit
 } from "./firebase-config.js";
 
 /* ---------- Category unit-cost fallback ----------
@@ -555,6 +556,11 @@ const itemId = params.get("id");
 if(!itemId){
   alert("No item selected — returning to the stock list.");
   location.href = "stock-list.html";
+}else{
+  document.addEventListener("DOMContentLoaded", ()=>{
+    const link = document.getElementById("itemAuditLink");
+    if(link) link.href = "audit.html?entity=" + encodeURIComponent(itemId);
+  });
 }
 
 /* ---------- Admin auth ---------- */
@@ -907,6 +913,10 @@ function submitEditItem(){
   const price = parseFloat(document.getElementById("editPrice").value) || 0;
   const errBox = document.getElementById("editError");
   if(!name){ errBox.textContent = "Item name is required."; errBox.style.display = "block"; return; }
+  const before = {
+    name: liveData.name, category: liveData.category, uom: liveData.uom,
+    min: liveData.min, balance: liveData.balance, price: liveData.price
+  };
   updateDoc(doc(db, "stockItems", itemId), {
     name, category, uom, min, balance, price,
     updatedAt: serverTimestamp(),
@@ -914,6 +924,16 @@ function submitEditItem(){
   }).then(()=>{
     syncPublicItem(itemId, { name, code: liveData.code, uom, balance, min })
       .catch(err=>console.error("public mirror sync failed:", err));
+    const after = { name, category, uom, min, balance, price };
+    const changes = Object.keys(after).filter(k => String(before[k]) !== String(after[k]));
+    logAudit({
+      actorUid: myUid, actorName: currentAdminEmail, actorRole: myRole,
+      action: "item.edit", entityType: "stockItem", entityId: itemId, entityLabel: name,
+      summary: changes.length
+        ? `Edited ${name}: ${changes.map(k=>`${k} ${before[k]}\u2192${after[k]}`).join(", ")}`
+        : `Edited ${name} (no field changes)`,
+      meta: { before, after, changes }
+    });
     closeEditModal();
   }).catch(err=>{
     errBox.textContent = "Save failed: " + err.message;

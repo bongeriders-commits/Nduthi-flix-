@@ -309,7 +309,7 @@ import {
   db, auth, loginAdmin, logoutAdmin, watchAdmin, statusOf, initialsFromEmail,
   collection, doc, addDoc, updateDoc, getDoc, onSnapshot,
   serverTimestamp, query, orderBy, canManage, isIssueOnly, isReceiveIssueOnly,
-  syncPublicItem, syncPublicItemStatus, fetchOrBootstrapRole
+  syncPublicItem, syncPublicItemStatus, fetchOrBootstrapRole, logAudit
 } from "./firebase-config.js";
 
 const ICONS = {
@@ -564,6 +564,13 @@ window.resolveApproval = async function(id, status){
       status,
       resolvedAt: serverTimestamp(),
       resolvedBy: currentAdminEmail || "admin"
+    });
+    logAudit({
+      actorUid: myUid, actorName: currentAdminEmail, actorRole: myRole,
+      action: status === "approved" ? "approval.approve" : "approval.reject",
+      entityType: "approval", entityId: id, entityLabel: a.title || a.itemName || a.type,
+      summary: `${status === "approved" ? "Approved" : "Rejected"} ${labelFor(a.type)}: ${a.title || a.itemName || ""}`,
+      meta: { type: a.type, requestedBy: a.requestedBy }
     });
   } catch(err){
     console.error("Failed to resolve approval:", err);

@@ -388,7 +388,7 @@
 import {
   db, loginAdmin, logoutAdmin, watchAdmin, initialsFromEmail, unitAbbr,
   doc, getDoc, addDoc, onSnapshot, serverTimestamp, runTransaction,
-  collection, query, where, fetchOrBootstrapRole, isIssueOnly, syncPublicItemStatus, changeMyPin
+  collection, query, where, fetchOrBootstrapRole, isIssueOnly, syncPublicItemStatus, changeMyPin, logAudit
 } from "./firebase-config.js";
 
 /* ---------- Read item id from query string (optional — may be picked below) ---------- */
@@ -764,6 +764,12 @@ window.submitIssue = function submitIssue(){
   }).then((docRef)=>{
     okBox.textContent = `Issued ${fmtNum(qty)} ${curUnitAbbr} of ${liveData.name}.`;
     okBox.style.display = "block";
+    logAudit({
+      actorUid: myUid, actorName: storemanName || currentUserEmail, actorRole: myRole,
+      action: "stock.issue", entityType: "stockItem", entityId: itemId, entityLabel: liveData.name,
+      summary: `Issued ${fmtNum(qty)} ${curUnitAbbr} of ${liveData.name} to ${issueTo || "—"}`,
+      meta: { qty, unit: curUnitAbbr, issueTo, collectedBy, purpose, remarks, newBalance: newBalanceAfter }
+    });
     generateIssuePDF(null, {
       itemName: liveData.name, itemCode: liveData.code, qty, unit: curUnitAbbr,
       issueTo, collectedBy, purpose, remarks, issueTime,

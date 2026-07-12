@@ -8,7 +8,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDoc, getDocs, setDoc,
-  onSnapshot, serverTimestamp, query, where, orderBy, limit, runTransaction, increment
+  onSnapshot, serverTimestamp, query, where, orderBy, limit, startAfter, runTransaction, increment
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 
@@ -204,8 +204,38 @@ export async function createTeamMember({ email, password, displayName, role, cre
   }
 }
 
+/* ---------- Audit trail ----------
+   Every meaningful write anywhere in the app (item create/edit/delete,
+   receive/issue, approvals, team changes, supplier changes, PIN changes)
+   should call logAudit() right after the write succeeds. Logs are
+   write-once (see firestore.rules.txt: auditLogs allows create only,
+   never update/delete), so this collection is a trustworthy record.
+   `summary` should be a short human-readable line ("Changed min stock
+   5 -> 10"); `meta` can carry the raw before/after values for the
+   expandable detail view on audit.html. Never throws — a logging
+   failure should never block the actual business action. */
+export async function logAudit({ actorUid, actorName, actorRole, action, entityType, entityId, entityLabel, summary, meta }){
+  try{
+    const user = auth.currentUser;
+    await addDoc(collection(db, "auditLogs"), {
+      ts: serverTimestamp(),
+      actorUid: actorUid || (user ? user.uid : ""),
+      actorName: actorName || (user ? user.email : "Unknown"),
+      actorRole: actorRole || "unknown",
+      action: action || "unknown",
+      entityType: entityType || "",
+      entityId: entityId || "",
+      entityLabel: entityLabel || "",
+      summary: summary || "",
+      meta: meta || {}
+    });
+  }catch(err){
+    console.error("audit log failed:", err);
+  }
+}
+
 /* ---------- Re-exported Firestore functions ---------- */
 export {
   collection, doc, addDoc, updateDoc, deleteDoc, getDoc, getDocs, setDoc,
-  onSnapshot, serverTimestamp, query, where, orderBy, limit, runTransaction, increment
+  onSnapshot, serverTimestamp, query, where, orderBy, limit, startAfter, runTransaction, increment
 };

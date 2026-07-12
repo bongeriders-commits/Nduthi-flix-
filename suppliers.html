@@ -427,7 +427,7 @@
 import {
   db, loginAdmin, logoutAdmin, watchAdmin, initialsFromEmail,
   collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot,
-  serverTimestamp, query, orderBy, runTransaction, canManage, isIssueOnly, isReceiveIssueOnly, fetchOrBootstrapRole
+  serverTimestamp, query, orderBy, runTransaction, canManage, isIssueOnly, isReceiveIssueOnly, fetchOrBootstrapRole, logAudit
 } from "./firebase-config.js";
 
 let isAdmin = false;
@@ -724,12 +724,24 @@ async function submitSupplier(){
         name, phone, contactPerson, category, email, status, notes,
         updatedAt: serverTimestamp(), updatedBy: currentAdminEmail
       });
+      logAudit({
+        actorUid: myUid, actorName: currentAdminEmail, actorRole: myRole,
+        action: "supplier.edit", entityType: "supplier", entityId: editingId, entityLabel: name,
+        summary: `Edited supplier ${name}`,
+        meta: { name, phone, category, status }
+      });
     } else {
       const code = await nextSupplierCode();
-      await addDoc(collection(db, "suppliers"), {
+      const ref = await addDoc(collection(db, "suppliers"), {
         code, name, phone, contactPerson, category, email, status, notes,
         lastSupplyAt: null,
         createdAt: serverTimestamp(), createdBy: currentAdminEmail
+      });
+      logAudit({
+        actorUid: myUid, actorName: currentAdminEmail, actorRole: myRole,
+        action: "supplier.create", entityType: "supplier", entityId: ref.id, entityLabel: name,
+        summary: `Added supplier ${name} (${code})`,
+        meta: { code, phone, category, status }
       });
     }
     closeSupplierModal();
@@ -745,7 +757,13 @@ function deleteSupplier(id){
   const s = suppliers.find(x=>x.id===id);
   if(!s) return;
   if(confirm(`Remove "${s.name}" (${s.code}) from your suppliers list?`)){
-    deleteDoc(doc(db, "suppliers", id)).catch(err=>alert("Delete failed: "+err.message));
+    deleteDoc(doc(db, "suppliers", id)).then(()=>{
+      logAudit({
+        actorUid: myUid, actorName: currentAdminEmail, actorRole: myRole,
+        action: "supplier.delete", entityType: "supplier", entityId: id, entityLabel: s.name,
+        summary: `Deleted supplier ${s.name} (${s.code})`
+      });
+    }).catch(err=>alert("Delete failed: "+err.message));
   }
 }
 

@@ -130,6 +130,19 @@ service cloud.firestore {
       allow read, write: if isActiveUser();
     }
 
+    // ---------------------------------------------------------------------
+    // Audit trail — write-once record of every meaningful action (item
+    // create/edit/delete, receive/issue, approvals, team changes, supplier
+    // changes, PIN changes). Any active user can create an entry (so their
+    // own actions get logged), but only owner/admin can read the trail, and
+    // nothing can ever be edited or deleted once written.
+    // ---------------------------------------------------------------------
+    match /auditLogs/{logId} {
+      allow read: if canManage();
+      allow create: if isActiveUser();
+      allow update, delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

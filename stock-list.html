@@ -371,7 +371,7 @@
 import {
   db, auth, loginAdmin, logoutAdmin, watchAdmin, statusOf, initialsFromEmail,
   collection, doc, updateDoc, deleteDoc, onSnapshot,
-  serverTimestamp, query, orderBy, canManage, isIssueOnly, isReceiveIssueOnly, deletePublicItem, fetchOrBootstrapRole
+  serverTimestamp, query, orderBy, canManage, isIssueOnly, isReceiveIssueOnly, deletePublicItem, fetchOrBootstrapRole, logAudit
 } from "./firebase-config.js";
 
 let isAdmin = false;
@@ -619,6 +619,12 @@ function deleteItem(idx){
   if(confirm(`Remove "${it.name}" (${it.code}) from the stock list?`)){
     deleteDoc(doc(db, "stockItems", it.id)).then(()=>{
       deletePublicItem(it.id).catch(err=>console.error("public mirror cleanup failed:", err));
+      logAudit({
+        actorUid: myUid, actorName: currentAdminEmail, actorRole: myRole,
+        action: "item.delete", entityType: "stockItem", entityId: it.id, entityLabel: it.name,
+        summary: `Deleted item ${it.name} (${it.code})`,
+        meta: { code: it.code, balanceAtDeletion: it.balance }
+      });
     }).catch(err=>alert("Delete failed: "+err.message));
     // no local splice needed — onSnapshot will refresh the table
   }

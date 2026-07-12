@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="/logo-data.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Audit Trail — Cabro City</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#f5590a">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" href="/icon-192.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ffffff;
+    --panel:#f6f6f8;
+    --panel-alt:#eeeef1;
+    --panel-raise:#ffffff;
+    --line:#e2e2e6;
+    --line-soft:#ececf0;
+    --text:#151517;
+    --text-dim:#68686f;
+    --text-faint:#9a9aa2;
+    --oxide:#f5590a;
+    --oxide-dim:#b8420a;
+    --amber:#b45309;
+    --red:#e13a3a;
+    --green:#16a34a;
+    --blue:#2563eb;
+    --purple:#7c3aed;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  html,body{
+    background:#f4f4f6;
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  button,input,select,textarea{font-family:inherit;}
+
+  /* ===== App shell ===== */
+  .app-shell{
+    max-width:1040px;margin:0 auto;min-height:100vh;
+    background:var(--bg);position:relative;
+    padding-bottom:96px;
+    border-left:1px solid var(--line);border-right:1px solid var(--line);
+  }
+  @media(max-width:1060px){ .app-shell{border-left:none;border-right:none;} }
+
+  /* ===== Mobile header ===== */
+  .mobile-header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 20px;border-bottom:1px solid var(--line);
+    position:sticky;top:0;background:#ffffff;z-index:30;
+  }
+  .mh-left{display:flex;align-items:center;gap:14px;}
+  .hamburger{width:22px;height:15px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;background:none;border:none;padding:0;}
+  .hamburger span{display:block;height:2.5px;background:#1a1a1d;border-radius:2px;}
+  .mh-logo{display:flex;align-items:center;gap:10px;cursor:pointer;background:none;border:none;padding:0;}
+  .brand-logo-img{height:36px;width:auto;display:block;}
+  .mh-right{display:flex;align-items:center;gap:18px;}
+  .bell{position:relative;width:23px;height:23px;color:#68686f;background:none;border:none;padding:0;cursor:pointer;}
+  .bell svg{width:100%;height:100%;}
+  .bell .badge-dot{position:absolute;top:-6px;right:-8px;background:#ff7a1f;color:#fff;font-size:10px;font-weight:700;min-width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;padding:0 3px;font-family:'IBM Plex Mono',monospace;box-shadow:0 0 0 2px #ffffff;}
+  .avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#3a3a40,#1c1c1f);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;position:relative;font-family:'Oswald',sans-serif;flex-shrink:0;border:1.5px solid #3a3a40;cursor:pointer;}
+  .avatar .dot{position:absolute;bottom:0;right:0;width:10px;height:10px;border-radius:50%;background:#ff7a1f;border:2px solid #ffffff;}
+
+  /* ===== Page head ===== */
+  .page-head{
+    display:flex;align-items:flex-start;justify-content:space-between;
+    gap:14px;flex-wrap:wrap;
+    padding:22px 20px 16px;
+  }
+  .page-head h1{margin:0;font-size:25px;font-weight:800;letter-spacing:-0.01em;color:var(--text);}
+  .page-head p{margin:5px 0 0;font-size:12.5px;color:var(--text-dim);}
+  .page-head-actions{display:flex;gap:10px;flex-wrap:wrap;}
+  .btn-export{
+    display:flex;align-items:center;gap:8px;
+    background:#ffffff;border:1px solid var(--line);color:var(--text);
+    padding:11px 16px;border-radius:11px;font-size:13px;font-weight:600;
+    cursor:pointer;white-space:nowrap;
+  }
+  .btn-export svg{width:15px;height:15px;color:var(--text-dim);}
+
+  /* ===== Stats bar ===== */
+  .stats-row{display:flex;gap:10px;padding:0 20px 16px;flex-wrap:wrap;}
+  .stat-card{flex:1;min-width:110px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;}
+  .stat-card .stat-num{font-family:'Oswald',sans-serif;font-size:22px;font-weight:700;color:var(--text);line-height:1;}
+  .stat-card .stat-label{font-size:11px;color:var(--text-faint);margin-top:4px;letter-spacing:0.03em;}
+
+  /* ===== Toolbar ===== */
+  .stock-toolbar{
+    display:flex;gap:10px;padding:0 20px 12px;flex-wrap:wrap;
+    position:relative;
+  }
+  .stock-search{flex:1;min-width:220px;position:relative;}
+  .stock-search input{
+    width:100%;background:#ffffff;border:1px solid var(--line);
+    color:var(--text);padding:12px 40px 12px 16px;border-radius:11px;
+    font-size:13.5px;
+  }
+  .stock-search input::placeholder{color:var(--text-faint);}
+  .stock-search input:focus{outline:2px solid var(--oxide);outline-offset:-1px;}
+  .stock-search svg{
+    position:absolute;right:14px;top:50%;transform:translateY(-50%);
+    width:16px;height:16px;color:var(--text-faint);pointer-events:none;
+  }
+  .btn-filter{
+    display:flex;align-items:center;gap:8px;
+    background:#ffffff;border:1px solid var(--line);color:var(--text);
+    padding:12px 16px;border-radius:11px;font-size:13.5px;font-weight:600;
+    cursor:pointer;white-space:nowrap;
+  }
+  .btn-filter svg{width:15px;height:15px;color:var(--text-dim);}
+  .btn-filter.on{border-color:var(--oxide);color:var(--oxide);}
+
+  .filter-panel{
+    position:absolute;top:52px;right:20px;z-index:25;
+    background:#fff;border:1px solid var(--line);border-radius:12px;
+    box-shadow:0 16px 40px -12px rgba(0,0,0,0.25);
+    padding:14px;width:250px;display:none;
+  }
+  .filter-panel.open{display:block;}
+  .filter-panel h4{margin:12px 0 10px;font-size:11px;letter-spacing:0.07em;text-transform:uppercase;color:var(--text-faint);font-family:'Oswald',sans-serif;}
+  .filter-panel h4:first-child{margin-top:0;}
+  .filter-row{display:flex;align-items:center;gap:9px;padding:6px 2px;font-size:13px;color:var(--text);cursor:pointer;}
+  .filter-row input{width:15px;height:15px;accent-color:var(--oxide);flex-shrink:0;}
+  .filter-panel select{width:100%;background:var(--panel);border:1px solid var(--line);color:var(--text);padding:9px 10px;border-radius:8px;font-size:13px;}
+  .filter-actions{display:flex;gap:8px;margin-top:12px;}
+  .filter-actions button{flex:1;padding:8px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;}
+  .filter-clear{background:none;border:1px solid var(--line);color:var(--text-dim);}
+  .filter-apply{background:var(--oxide);border:none;color:#fff;}
+
+  .entity-chip{
+    margin:0 20px 14px;display:flex;align-items:center;gap:8px;
+    background:#fff3ec;border:1px solid #ffd9c2;color:var(--oxide-dim);
+    padding:9px 14px;border-radius:10px;font-size:12.5px;font-weight:600;
+    width:fit-content;
+  }
+  .entity-chip button{background:none;border:none;color:var(--oxide-dim);cursor:pointer;font-size:13px;padding:0 0 0 6px;font-weight:700;}
+
+  /* ===== Feed ===== */
+  .feed-wrap{padding:0 20px;}
+  .day-header{
+    font-size:11.5px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;
+    color:var(--text-faint);margin:18px 0 8px;padding-left:2px;
+    font-family:'Oswald',sans-serif;
+  }
+  .day-header:first-child{margin-top:0;}
+  .log-card{
+    background:#fff;border:1px solid var(--line);border-radius:13px;
+    padding:13px 14px;margin-bottom:8px;cursor:pointer;
+  }
+  .log-card:hover{border-color:#d8d8dd;}
+  .log-top{display:flex;align-items:flex-start;gap:11px;}
+  .log-icon{
+    width:34px;height:34px;border-radius:10px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .log-icon svg{width:17px;height:17px;}
+  .log-icon.green{background:#dcfce7;color:var(--green);}
+  .log-icon.red{background:#fde2e2;color:var(--red);}
+  .log-icon.blue{background:#dbeafe;color:var(--blue);}
+  .log-icon.amber{background:#fef3c7;color:var(--amber);}
+  .log-icon.purple{background:#ede9fe;color:var(--purple);}
+  .log-icon.gray{background:var(--panel-alt);color:var(--text-dim);}
+  .log-body{flex:1;min-width:0;}
+  .log-actor-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:2px;}
+  .log-actor{font-size:13px;font-weight:700;color:var(--text);}
+  .role-badge{
+    font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;
+    padding:2px 7px;border-radius:100px;background:var(--panel-alt);color:var(--text-dim);
+  }
+  .log-summary{font-size:13px;color:var(--text);line-height:1.4;}
+  .log-time{font-size:11.5px;color:var(--text-faint);white-space:nowrap;flex-shrink:0;}
+  .log-detail{
+    display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--line-soft);
+    font-size:12px;color:var(--text-dim);
+  }
+  .log-card.open .log-detail{display:block;}
+  .log-detail-row{display:flex;gap:6px;padding:2px 0;}
+  .log-detail-row .k{color:var(--text-faint);min-width:90px;flex-shrink:0;}
+  .log-detail-row .v{color:var(--text);word-break:break-word;font-family:'IBM Plex Mono',monospace;font-size:11.5px;}
+
+  .empty-state{text-align:center;padding:60px 20px;color:var(--text-faint);}
+  .empty-state svg{width:40px;height:40px;margin-bottom:12px;color:var(--text-faint);}
+  .empty-state p{font-size:13px;margin:0;}
+
+  .load-more-wrap{padding:8px 20px 20px;text-align:center;}
+  .btn-load-more{
+    background:#fff;border:1px solid var(--line);color:var(--text);
+    padding:11px 22px;border-radius:11px;font-size:13px;font-weight:600;cursor:pointer;
+  }
+  .btn-load-more:hover{border-color:var(--text-faint);}
+  .btn-load-more:disabled{opacity:0.5;cursor:default;}
+
+  /* ===== Bottom nav ===== */
+  .bottom-nav{
+    position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+    width:100%;max-width:1040px;background:var(--panel);
+    border-top:1px solid var(--line);
+    display:flex;align-items:center;justify-content:space-around;
+    padding:11px 4px 16px;z-index:40;
+  }
+  .nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;color:var(--text-faint);font-size:9.5px;cursor:pointer;flex:1;padding:2px 0;max-width:120px;}
+  .nav-item svg{width:19px;height:19px;}
+  .nav-item.active{color:var(--oxide);}
+
+  /* ===== Desktop layout ===== */
+  @media(min-width:860px){
+    .app-shell{max-width:none;width:100%;margin:0;border:none;}
+    .bottom-nav{max-width:none;}
+    .page-head{padding:26px 32px 18px;}
+    .entity-chip{margin:0 32px 16px;}
+
+    .audit-layout{display:flex;align-items:flex-start;gap:26px;padding:0 32px 32px;}
+    .audit-sidebar{
+      width:280px;flex-shrink:0;position:sticky;top:79px;
+      display:flex;flex-direction:column;gap:16px;
+    }
+    .audit-sidebar .stats-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0;}
+    .audit-sidebar .stock-toolbar{display:flex;flex-direction:column;gap:10px;padding:0;position:static;}
+    .audit-sidebar .stock-search{width:100%;}
+    .audit-sidebar .btn-filter{display:none;}
+    .audit-sidebar .filter-panel{
+      position:static;display:block;width:100%;box-shadow:none;
+      padding:14px;top:auto;right:auto;
+    }
+    .audit-main{flex:1;min-width:0;}
+    .audit-main .feed-wrap{padding:0;}
+    .log-summary{max-width:none;}
+  }
+  @media(min-width:1280px){
+    .audit-sidebar{width:320px;}
+  }
+
+  /* ===== Modal (admin re-login) ===== */
+  .overlay{position:fixed;inset:0;background:rgba(10,10,11,0.55);display:none;align-items:center;justify-content:center;z-index:100;padding:20px;}
+  .overlay.open{display:flex;}
+  .modal{background:#fff;border:1px solid var(--line);border-radius:14px;width:100%;max-width:440px;padding:22px 22px 20px;max-height:88vh;overflow-y:auto;}
+  .modal h3{font-size:16px;margin:0 0 16px;color:var(--text);font-weight:800;}
+  .field{margin-bottom:13px;}
+  .field label{display:block;font-size:11.5px;color:var(--text-dim);font-weight:600;margin-bottom:6px;}
+  .field select,.field input,.field textarea{width:100%;background:var(--panel);border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:8px;font-size:13.5px;}
+  .modal-actions{display:flex;gap:10px;margin-top:18px;}
+  .btn-cancel{flex:1;padding:11px;border-radius:9px;border:1px solid var(--line);background:transparent;color:var(--text-dim);font-size:13px;font-weight:600;cursor:pointer;}
+  .btn-submit{flex:2;padding:11px;border-radius:9px;border:none;background:var(--oxide);color:#fff;font-size:13px;font-weight:700;cursor:pointer;}
+  .btn-submit:hover{background:#ff6b1f;}
+
+  button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--oxide);outline-offset:2px;}
+
+  .app-shell{display:none;}
+  .app-shell.ready{display:block;}
+
+  /* ---------- Access gate ---------- */
+  #accessGate{position:fixed;inset:0;z-index:9999;background:#fff;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .gate-card{width:100%;max-width:340px;text-align:center;}
+  .gate-card img{height:34px;width:auto;margin:0 auto 22px;display:block;}
+  .gate-card h2{font-family:'Inter',sans-serif;text-transform:none;font-size:17px;font-weight:700;margin-bottom:6px;}
+  .gate-card p{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-bottom:22px;}
+  .gate-card .field{margin-bottom:12px;text-align:left;}
+  .gate-card .field label{display:block;font-size:11px;color:var(--text-dim);margin-bottom:5px;}
+  .gate-card .field input{width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--line);font-size:13.5px;font-family:'Inter',sans-serif;box-sizing:border-box;}
+  .gate-card .btn-submit{width:100%;padding:12px;border-radius:9px;border:1px solid var(--oxide);background:var(--oxide);color:#fff;font-weight:700;font-size:13px;cursor:pointer;margin-top:6px;font-family:'Inter',sans-serif;}
+  .gate-error{color:var(--red);font-size:12px;margin:-4px 0 12px;text-align:left;}
+
+  /* ---------- Not-authorized state (signed in, but not owner/admin) ---------- */
+  #notAuthorized{display:none;text-align:center;padding:80px 24px;}
+  #notAuthorized svg{width:40px;height:40px;color:var(--text-faint);margin-bottom:14px;}
+  #notAuthorized h2{font-size:16px;margin:0 0 6px;}
+  #notAuthorized p{font-size:13px;color:var(--text-dim);margin:0;}
+</style>
+</head>
+<body>
+
+<div id="accessGate" style="display:none;">
+  <div class="gate-card">
+    <img alt="Cabro City" class="cc-logo" data-fallback="/cabro-city-logo.png">
+    <h2>Sign in required</h2>
+    <p>Cabro City is restricted to approved staff. If you don't have an account yet, ask your admin to add one for you.</p>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="gateEmail" placeholder="you@cabrocity.co.ke">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="gatePassword" placeholder="••••••••">
+    </div>
+    <div id="gateError" class="gate-error" style="display:none;"></div>
+    <button class="btn-submit" onclick="submitGateLogin()">Sign In</button>
+  </div>
+</div>
+
+<div class="app-shell">
+
+  <!-- HEADER -->
+  <div class="mobile-header">
+    <div class="mh-left">
+      <button class="hamburger" aria-label="Back to home" onclick="location.href='index.html'"><span></span><span></span><span></span></button>
+      <button class="mh-logo" onclick="location.href='index.html'" aria-label="Cabro City home">
+        <img alt="Cabro City — Paving the Future" class="brand-logo-img cc-logo" data-fallback="/cabro-city-logo.png">
+      </button>
+    </div>
+    <div class="mh-right">
+      <button class="bell" onclick="location.href='index.html'" aria-label="Notifications">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </button>
+      <div class="avatar" onclick="location.href='index.html'"><span id="avatarInitials">--</span><span class="dot"></span></div>
+    </div>
+  </div>
+
+  <!-- NOT AUTHORIZED (signed in but not owner/admin) -->
+  <div id="notAuthorized">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    <h2>Owner/admin access only</h2>
+    <p>The audit trail is restricted to owners and admins.</p>
+  </div>
+
+  <div id="pageContent">
+    <!-- PAGE HEAD -->
+    <div class="page-head">
+      <div>
+        <h1>Audit Trail</h1>
+        <p>Every meaningful action across Cabro City, in one place</p>
+      </div>
+      <div class="page-head-actions">
+        <button class="btn-export" onclick="exportAuditCSV()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+          Export CSV
+        </button>
+      </div>
+    </div>
+
+    <!-- ENTITY FILTER CHIP (only shown when arriving via ?entity=) -->
+    <div class="entity-chip" id="entityChip" style="display:none;">
+      <span id="entityChipLabel">Filtered to one item</span>
+      <button onclick="clearEntityFilter()" aria-label="Clear item filter">&times;</button>
+    </div>
+
+    <div class="audit-layout">
+    <aside class="audit-sidebar">
+    <!-- STATS -->
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-num" id="statToday">0</div><div class="stat-label">Today</div></div>
+      <div class="stat-card"><div class="stat-num" id="statWeek">0</div><div class="stat-label">This Week</div></div>
+      <div class="stat-card"><div class="stat-num" id="statMine">0</div><div class="stat-label">By You</div></div>
+      <div class="stat-card"><div class="stat-num" id="statLoaded">0</div><div class="stat-label">Loaded</div></div>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div class="stock-toolbar">
+      <div class="stock-search">
+        <input type="text" id="searchInput" placeholder="Search by person, item, or action..." oninput="onSearch()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      </div>
+      <button class="btn-filter" id="filterBtn" onclick="toggleFilterPanel()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+        Filter
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="filter-panel" id="filterPanel">
+        <h4>Action type</h4>
+        <label class="filter-row"><input type="checkbox" class="catFilter" value="item" checked> Item</label>
+        <label class="filter-row"><input type="checkbox" class="catFilter" value="stock" checked> Receive / Issue</label>
+        <label class="filter-row"><input type="checkbox" class="catFilter" value="grn" checked> GRN</label>
+        <label class="filter-row"><input type="checkbox" class="catFilter" value="approval" checked> Approvals</label>
+        <label class="filter-row"><input type="checkbox" class="catFilter" value="team" checked> Team</label>
+        <label class="filter-row"><input type="checkbox" class="catFilter" value="supplier" checked> Suppliers</label>
+        <label class="filter-row"><input type="checkbox" class="catFilter" value="auth" checked> Sign-in / PIN</label>
+        <h4>Date range</h4>
+        <select id="dateRangeSelect">
+          <option value="all">All time</option>
+          <option value="today">Today</option>
+          <option value="week">This week</option>
+          <option value="month">This month</option>
+        </select>
+        <h4>Team member</h4>
+        <select id="actorSelect">
+          <option value="all">Everyone</option>
+        </select>
+        <div class="filter-actions">
+          <button class="filter-clear" onclick="clearFilters()">Clear</button>
+          <button class="filter-apply" onclick="applyFilters()">Apply</button>
+        </div>
+      </div>
+    </div>
+    </aside>
+
+    <main class="audit-main">
+    <!-- FEED -->
+    <div class="feed-wrap" id="feedWrap"></div>
+
+    <div class="empty-state" id="emptyState" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+      <p id="emptyStateText">No activity yet — actions will appear here automatically as your team uses Cabro City.</p>
+    </div>
+
+    <div class="load-more-wrap" id="loadMoreWrap" style="display:none;">
+      <button class="btn-load-more" id="loadMoreBtn" onclick="loadMore()">Load more</button>
+    </div>
+    </main>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <button class="nav-item" onclick="location.href='index.html'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+      Home
+    </button>
+    <button class="nav-item" onclick="location.href='stock-list.html'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>
+      Inventory
+    </button>
+    <button class="nav-item" onclick="location.href='index.html#transactions'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+      Transactions
+    </button>
+    <button class="nav-item active" onclick="location.href='index.html#reports'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+      Reports
+    </button>
+  </div>
+
+</div>
+
+<!-- ADMIN LOGIN MODAL -->
+<div class="overlay" id="adminOverlay">
+  <div class="modal">
+    <h3>Admin Login</h3>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="adminEmail" placeholder="you@cabrocity.co.ke">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="adminPassword" placeholder="••••••••">
+    </div>
+    <div id="adminError" style="display:none;color:var(--red);font-size:12.5px;margin:-4px 0 10px;"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeAdminModal()">Cancel</button>
+      <button class="btn-submit" onclick="submitAdminLogin()">Log In</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+/* ---------- Firebase ---------- */
+import {
+  db, loginAdmin, logoutAdmin, watchAdmin, initialsFromEmail,
+  collection, query, orderBy, limit, onSnapshot, canManage, fetchOrBootstrapRole
+} from "./firebase-config.js";
+
+let isAdmin = false;
+let myRole = null, myUid = "";
+let currentAdminEmail = "";
+let appRevealed = false;
+let feedUnsub = null;
+
+/* ---------- Category mapping (drives icon, color, and filter chips) ---------- */
+const CATEGORY_OF = {
+  "item.create":"item", "item.edit":"item", "item.delete":"item",
+  "stock.receive":"stock", "stock.issue":"stock",
+  "grn.submit":"grn",
+  "approval.approve":"approval", "approval.reject":"approval",
+  "team.add":"team", "team.role_change":"team", "team.deactivate":"team", "team.reactivate":"team",
+  "supplier.create":"supplier", "supplier.edit":"supplier", "supplier.delete":"supplier",
+  "auth.pin_change":"auth"
+};
+const ICON_SVG = {
+  box: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>',
+  arrowDown: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>',
+  arrowUp: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
+  truck: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1.5"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>',
+  users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>',
+  x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>'
+};
+// action -> { icon, color }
+function iconFor(action){
+  switch(action){
+    case "item.create": return {icon:"box", color:"blue"};
+    case "item.edit": return {icon:"box", color:"amber"};
+    case "item.delete": return {icon:"trash", color:"red"};
+    case "stock.receive": return {icon:"arrowDown", color:"green"};
+    case "stock.issue": return {icon:"arrowUp", color:"red"};
+    case "grn.submit": return {icon:"truck", color:"green"};
+    case "approval.approve": return {icon:"check", color:"green"};
+    case "approval.reject": return {icon:"x", color:"red"};
+    case "team.add": return {icon:"users", color:"blue"};
+    case "team.role_change": return {icon:"users", color:"amber"};
+    case "team.deactivate": return {icon:"users", color:"red"};
+    case "team.reactivate": return {icon:"users", color:"green"};
+    case "supplier.create": return {icon:"truck", color:"blue"};
+    case "supplier.edit": return {icon:"truck", color:"amber"};
+    case "supplier.delete": return {icon:"trash", color:"red"};
+    case "auth.pin_change": return {icon:"lock", color:"purple"};
+    default: return {icon:"box", color:"gray"};
+  }
+}
+
+/* ---------- Auth / role gate ---------- */
+watchAdmin(async (user)=>{
+  isAdmin = !!user;
+  currentAdminEmail = user ? user.email : "";
+  myUid = user ? user.uid : "";
+  document.getElementById("avatarInitials").textContent = isAdmin ? initialsFromEmail(currentAdminEmail) : "--";
+
+  const gate = document.getElementById("accessGate");
+  if(!isAdmin){
+    myRole = null;
+    gate.style.display = "flex";
+    document.querySelector(".app-shell").classList.remove("ready");
+    appRevealed = false;
+    return;
+  }
+  let roleDoc;
+  try{ roleDoc = await fetchOrBootstrapRole(user); }catch(e){ roleDoc = null; }
+  if(!roleDoc){
+    myRole = null;
+    gate.style.display = "flex";
+    document.querySelector(".app-shell").classList.remove("ready");
+    appRevealed = false;
+    logoutAdmin();
+    return;
+  }
+  myRole = roleDoc.role;
+  gate.style.display = "none";
+  if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
+
+  if(!canManage(myRole)){
+    document.getElementById("pageContent").style.display = "none";
+    document.getElementById("notAuthorized").style.display = "block";
+    return;
+  }
+  document.getElementById("pageContent").style.display = "block";
+  document.getElementById("notAuthorized").style.display = "none";
+  startFeed();
+});
+
+function submitGateLogin(){
+  const email = document.getElementById("gateEmail").value.trim();
+  const password = document.getElementById("gatePassword").value;
+  const errBox = document.getElementById("gateError");
+  errBox.style.display = "none";
+  loginAdmin(email, password).catch(()=>{
+    errBox.textContent = "Sign-in failed — check your email and password, or ask your admin for access.";
+    errBox.style.display = "block";
+  });
+}
+function openAdminModal(){ document.getElementById("adminError").style.display = "none"; document.getElementById("adminOverlay").classList.add("open"); }
+function closeAdminModal(){ document.getElementById("adminOverlay").classList.remove("open"); }
+function submitAdminLogin(){
+  const email = document.getElementById("adminEmail").value.trim();
+  const password = document.getElementById("adminPassword").value;
+  const errBox = document.getElementById("adminError");
+  loginAdmin(email, password).then(()=>{ closeAdminModal(); }).catch(()=>{
+    errBox.textContent = "Login failed — check email and password.";
+    errBox.style.display = "block";
+  });
+}
+
+/* ---------- Data ---------- */
+let rawLogs = [];       // everything loaded from Firestore so far, newest first
+let filtered = [];      // after search/filter applied
+let feedLimit = 100;    // grows via "Load more"
+let entityFilter = null; // set from ?entity= query param
+
+const params = new URLSearchParams(location.search);
+if(params.get("entity")){
+  entityFilter = params.get("entity");
+}
+
+function startFeed(){
+  if(feedUnsub) feedUnsub();
+  const q = query(collection(db, "auditLogs"), orderBy("ts", "desc"), limit(feedLimit));
+  feedUnsub = onSnapshot(q, (snap)=>{
+    rawLogs = snap.docs.map(d=>{
+      const data = d.data();
+      return {
+        id: d.id,
+        ts: data.ts && data.ts.toDate ? data.ts.toDate() : null,
+        actorUid: data.actorUid || "",
+        actorName: data.actorName || "Unknown",
+        actorRole: data.actorRole || "unknown",
+        action: data.action || "unknown",
+        entityType: data.entityType || "",
+        entityId: data.entityId || "",
+        entityLabel: data.entityLabel || "",
+        summary: data.summary || "",
+        meta: data.meta || {}
+      };
+    });
+    populateActorSelect();
+    updateEntityChip();
+    applyPipeline();
+  }, (err)=>{
+    console.error("audit feed error:", err);
+  });
+}
+
+function populateActorSelect(){
+  const sel = document.getElementById("actorSelect");
+  const current = sel.value;
+  const names = [...new Set(rawLogs.map(l=>l.actorName))].sort();
+  sel.innerHTML = `<option value="all">Everyone</option>` + names.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join("");
+  if(names.includes(current)) sel.value = current;
+}
+
+function updateEntityChip(){
+  const chip = document.getElementById("entityChip");
+  if(!entityFilter){ chip.style.display = "none"; return; }
+  const match = rawLogs.find(l=>l.entityId === entityFilter);
+  document.getElementById("entityChipLabel").textContent = "Filtered to: " + (match ? match.entityLabel : entityFilter);
+  chip.style.display = "flex";
+}
+function clearEntityFilter(){
+  entityFilter = null;
+  document.getElementById("entityChip").style.display = "none";
+  const url = new URL(location.href);
+  url.searchParams.delete("entity");
+  history.replaceState(null, "", url.toString());
+  applyPipeline();
+}
+
+/* ---------- Filters ---------- */
+let allowedCats = new Set(["item","stock","grn","approval","team","supplier","auth"]);
+let dateRange = "all";
+let actorPick = "all";
+
+function inDateRange(ts){
+  if(!ts) return true;
+  if(dateRange === "all") return true;
+  const now = new Date();
+  if(dateRange === "today"){
+    return ts.toDateString() === now.toDateString();
+  }
+  if(dateRange === "week"){
+    const weekAgo = new Date(now); weekAgo.setDate(now.getDate()-7);
+    return ts >= weekAgo;
+  }
+  if(dateRange === "month"){
+    const monthAgo = new Date(now); monthAgo.setMonth(now.getMonth()-1);
+    return ts >= monthAgo;
+  }
+  return true;
+}
+
+function applyPipeline(){
+  const q = document.getElementById("searchInput").value.trim().toLowerCase();
+  filtered = rawLogs.filter(l=>{
+    if(entityFilter && l.entityId !== entityFilter) return false;
+    const cat = CATEGORY_OF[l.action] || "item";
+    if(!allowedCats.has(cat)) return false;
+    if(actorPick !== "all" && l.actorName !== actorPick) return false;
+    if(!inDateRange(l.ts)) return false;
+    if(q){
+      const hay = (l.actorName + " " + l.entityLabel + " " + l.summary + " " + l.action).toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  renderFeed();
+  updateStats();
+}
+function onSearch(){ applyPipeline(); }
+function toggleFilterPanel(){ document.getElementById("filterPanel").classList.toggle("open"); }
+function clearFilters(){
+  document.querySelectorAll(".catFilter").forEach(cb=>cb.checked=true);
+  document.getElementById("dateRangeSelect").value = "all";
+  document.getElementById("actorSelect").value = "all";
+}
+function applyFilters(){
+  allowedCats = new Set([...document.querySelectorAll(".catFilter:checked")].map(cb=>cb.value));
+  dateRange = document.getElementById("dateRangeSelect").value;
+  actorPick = document.getElementById("actorSelect").value;
+  document.getElementById("filterBtn").classList.toggle("on", allowedCats.size < 7 || dateRange !== "all" || actorPick !== "all");
+  document.getElementById("filterPanel").classList.remove("open");
+  applyPipeline();
+}
+document.addEventListener("click", (e)=>{
+  const panel = document.getElementById("filterPanel");
+  const btn = document.getElementById("filterBtn");
+  if(panel.classList.contains("open") && !panel.contains(e.target) && !btn.contains(e.target)){
+    panel.classList.remove("open");
+  }
+});
+
+/* ---------- Stats ---------- */
+function updateStats(){
+  const now = new Date();
+  const today = rawLogs.filter(l=>l.ts && l.ts.toDateString()===now.toDateString()).length;
+  const weekAgo = new Date(now); weekAgo.setDate(now.getDate()-7);
+  const week = rawLogs.filter(l=>l.ts && l.ts >= weekAgo).length;
+  const mine = rawLogs.filter(l=>l.actorUid === myUid).length;
+  document.getElementById("statToday").textContent = today;
+  document.getElementById("statWeek").textContent = week;
+  document.getElementById("statMine").textContent = mine;
+  document.getElementById("statLoaded").textContent = rawLogs.length;
+}
+
+/* ---------- Render ---------- */
+function escapeHtml(s){
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function fmtDayHeader(d){
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  const yesterday = new Date(now); yesterday.setDate(now.getDate()-1);
+  const isYesterday = d.toDateString() === yesterday.toDateString();
+  if(isToday) return "Today";
+  if(isYesterday) return "Yesterday";
+  return d.toLocaleDateString("en-GB", {weekday:"long", day:"2-digit", month:"short", year:"numeric"});
+}
+function timeAgo(d){
+  if(!d) return "just now";
+  const diffMs = Date.now() - d.getTime();
+  const mins = Math.floor(diffMs/60000);
+  if(mins < 1) return "just now";
+  if(mins < 60) return mins + "m ago";
+  const hrs = Math.floor(mins/60);
+  if(hrs < 24) return hrs + "h ago";
+  return d.toLocaleDateString("en-GB", {day:"2-digit", month:"short"}) + " · " + d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
+}
+function renderFeed(){
+  const wrap = document.getElementById("feedWrap");
+  const empty = document.getElementById("emptyState");
+  const loadMoreWrap = document.getElementById("loadMoreWrap");
+
+  if(filtered.length === 0){
+    wrap.innerHTML = "";
+    empty.style.display = "block";
+    document.getElementById("emptyStateText").textContent = rawLogs.length === 0
+      ? "No activity yet — actions will appear here automatically as your team uses Cabro City."
+      : "No log entries match your search or filters.";
+    loadMoreWrap.style.display = "none";
+    return;
+  }
+  empty.style.display = "none";
+
+  let html = "";
+  let lastDay = null;
+  filtered.forEach(l=>{
+    const dayKey = l.ts ? l.ts.toDateString() : "Unknown date";
+    if(dayKey !== lastDay){
+      html += `<div class="day-header">${l.ts ? fmtDayHeader(l.ts) : "Unknown date"}</div>`;
+      lastDay = dayKey;
+    }
+    const { icon, color } = iconFor(l.action);
+    const metaRows = Object.entries(l.meta || {}).filter(([k,v])=>v !== undefined && v !== null && v !== "" ).map(([k,v])=>{
+      const val = typeof v === "object" ? JSON.stringify(v) : String(v);
+      return `<div class="log-detail-row"><span class="k">${escapeHtml(k)}</span><span class="v">${escapeHtml(val)}</span></div>`;
+    }).join("");
+    html += `
+      <div class="log-card" onclick="this.classList.toggle('open')">
+        <div class="log-top">
+          <div class="log-icon ${color}">${ICON_SVG[icon]}</div>
+          <div class="log-body">
+            <div class="log-actor-row">
+              <span class="log-actor">${escapeHtml(l.actorName)}</span>
+              <span class="role-badge">${escapeHtml(l.actorRole)}</span>
+            </div>
+            <div class="log-summary">${escapeHtml(l.summary || l.action)}</div>
+          </div>
+          <div class="log-time">${timeAgo(l.ts)}</div>
+        </div>
+        <div class="log-detail">
+          <div class="log-detail-row"><span class="k">Action</span><span class="v">${escapeHtml(l.action)}</span></div>
+          ${l.entityLabel ? `<div class="log-detail-row"><span class="k">Entity</span><span class="v">${escapeHtml(l.entityLabel)}</span></div>` : ""}
+          ${metaRows}
+        </div>
+      </div>`;
+  });
+  wrap.innerHTML = html;
+
+  // Only offer "Load more" when we've hit the current Firestore limit —
+  // otherwise everything that exists is already loaded.
+  loadMoreWrap.style.display = rawLogs.length >= feedLimit ? "block" : "none";
+}
+
+function loadMore(){
+  const btn = document.getElementById("loadMoreBtn");
+  btn.disabled = true;
+  btn.textContent = "Loading…";
+  feedLimit += 100;
+  startFeed();
+  setTimeout(()=>{ btn.disabled = false; btn.textContent = "Load more"; }, 800);
+}
+
+/* ---------- Export ---------- */
+function exportAuditCSV(){
+  const rows = [["Date","Time","Actor","Role","Action","Entity","Summary"]];
+  filtered.forEach(l=>{
+    rows.push([
+      l.ts ? l.ts.toLocaleDateString("en-GB") : "",
+      l.ts ? l.ts.toLocaleTimeString("en-GB") : "",
+      l.actorName, l.actorRole, l.action, l.entityLabel, l.summary
+    ]);
+  });
+  const csv = rows.map(r=>r.map(v=>`"${String(v||"").replace(/"/g,'""')}"`).join(",")).join("\n");
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `cabro-city-audit-trail-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ---------- Expose functions used by inline onclick handlers ---------- */
+Object.assign(window, {
+  submitGateLogin, openAdminModal, closeAdminModal, submitAdminLogin,
+  onSearch, toggleFilterPanel, clearFilters, applyFilters,
+  clearEntityFilter, loadMore, exportAuditCSV
+});
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(() => console.log('SW registered'))
+        .catch((err) => console.error('SW registration failed:', err));
+    });
+  }
+</script>
+<script>
+(function(){
+  var uri = window.CABRO_LOGO_URI;
+  document.querySelectorAll("img.cc-logo").forEach(function(img){
+    img.src = uri || img.getAttribute("data-fallback");
+  });
+})();
+</script>
+</body>
+</html>

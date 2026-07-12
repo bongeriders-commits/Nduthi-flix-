@@ -878,7 +878,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         <span class="d-label">Settings</span>
       </button>
-      <button class="drawer-item" onclick="closeDrawer()">
+      <button class="drawer-item" data-requires="manage" onclick="closeDrawer();window.location.href='audit.html'">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
         <span class="d-label">Audit Trail</span>
       </button>
@@ -1083,7 +1083,7 @@ import {
   db, loginAdmin, logoutAdmin, watchAdmin, unitAbbr as sharedUnitAbbr, initialsFromEmail,
   collection, doc, addDoc, onSnapshot, serverTimestamp, query, orderBy, limit, runTransaction,
   ROLES, canManage, canManageTeam, isIssueOnly, isReceiveIssueOnly, syncPublicItem, syncPublicItemStatus, getDocs, changeMyPin,
-  fetchOrBootstrapRole, watchTeam, updateTeamMember, createTeamMember
+  fetchOrBootstrapRole, watchTeam, updateTeamMember, createTeamMember, logAudit
 } from "./firebase-config.js";
 
 let isAdmin = false, currentAdminEmail = "";
@@ -1189,19 +1189,34 @@ function renderTeamList(members){
         <div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.displayName||m.email}${isMe?" (you)":""}</div>
         <div style="font-size:11.5px;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.email}</div>
       </div>
-      <select onchange="changeTeamRole('${m.id}', this.value)" ${m.role==="owner"?"disabled":""} style="font-size:12px;padding:5px 6px;border-radius:6px;border:1px solid var(--line);">
+      <select onchange="changeTeamRole('${m.id}', this.value, '${(m.displayName||m.email).replace(/'/g,"\\'")}', '${m.role}')" ${m.role==="owner"?"disabled":""} style="font-size:12px;padding:5px 6px;border-radius:6px;border:1px solid var(--line);">
         ${roleOpts}
       </select>
-      ${m.role==="owner" ? "" : `<button onclick="toggleTeamActive('${m.id}', ${m.active===false})" style="border:1px solid var(--line);background:${m.active===false?'var(--panel-alt)':'transparent'};color:${m.active===false?'var(--text-dim)':'var(--red,#e13a3a)'};font-size:11px;padding:6px 8px;border-radius:6px;cursor:pointer;white-space:nowrap;">${m.active===false?"Reactivate":"Deactivate"}</button>`}
+      ${m.role==="owner" ? "" : `<button onclick="toggleTeamActive('${m.id}', ${m.active===false}, '${(m.displayName||m.email).replace(/'/g,"\\'")}')" style="border:1px solid var(--line);background:${m.active===false?'var(--panel-alt)':'transparent'};color:${m.active===false?'var(--text-dim)':'var(--red,#e13a3a)'};font-size:11px;padding:6px 8px;border-radius:6px;cursor:pointer;white-space:nowrap;">${m.active===false?"Reactivate":"Deactivate"}</button>`}
     </div>`;
   }).join("");
 }
-async function changeTeamRole(uid, newRole){
-  try{ await updateTeamMember(uid, { role: newRole }); }
+async function changeTeamRole(uid, newRole, memberName, oldRole){
+  try{
+    await updateTeamMember(uid, { role: newRole });
+    logAudit({
+      actorUid: myUid, actorName: currentAdminEmail, actorRole: myRole,
+      action: "team.role_change", entityType: "user", entityId: uid, entityLabel: memberName,
+      summary: `Changed ${memberName}'s role from ${oldRole} to ${newRole}`,
+      meta: { oldRole, newRole }
+    });
+  }
   catch(e){ alert("Couldn't update role: " + e.message); }
 }
-async function toggleTeamActive(uid, makeActive){
-  try{ await updateTeamMember(uid, { active: makeActive }); }
+async function toggleTeamActive(uid, makeActive, memberName){
+  try{
+    await updateTeamMember(uid, { active: makeActive });
+    logAudit({
+      actorUid: myUid, actorName: currentAdminEmail, actorRole: myRole,
+      action: makeActive ? "team.reactivate" : "team.deactivate", entityType: "user", entityId: uid, entityLabel: memberName,
+      summary: `${makeActive ? "Reactivated" : "Deactivated"} team member ${memberName}`
+    });
+  }
   catch(e){ alert("Couldn't update status: " + e.message); }
 }
 async function submitAddTeamMember(){
@@ -1218,6 +1233,12 @@ async function submitAddTeamMember(){
   }
   try{
     await createTeamMember({ email, password, displayName: name, role, createdByUid: myUid });
+    logAudit({
+      actorUid: myUid, actorName: currentAdminEmail, actorRole: myRole,
+      action: "team.add", entityType: "user", entityLabel: name || email,
+      summary: `Added ${name || email} to the team as ${role}`,
+      meta: { email, role }
+    });
     document.getElementById("teamName").value = "";
     document.getElementById("teamEmail").value = "";
     document.getElementById("teamPassword").value = "";
@@ -1460,6 +1481,12 @@ function submitTx(){
       createdAt: serverTimestamp(), createdBy: currentAdminEmail
     });
   }).then(()=>{
+    logAudit({
+      actorUid: myUid, actorName: currentAdminEmail, actorRole: myRole,
+      action: type === "in" ? "stock.receive" : "stock.issue", entityType: "stockItem", entityId: itemId, entityLabel: it.name,
+      summary: `${type === "in" ? "Received" : "Issued"} ${qty} ${it.unit} of ${it.name}${who ? (type==="in" ? ` from ${who}` : ` to/by ${who}`) : ""}`,
+      meta: { qty, unit: it.unit, who, machine, note, newBalance: newBalanceAfter }
+    });
     document.getElementById("txWho").value = "";
     document.getElementById("txNote").value = "";
     closeModal();
@@ -1529,6 +1556,11 @@ function submitChangePin(){
   changeMyPin(current, next).then(()=>{
     okBox.textContent = "PIN updated.";
     okBox.style.display = "block";
+    logAudit({
+      actorUid: myUid, actorName: currentAdminEmail, actorRole: myRole,
+      action: "auth.pin_change", entityType: "user", entityId: myUid, entityLabel: currentAdminEmail,
+      summary: `${currentAdminEmail} changed their own PIN`
+    });
     document.getElementById("cpCurrent").value = "";
     document.getElementById("cpNew").value = "";
     document.getElementById("cpConfirm").value = "";
@@ -1581,6 +1613,12 @@ function submitNewItem(){
   };
   addDoc(collection(db, "stockItems"), newItemData).then((ref)=>{
     syncPublicItem(ref.id, newItemData).catch(err=>console.error("public mirror sync failed:", err));
+    logAudit({
+      actorUid: myUid, actorName: currentAdminEmail, actorRole: myRole,
+      action: "item.create", entityType: "stockItem", entityId: ref.id, entityLabel: name,
+      summary: `Created item ${name} (${newItemData.code}) with starting stock ${qty} ${unit}`,
+      meta: { code: newItemData.code, category: cat, uom: unit, min, startingBalance: qty }
+    });
     closeNewItemModal();
   }).catch(err=>{
     errBox.textContent = "Could not add item: " + err.message;
