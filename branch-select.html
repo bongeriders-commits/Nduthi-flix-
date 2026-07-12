@@ -152,6 +152,8 @@ watchAdmin(async (user)=>{
   loadedBranches = branches;
 
   if(branches.length === 0){
+    document.getElementById("titleText").textContent = "No stores yet";
+    document.getElementById("subText").textContent = "Add your first store from Settings → Branches, then come back here.";
     branchListEl.innerHTML = `<div class="empty-state">No stores have been set up yet. Add one from Settings → Branches, or ask the owner to.</div>`;
     return;
   }
