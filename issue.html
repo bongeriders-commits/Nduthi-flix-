@@ -251,12 +251,59 @@
     </div>
   </div>
 
+  <!-- REPORT MISMATCH MODAL (storeman) -->
+  <div class="cp-overlay" id="mismatchOverlay">
+    <div class="cp-modal">
+      <h3>Report Mismatch</h3>
+      <p style="font-size:12.5px;color:var(--text-dim);margin:-8px 0 14px;">
+        Found a physical count that doesn't match the system? Flag it here — an admin will review and correct the balance.
+      </p>
+
+      <div id="mmPickStep">
+        <div class="field">
+          <label>Item</label>
+          <input type="text" id="mmSearch" placeholder="Search item by name or code..." oninput="renderMismatchPicker()">
+        </div>
+        <div id="mmPickList" style="max-height:220px;overflow-y:auto;"></div>
+      </div>
+
+      <div id="mmFormStep" style="display:none;">
+        <div class="field">
+          <label>Item</label>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;background:var(--panel-alt);border-radius:9px;">
+            <span id="mmSelectedName" style="font-weight:600;"></span>
+            <button class="btn-outline" style="padding:5px 10px;font-size:11px;" onclick="mismatchBackToPicker()">Change</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Physical Count Found <span class="req">*</span></label>
+          <input type="number" id="mmActualCount" placeholder="e.g. 12" min="0" step="any">
+        </div>
+        <div id="mmError" style="display:none;color:var(--red);font-size:12.5px;margin:-4px 0 10px;"></div>
+        <div id="mmSuccess" style="display:none;color:#1a8f4c;font-size:12.5px;margin:-4px 0 10px;"></div>
+        <div class="cp-modal-actions">
+          <button class="cp-btn-cancel" onclick="closeMismatchModal()">Cancel</button>
+          <button class="cp-btn-submit" id="mmSubmitBtn" onclick="submitMismatch()">Submit Report</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- PAGE HEAD -->
   <div class="page-head">
     <h1>Item Details</h1>
     <button class="btn-outline" onclick="generateSummaryPDF()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
       Print
+    </button>
+  </div>
+
+  <!-- REPORT MISMATCH — lets a storeman flag a physical-vs-system
+       discrepancy without ever needing inventory/balance access. -->
+  <div style="padding:0 20px 14px;">
+    <button class="btn-outline" style="width:100%;justify-content:center;display:flex;gap:8px;align-items:center;" onclick="openMismatchModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L14.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 17h.01"/></svg>
+      Report Mismatch
     </button>
   </div>
 
@@ -390,9 +437,9 @@
 /* ---------- Firebase ---------- */
 import {
   db, loginAdmin, logoutAdmin, watchAdmin, initialsFromEmail, unitAbbr,
-  doc, getDoc, addDoc, onSnapshot, serverTimestamp, runTransaction,
+  doc, getDoc, addDoc, updateDoc, onSnapshot, serverTimestamp, increment,
   collection, query, where, fetchOrBootstrapRole, isIssueOnly, syncPublicItemStatus, changeMyPin, logAudit,
-  isBranchLocked, setActiveBranch, getBranch
+  isBranchLocked, setActiveBranch, getBranch, reportMismatch
 } from "./firebase-config.js";
 
 /* ---------- Read item id from query string (optional — may be picked below) ---------- */
@@ -650,12 +697,17 @@ let issuePageInitStarted = false;
 function initIssuePage(){
   if(issuePageInitStarted) return;
   issuePageInitStarted = true;
+  // Always subscribed (not just when arriving without ?id=) so the Report
+  // Mismatch picker has items to search even when landing straight on a
+  // specific item's issue form.
+  onSnapshot(query(collection(db, "stockItemsPublic"), where("branchId", "==", getActiveBranchId())), (snap)=>{
+    allItems = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+    renderPicker();
+    renderMismatchPicker();
+  }, (err)=>{ console.error("stockItemsPublic listener error:", err); });
+
   if(!itemId){
     document.getElementById("pickerCard").style.display = "block";
-    onSnapshot(query(collection(db, "stockItemsPublic"), where("branchId", "==", getActiveBranchId())), (snap)=>{
-      allItems = snap.docs.map(d=>({ id:d.id, ...d.data() }));
-      renderPicker();
-    }, (err)=>{ console.error("stockItemsPublic listener error:", err); });
   } else {
     watchItem(itemId);
     document.getElementById("itemSummaryBlock").style.display = "block";
@@ -734,11 +786,25 @@ function renderRecentIssues(){
 
 /* =========================================================================
    ISSUE STOCK — the only write action available on this page.
-   Deducts the issued quantity from stockItems.balance inside a Firestore
-   transaction (so two storemen issuing at once can't oversell the same
-   stock), then logs a stockTransactions "out" record for the ledger.
+   Deducts the issued quantity from stockItems.balance using an atomic
+   increment(-qty) rather than a read-then-write transaction. A Firestore
+   transaction requires a live round-trip to the server, so it simply
+   fails (or hangs) with no network — increment() instead queues locally
+   offline and applies atomically once synced, which is essential for
+   sites with weak/no signal.
+
+   Trade-off: increment() can't verify the current balance before
+   deducting, so two people issuing offline off a stale cached balance
+   could, in theory, take stock below zero. Rather than hard-blocking
+   (which would make the app unusable offline), this is a SOFT block:
+   if the last known cached balance looks insufficient, the user is
+   warned and asked to confirm, but is always allowed to proceed. The
+   transaction is flagged (flaggedForReview) and the item is marked
+   needsReconciliation so admin/owner can review and true-up the balance
+   once everyone is back online — matching the audit-log philosophy of
+   an honest record over a false guarantee.
    ========================================================================= */
-window.submitIssue = function submitIssue(){
+window.submitIssue = async function submitIssue(){
   if(!currentUser){ document.getElementById("accessGate").style.display = "flex"; return; }
   if(!itemId){ return showIssueError("Select an item to issue first."); }
   const errBox = document.getElementById("issueError");
@@ -764,37 +830,59 @@ window.submitIssue = function submitIssue(){
   btn.disabled = true;
 
   const itemRef = doc(db, "stockItems", itemId);
-  let newBalanceAfter = null, newMin = null;
 
-  runTransaction(db, async (tx)=>{
-    const snap = await tx.get(itemRef);
-    if(!snap.exists()) throw new Error("This item no longer exists.");
-    const curBalance = snap.data().balance || 0;
-    newMin = snap.data().min || 0;
-    if(qty > curBalance){
-      // Storeman never sees the exact figure — just that it's not enough.
-      throw new Error(isIssueOnly(myRole)
-        ? "Not enough stock to issue that quantity."
-        : `Only ${fmtNum(curBalance)} ${curUnitAbbr} in stock — cannot issue ${qty}.`);
+  // Best-effort look at the last known balance/min (served from Firestore's
+  // local cache if offline, thanks to persistence — may be stale, which is
+  // exactly why this is a soft warning and not a hard gate).
+  let curBalance = null, curMin = null;
+  try {
+    const snap = await getDoc(itemRef);
+    if (snap.exists()) {
+      curBalance = snap.data().balance || 0;
+      curMin = snap.data().min || 0;
     }
-    newBalanceAfter = curBalance - qty;
-    tx.update(itemRef, { balance: newBalanceAfter, updatedAt: serverTimestamp(), updatedBy: currentUserEmail });
+  } catch (e) {
+    console.warn("Could not read last-known balance (fully offline, no cache yet):", e);
+  }
+
+  let flaggedForReview = false;
+  if (curBalance !== null && qty > curBalance) {
+    flaggedForReview = true;
+    // Storeman never sees the exact figure — just a generic warning.
+    const warnMsg = isIssueOnly(myRole)
+      ? "Stock may not be enough for this quantity (last known count). Issue anyway? This will be flagged for admin review."
+      : `Only ${fmtNum(curBalance)} ${curUnitAbbr} in stock (last known) — issuing ${qty} would go negative. Issue anyway and flag for review?`;
+    if (!confirm(warnMsg)) { btn.disabled = false; return; }
+  }
+
+  updateDoc(itemRef, {
+    balance: increment(-qty),
+    updatedAt: serverTimestamp(),
+    updatedBy: currentUserEmail,
+    ...(flaggedForReview ? { needsReconciliation: true } : {})
   }).then(()=>{
-    syncPublicItemStatus(itemId, newBalanceAfter, newMin)
-      .catch(err=>console.error("public mirror status sync failed:", err));
+    // Approximate post-issue balance for the public status pill — exact once
+    // this device is back online and the real value has synced.
+    if (curBalance !== null) {
+      syncPublicItemStatus(itemId, curBalance - qty, curMin)
+        .catch(err=>console.error("public mirror status sync failed:", err));
+    }
     return addDoc(collection(db, "stockTransactions"), {
       itemId, itemName: liveData.name, type: "out", qty, unit: curUnitAbbr, branchId: getActiveBranchId(),
       machine: issueTo, who: collectedBy, note: purpose + (remarks ? (" — " + remarks) : ""),
-      issueTime, createdAt: serverTimestamp(), createdBy: currentUserEmail, createdByName: storemanName
+      issueTime, createdAt: serverTimestamp(), createdBy: currentUserEmail, createdByName: storemanName,
+      flaggedForReview
     });
   }).then((docRef)=>{
-    okBox.textContent = `Issued ${fmtNum(qty)} ${curUnitAbbr} of ${liveData.name}.`;
+    okBox.textContent = flaggedForReview
+      ? `Issued ${fmtNum(qty)} ${curUnitAbbr} of ${liveData.name} — flagged for review.`
+      : `Issued ${fmtNum(qty)} ${curUnitAbbr} of ${liveData.name}.`;
     okBox.style.display = "block";
     logAudit({
       actorUid: myUid, actorName: storemanName || currentUserEmail, actorRole: myRole,
       action: "stock.issue", entityType: "stockItem", entityId: itemId, entityLabel: liveData.name,
-      summary: `Issued ${fmtNum(qty)} ${curUnitAbbr} of ${liveData.name} to ${issueTo || "—"}`,
-      meta: { qty, unit: curUnitAbbr, issueTo, collectedBy, purpose, remarks, newBalance: newBalanceAfter }
+      summary: `Issued ${fmtNum(qty)} ${curUnitAbbr} of ${liveData.name} to ${issueTo || "—"}` + (flaggedForReview ? " (flagged — may exceed stock)" : ""),
+      meta: { qty, unit: curUnitAbbr, issueTo, collectedBy, purpose, remarks, flaggedForReview }
     });
     generateIssuePDF(null, {
       itemName: liveData.name, itemCode: liveData.code, qty, unit: curUnitAbbr,
@@ -911,6 +999,99 @@ window.generateSummaryPDF = function generateSummaryPDF(){
   });
 
   doc.save(`${liveData ? liveData.code : "item"}-issue-summary.pdf`);
+};
+
+/* ---------- Report Mismatch (storeman) ----------
+   Storeman never sees balances anywhere, so the picker here uses the same
+   stockItemsPublic-backed `allItems` list as the item picker above (name/
+   code/status only). Submits into the same "approvals" queue reviewed on
+   katani-approvals.html. */
+let mmSelectedItem = null;
+window.openMismatchModal = function openMismatchModal(){
+  mmSelectedItem = null;
+  document.getElementById("mmSearch").value = "";
+  document.getElementById("mmActualCount").value = "";
+  document.getElementById("mmError").style.display = "none";
+  document.getElementById("mmSuccess").style.display = "none";
+  document.getElementById("mmPickStep").style.display = "block";
+  document.getElementById("mmFormStep").style.display = "none";
+  renderMismatchPicker();
+  document.getElementById("mismatchOverlay").classList.add("open");
+};
+window.closeMismatchModal = function closeMismatchModal(){
+  document.getElementById("mismatchOverlay").classList.remove("open");
+};
+document.getElementById("mismatchOverlay").addEventListener("click", (e)=>{
+  if(e.target.id==="mismatchOverlay") closeMismatchModal();
+});
+window.renderMismatchPicker = function renderMismatchPicker(){
+  const box = document.getElementById("mmPickList");
+  if(!box) return;
+  const q = (document.getElementById("mmSearch").value || "").trim().toLowerCase();
+  const list = allItems
+    .filter(it => !q || (it.name||"").toLowerCase().includes(q) || (it.code||"").toLowerCase().includes(q))
+    .sort((a,b)=> (a.name||"").localeCompare(b.name||""));
+  if(list.length === 0){
+    box.innerHTML = `<div style="padding:16px 0;color:var(--text-dim);font-size:13px;">No items match your search.</div>`;
+    return;
+  }
+  box.innerHTML = list.slice(0,30).map(it=>`
+    <div style="padding:10px 8px;border-bottom:1px solid var(--line);cursor:pointer;" onclick="selectMismatchItem('${it.id}')">
+      <div style="font-weight:600;">${escapeHtml(it.name)}</div>
+      <div style="font-size:12px;color:var(--text-dim);">${escapeHtml(it.code||"")}</div>
+    </div>
+  `).join("");
+};
+window.selectMismatchItem = function selectMismatchItem(id){
+  const it = allItems.find(i=>i.id===id);
+  if(!it) return;
+  mmSelectedItem = it;
+  document.getElementById("mmSelectedName").textContent = it.name;
+  document.getElementById("mmPickStep").style.display = "none";
+  document.getElementById("mmFormStep").style.display = "block";
+};
+window.mismatchBackToPicker = function mismatchBackToPicker(){
+  document.getElementById("mmFormStep").style.display = "none";
+  document.getElementById("mmPickStep").style.display = "block";
+};
+window.submitMismatch = function submitMismatch(){
+  const errBox = document.getElementById("mmError");
+  const okBox = document.getElementById("mmSuccess");
+  errBox.style.display = "none";
+  okBox.style.display = "none";
+
+  if(!mmSelectedItem){ errBox.textContent = "Select an item first."; errBox.style.display = "block"; return; }
+  const actualCount = parseFloat(document.getElementById("mmActualCount").value);
+  if(isNaN(actualCount) || actualCount < 0){ errBox.textContent = "Enter the physical count you found."; errBox.style.display = "block"; return; }
+
+  const btn = document.getElementById("mmSubmitBtn");
+  btn.disabled = true; btn.textContent = "Submitting…";
+
+  reportMismatch({
+    itemId: mmSelectedItem.id,
+    itemName: mmSelectedItem.name,
+    uom: mmSelectedItem.uom,
+    actualCount,
+    requestedByUid: myUid,
+    requestedByName: storemanName || currentUserEmail,
+    requestedByRole: myRole,
+    branchId: getActiveBranchId()
+  }).then(()=>{
+    okBox.textContent = "Reported — an admin will review this.";
+    okBox.style.display = "block";
+    logAudit({
+      actorUid: myUid, actorName: storemanName || currentUserEmail, actorRole: myRole,
+      action: "approval.request", entityType: "stockItem", entityId: mmSelectedItem.id, entityLabel: mmSelectedItem.name,
+      summary: `Reported a stock mismatch for ${mmSelectedItem.name}`,
+      meta: { actualCount }
+    });
+    setTimeout(closeMismatchModal, 1200);
+  }).catch(err=>{
+    errBox.textContent = err.message || "Could not submit report.";
+    errBox.style.display = "block";
+  }).finally(()=>{
+    btn.disabled = false; btn.textContent = "Submit Report";
+  });
 };
 
 Object.assign(window, { toggleAvatarMenu, signOutNow, submitGateLogin, openChangePinModal, closeChangePinModal, submitChangePin });

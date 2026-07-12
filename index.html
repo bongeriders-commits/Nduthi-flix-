@@ -900,6 +900,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1.5"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
         <span class="d-label">Dispatch</span>
       </button>
+      <button class="drawer-item" data-requires="nonmanage" onclick="closeDrawer();openMismatchModal();">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L14.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 17h.01"/></svg>
+        <span class="d-label">Report Mismatch</span>
+      </button>
       <button class="drawer-item" data-dtab="reports" data-requires="manage" onclick="drawerGo('reports')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
         <span class="d-label">Reports</span>
@@ -1000,6 +1004,47 @@
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeChangePinModal()">Cancel</button>
       <button class="btn-submit" id="cpSubmitBtn" onclick="submitChangePin()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- REPORT MISMATCH MODAL (staff/receiver only) -->
+<div class="overlay" id="mismatchOverlay">
+  <div class="modal" style="max-width:420px;">
+    <h3>Report Mismatch</h3>
+    <p style="font-size:12.5px;color:var(--text-dim,#68686f);margin:-6px 0 12px;">
+      Found a physical count that doesn't match the system? Flag it here — an admin will review and correct the balance.
+    </p>
+
+    <div id="mmPickStep">
+      <div class="field">
+        <label>Item</label>
+        <div class="input-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input type="text" id="mmSearch" placeholder="Search item by name or code..." oninput="renderMismatchPicker()">
+        </div>
+      </div>
+      <div id="mmPickList" style="max-height:220px;overflow-y:auto;"></div>
+    </div>
+
+    <div id="mmFormStep" style="display:none;">
+      <div class="field">
+        <label>Item</label>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;background:var(--panel-alt,#eeeef1);border-radius:8px;">
+          <span id="mmSelectedName" style="font-weight:600;"></span>
+          <button class="btn-outline" style="padding:5px 10px;font-size:11px;" onclick="mismatchBackToPicker()">Change</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Physical Count Found <span class="req">*</span></label>
+        <input type="number" id="mmActualCount" placeholder="e.g. 12" min="0" step="any">
+      </div>
+      <div id="mmError" style="display:none;color:var(--red);font-size:12.5px;margin:-4px 0 10px;"></div>
+      <div id="mmSuccess" style="display:none;color:#1a8f4c;font-size:12.5px;margin:-4px 0 10px;"></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeMismatchModal()">Cancel</button>
+        <button class="btn-submit" id="mmSubmitBtn" onclick="submitMismatch()">Submit Report</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1189,7 +1234,8 @@ import {
   collection, doc, addDoc, onSnapshot, serverTimestamp, query, where, orderBy, limit, runTransaction,
   ROLES, canManage, canManageTeam, isIssueOnly, isReceiveIssueOnly, syncPublicItem, syncPublicItemStatus, getDocs, changeMyPin,
   fetchOrBootstrapRole, watchTeam, updateTeamMember, createTeamMember, logAudit, statusOf as sharedStatusOf,
-  isBranchLocked, setActiveBranch, getActiveBranchId, getActiveBranchName, getBranch, fetchBranches, createBranch, setBranchActive
+  isBranchLocked, setActiveBranch, getActiveBranchId, getActiveBranchName, getBranch, fetchBranches, createBranch, setBranchActive,
+  reportMismatch
 } from "./firebase-config.js";
 
 let isAdmin = false, currentAdminEmail = "", currentAdminName = "";
@@ -1276,6 +1322,13 @@ function applyRolePermissions(){
   });
   document.querySelectorAll('[data-requires="owner"]').forEach(el=>{
     el.style.display = owner ? "" : "none";
+  });
+
+  // Report Mismatch is for staff/receiver to flag a physical-vs-system
+  // discrepancy for admin review — owner/admin edit stock directly and
+  // don't need to route through the approvals queue.
+  document.querySelectorAll('[data-requires="nonmanage"]').forEach(el=>{
+    el.style.display = manage ? "none" : "";
   });
 
   // Receiver: home page is a launcher for Receive/Issue only — no inventory
@@ -1818,6 +1871,97 @@ function submitChangePin(){
   });
 }
 
+/* ---------- Report Mismatch Modal (staff/receiver) ----------
+   Lets a non-manage user flag that a physical count doesn't match the
+   system for a given item. Only name/category are ever shown in the
+   picker here — never the balance, even for staff who could otherwise
+   see it elsewhere, to keep this flow identical across roles. Submits
+   into the same "approvals" queue reviewed on katani-approvals.html. */
+let mmSelectedItem = null;
+function openMismatchModal(){
+  mmSelectedItem = null;
+  document.getElementById("mmSearch").value = "";
+  document.getElementById("mmActualCount").value = "";
+  document.getElementById("mmError").style.display = "none";
+  document.getElementById("mmSuccess").style.display = "none";
+  document.getElementById("mmPickStep").style.display = "block";
+  document.getElementById("mmFormStep").style.display = "none";
+  renderMismatchPicker();
+  document.getElementById("mismatchOverlay").classList.add("open");
+}
+function closeMismatchModal(){ document.getElementById("mismatchOverlay").classList.remove("open"); }
+document.getElementById("mismatchOverlay").addEventListener("click", (e)=>{
+  if(e.target.id==="mismatchOverlay") closeMismatchModal();
+});
+function renderMismatchPicker(){
+  const q = (document.getElementById("mmSearch").value || "").trim().toLowerCase();
+  const list = items
+    .filter(it => !q || (it.name||"").toLowerCase().includes(q) || (it.cat||"").toLowerCase().includes(q))
+    .sort((a,b)=> (a.name||"").localeCompare(b.name||""));
+  const box = document.getElementById("mmPickList");
+  if(list.length === 0){
+    box.innerHTML = `<div class="tx-empty" style="padding:16px 0;color:var(--text-dim,#68686f);font-size:13px;">No items match your search.</div>`;
+    return;
+  }
+  box.innerHTML = list.slice(0,30).map(it=>`
+    <div style="padding:10px 8px;border-bottom:1px solid var(--line,#e2e2e6);cursor:pointer;" onclick="selectMismatchItem('${it.id}')">
+      <div style="font-weight:600;">${escapeHtml(it.name)}</div>
+      <div style="font-size:12px;color:var(--text-dim,#68686f);">${escapeHtml(it.cat||"")}</div>
+    </div>
+  `).join("");
+}
+window.selectMismatchItem = function selectMismatchItem(id){
+  const it = items.find(i=>i.id===id);
+  if(!it) return;
+  mmSelectedItem = it;
+  document.getElementById("mmSelectedName").textContent = it.name;
+  document.getElementById("mmPickStep").style.display = "none";
+  document.getElementById("mmFormStep").style.display = "block";
+};
+function mismatchBackToPicker(){
+  document.getElementById("mmFormStep").style.display = "none";
+  document.getElementById("mmPickStep").style.display = "block";
+}
+function submitMismatch(){
+  const errBox = document.getElementById("mmError");
+  const okBox = document.getElementById("mmSuccess");
+  errBox.style.display = "none";
+  okBox.style.display = "none";
+
+  if(!mmSelectedItem){ errBox.textContent = "Select an item first."; errBox.style.display = "block"; return; }
+  const actualCount = parseFloat(document.getElementById("mmActualCount").value);
+  if(isNaN(actualCount) || actualCount < 0){ errBox.textContent = "Enter the physical count you found."; errBox.style.display = "block"; return; }
+
+  const btn = document.getElementById("mmSubmitBtn");
+  btn.disabled = true; btn.textContent = "Submitting…";
+
+  reportMismatch({
+    itemId: mmSelectedItem.id,
+    itemName: mmSelectedItem.name,
+    uom: mmSelectedItem.unit,
+    actualCount,
+    requestedByUid: myUid,
+    requestedByName: currentAdminName || currentAdminEmail,
+    requestedByRole: myRole,
+    branchId: getActiveBranchId()
+  }).then(()=>{
+    okBox.textContent = "Reported — an admin will review this.";
+    okBox.style.display = "block";
+    logAudit({
+      actorUid: myUid, actorName: currentAdminName || currentAdminEmail, actorRole: myRole,
+      action: "approval.request", entityType: "stockItem", entityId: mmSelectedItem.id, entityLabel: mmSelectedItem.name,
+      summary: `Reported a stock mismatch for ${mmSelectedItem.name}`,
+      meta: { actualCount }
+    });
+    setTimeout(closeMismatchModal, 1200);
+  }).catch(err=>{
+    errBox.textContent = err.message || "Could not submit report.";
+    errBox.style.display = "block";
+  }).finally(()=>{
+    btn.disabled = false; btn.textContent = "Submit Report";
+  });
+}
+
 /* ---------- New Item Modal ---------- */
 function openNewItemModal(){
   if(!requireAdmin()) return;
@@ -2091,7 +2235,12 @@ function renderDashboard(){
   const totalItems = items.length;
   const receiptsToday = activity.filter(a=>a.type==="in" && isToday(a.ts));
   const issuesToday = activity.filter(a=>a.type==="out" && isToday(a.ts));
-  const lowStock = items.filter(it=>statusOf(it)==="low");
+  // "Low Stock" now means within 5 units of an item's own minimum level —
+  // not just already below it — so staff get a heads-up before an item
+  // actually runs low, not just after. Already-out-of-stock items are
+  // tracked separately below, so they're excluded here to avoid double
+  // counting between the two cards.
+  const lowStock = items.filter(it=> it.balance > 0 && (it.balance - it.min) <= 5);
   const outOfStock = items.filter(it=>it.balance<=0);
   const pending = items.filter(it=>it.flagged);
 
@@ -2125,7 +2274,7 @@ function renderDashboard(){
       <div class="s-sub neutral">Active items</div>
     </div>
     ${receiveIssueCards}
-    <div class="stat-card">
+    <div class="stat-card" onclick="location.href='stock-list.html?filter=low'" style="cursor:pointer;">
       <div class="s-icon amber">${ICONS.warn}</div>
       <div class="s-label">LOW STOCK</div>
       <div class="s-value">${lowStock.length}</div>
@@ -2287,7 +2436,8 @@ Object.assign(window, {
   quickIssue, quickReceive, setTxType, submitNewItem, submitTx, switchTab,
   openTeamModal, closeTeamModal, submitAddTeamMember, changeTeamRole, changeTeamBranch, toggleTeamActive, renameTeamMember, onTeamRoleChange, switchStore,
   syncAllItemsToPublicMirror, openChangePinModal, closeChangePinModal, submitChangePin,
-  openStockCountModal, closeStockCountModal, scBackToSearch, scHandleSearch, scSelectItem, scGoToGRN
+  openStockCountModal, closeStockCountModal, scBackToSearch, scHandleSearch, scSelectItem, scGoToGRN,
+  openMismatchModal, closeMismatchModal, renderMismatchPicker, mismatchBackToPicker, submitMismatch
 });
 </script>
 

@@ -271,8 +271,8 @@
   <!-- PAGE HEAD -->
   <div class="page-head">
     <div>
-      <h1>Stock List</h1>
-      <p>All items in your stores</p>
+      <h1 id="pageTitle">Stock List</h1>
+      <p id="pageSubtitle">All items in your stores</p>
     </div>
   </div>
 
@@ -483,6 +483,24 @@ const PAGE_SIZE = 10;
 let sortKey = null, sortDir = 1;
 let allowedStatuses = new Set(["Active","Low Stock","Out of Stock"]);
 
+// Deep-link from the dashboard's "LOW STOCK" card (?filter=low): shows any
+// item within 5 units of its own minimum level, not just items already
+// tagged "Low Stock"/"Out of Stock" — an early-warning view rather than
+// the plain status filter. Overrides the normal checkbox filters while on.
+const nearLowMode = new URLSearchParams(location.search).get("filter") === "low";
+const LOW_MARGIN = 5;
+
+if(nearLowMode){
+  document.getElementById("pageTitle").textContent = "Low Stock";
+  document.getElementById("pageSubtitle").innerHTML =
+    `Items within ${LOW_MARGIN} units of their reorder level &nbsp;·&nbsp; <a href="stock-list.html" style="color:var(--oxide);text-decoration:underline;">Show all items</a>`;
+  // The checkbox status filter doesn't apply to this margin-based view.
+  document.addEventListener("DOMContentLoaded", ()=>{
+    const btn = document.getElementById("filterBtn");
+    if(btn) btn.style.display = "none";
+  });
+}
+
 /* ---------- Render ---------- */
 function formatMin(item){
   if(item.uom.startsWith("Litre")) return item.min.toLocaleString() + " L";
@@ -576,7 +594,9 @@ function applyPipeline(){
   const q = document.getElementById("searchInput").value.trim().toLowerCase();
   filtered = items.filter(it=>{
     const matchesQuery = !q || it.name.toLowerCase().includes(q) || it.code.toLowerCase().includes(q) || it.category.toLowerCase().includes(q);
-    const matchesStatus = allowedStatuses.has(it.status);
+    const matchesStatus = nearLowMode
+      ? (it.balance - it.min) <= LOW_MARGIN
+      : allowedStatuses.has(it.status);
     return matchesQuery && matchesStatus;
   });
   if(sortKey){

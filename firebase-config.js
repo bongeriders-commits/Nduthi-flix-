@@ -7,7 +7,8 @@ import {
   createUserWithEmailAndPassword, EmailAuthProvider, reauthenticateWithCredential, updatePassword
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDoc, getDocs, setDoc,
+  initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
+  collection, doc, addDoc, updateDoc, deleteDoc, getDoc, getDocs, setDoc,
   onSnapshot, serverTimestamp, query, where, orderBy, limit, startAfter, runTransaction, increment
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -26,7 +27,17 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+
+// Offline persistence: caches reads locally and queues writes (addDoc,
+// updateDoc, increment, etc.) whenever there's no network, then syncs
+// automatically the moment connection returns. This is required for the
+// app to be usable at all on construction sites with weak/no signal —
+// without it, every Firestore call simply fails offline.
+// persistentMultipleTabManager lets the cache be shared safely if the
+// storeman ever has the app open in two tabs/windows at once.
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+});
 
 /* ---------- Auth helpers ---------- */
 export function loginAdmin(email, password) {
@@ -283,6 +294,36 @@ export async function logAudit({ actorUid, actorName, actorRole, action, entityT
   }catch(err){
     console.error("audit log failed:", err);
   }
+}
+
+/* ---------- Stock discrepancy ("Mismatch") reports ----------
+   Raised by staff/receiver/storeman when a physical count doesn't match
+   what the system shows. Feeds the same "approvals" queue used by
+   new-item and threshold requests (see katani-approvals.html) — owner/
+   admin reviews it there, and approving corrects stockItems.balance to
+   the reported physical count. systemCount is captured here purely for
+   the reviewer's benefit and is never shown back to the person reporting
+   it — matches the rule that storeman/receiver never see live balances. */
+export async function reportMismatch({ itemId, itemName, uom, actualCount, requestedByUid, requestedByName, requestedByRole, branchId }) {
+  let systemCount = null;
+  try {
+    const snap = await getDoc(doc(db, "stockItems", itemId));
+    if (snap.exists()) systemCount = snap.data().balance ?? null;
+  } catch (e) {
+    console.warn("Could not read system count for mismatch report:", e);
+  }
+  return addDoc(collection(db, "approvals"), {
+    type: "discrepancy",
+    itemId, itemName: itemName || "", uom: uom || "",
+    actualCount, systemCount,
+    title: `${itemName || "Item"} — reported mismatch`,
+    requestedBy: requestedByName || "Unknown",
+    requestedByUid: requestedByUid || "",
+    requestedByRole: requestedByRole || "unknown",
+    status: "pending",
+    createdAt: serverTimestamp(),
+    branchId: branchId || ""
+  });
 }
 
 /* ---------- Re-exported Firestore functions ---------- */
