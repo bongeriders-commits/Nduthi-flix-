@@ -46,6 +46,11 @@
   .branch-arrow svg{width:18px;height:18px;}
 
   .empty-state{font-size:12.5px;color:var(--text-dim);padding:20px 0;}
+  .btn-settings-link{
+    display:block;width:100%;padding:12px;border-radius:9px;border:1px solid var(--oxide);
+    background:var(--oxide);color:#fff;font-weight:700;font-size:13px;text-align:center;
+    text-decoration:none;box-sizing:border-box;margin-top:4px;
+  }
   .loading{font-size:12.5px;color:var(--text-dim);padding:20px 0;}
   .err{color:#e13a3a;font-size:12px;margin-bottom:14px;}
 
@@ -154,7 +159,10 @@ watchAdmin(async (user)=>{
   if(branches.length === 0){
     document.getElementById("titleText").textContent = "No stores yet";
     document.getElementById("subText").textContent = "Add your first store from Settings → Branches, then come back here.";
-    branchListEl.innerHTML = `<div class="empty-state">No stores have been set up yet. Add one from Settings → Branches, or ask the owner to.</div>`;
+    branchListEl.innerHTML = `
+      <div class="empty-state">No stores have been set up yet. Add one from Settings → Branches, or ask the owner to.</div>
+      <a href="settings.html" class="btn-settings-link">Go to Settings →</a>
+    `;
     return;
   }
 
