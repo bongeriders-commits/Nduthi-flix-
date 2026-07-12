@@ -1283,7 +1283,10 @@ function renderTeamList(members){
     return `
     <div style="border:1px solid var(--line);border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:10px;">
       <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(m.displayName||m.email)}${isMe?" (you)":""}</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:5px;">
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(m.displayName||m.email)}${isMe?" (you)":""}</span>
+          <button onclick="renameTeamMember('${m.id}', '${(m.displayName||"").replace(/'/g,"\\'")}', '${m.email.replace(/'/g,"\\'")}')" title="Edit name" style="border:none;background:none;color:var(--text-dim);cursor:pointer;padding:2px;font-size:12px;line-height:1;flex-shrink:0;">✎</button>
+        </div>
         <div style="font-size:11.5px;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(m.email)}</div>
       </div>
       <select onchange="changeTeamRole('${m.id}', this.value, '${(m.displayName||m.email).replace(/'/g,"\\'")}', '${m.role}')" ${m.role==="owner"?"disabled":""} style="font-size:12px;padding:5px 6px;border-radius:6px;border:1px solid var(--line);">
@@ -1315,6 +1318,22 @@ async function toggleTeamActive(uid, makeActive, memberName){
     });
   }
   catch(e){ alert("Couldn't update status: " + e.message); }
+}
+async function renameTeamMember(uid, currentName, email){
+  const newName = prompt("Full name for " + email + ":", currentName || "");
+  if(newName === null) return;
+  const trimmed = newName.trim();
+  if(!trimmed || trimmed === currentName) return;
+  try{
+    await updateTeamMember(uid, { displayName: trimmed });
+    logAudit({
+      actorUid: myUid, actorName: currentAdminName || currentAdminEmail, actorRole: myRole,
+      action: "team.rename", entityType: "user", entityId: uid, entityLabel: trimmed,
+      summary: `Renamed team member from "${currentName || email}" to "${trimmed}"`,
+      meta: { oldName: currentName || "", newName: trimmed }
+    });
+  }
+  catch(e){ alert("Couldn't update name: " + e.message); }
 }
 async function submitAddTeamMember(){
   const name = document.getElementById("teamName").value.trim();
@@ -2158,7 +2177,7 @@ Object.assign(window, {
   closeDrawer, closeModal, closeNewItemModal, drawerGo, drawerIssue, drawerReceive,
   exportIssuedPDF, exportReceivedPDF, openDrawer, openModal, openNewItemModal, openStockAudit,
   quickIssue, quickReceive, setTxType, submitNewItem, submitTx, switchTab,
-  openTeamModal, closeTeamModal, submitAddTeamMember, changeTeamRole, toggleTeamActive,
+  openTeamModal, closeTeamModal, submitAddTeamMember, changeTeamRole, toggleTeamActive, renameTeamMember,
   syncAllItemsToPublicMirror, openChangePinModal, closeChangePinModal, submitChangePin,
   openStockCountModal, closeStockCountModal, scBackToSearch, scHandleSearch, scSelectItem, scGoToGRN
 });
