@@ -619,6 +619,10 @@ async function generateGrnNo(){
 
 /* ---------- Live stock items from Firestore ---------- */
 let items = [];
+// If we arrived here via the Stock Count "Edit" button (index.html), the
+// item id is passed as ?item=<id> — pre-load it as the first GRN row.
+const prefillItemId = new URLSearchParams(location.search).get("item");
+let prefillApplied = false;
 onSnapshot(query(collection(db, "stockItems"), orderBy("name")), (snap)=>{
   items = snap.docs.map(d=>{
     const data = d.data();
@@ -632,6 +636,10 @@ onSnapshot(query(collection(db, "stockItems"), orderBy("name")), (snap)=>{
       price: data.price || 0
     };
   });
+  if(prefillItemId && !prefillApplied){
+    const match = items.find(i => i.id === prefillItemId);
+    if(match){ addItemToRows(match); prefillApplied = true; }
+  }
   onItemSearchInput();
   renderPickerList();
 }, (err)=>{ console.error("stockItems listener error:", err); });

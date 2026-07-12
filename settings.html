@@ -124,6 +124,7 @@
     font-size:12.5px;font-weight:600;color:var(--text-dim);cursor:pointer;background:#fff;
   }
   .chip-opt.on{background:var(--oxide);border-color:var(--oxide);color:#fff;}
+  #editableFieldsWrap.locked{pointer-events:none;opacity:.55;}
 
   /* role checkbox rows */
   .role-check-row{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:13px;color:var(--text);}
@@ -259,8 +260,8 @@
 
   <div id="notAuthorized">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-    <h2>Owner/admin access only</h2>
-    <p>Settings are restricted to owners and admins.</p>
+    <h2>Access unavailable</h2>
+    <p>Your account isn't active on this team, or you need to sign in.</p>
   </div>
 
   <div id="pageContent">
@@ -269,7 +270,14 @@
       <p>Business defaults, notifications, team policy, backups &amp; the app itself</p>
     </div>
 
+    <div id="viewOnlyBanner" style="display:none;align-items:center;gap:10px;background:var(--panel-alt);border:1px solid var(--line-soft);border-radius:12px;padding:12px 16px;margin-bottom:16px;color:var(--text-dim);font-size:13px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <span>You can view settings, but only the owner or admin can make changes here.</span>
+    </div>
+
     <div class="settings-wrap">
+
+      <div id="editableFieldsWrap">
 
       <!-- 1. BUSINESS PROFILE -->
       <div class="sec" data-sec="profile">
@@ -432,6 +440,8 @@
         </div>
       </div>
 
+      </div><!-- /editableFieldsWrap -->
+
       <!-- 5. DATA & BACKUP -->
       <div class="sec" data-sec="data">
         <div class="sec-head" onclick="toggleSec(this)">
@@ -440,7 +450,7 @@
           <svg class="sec-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
         </div>
         <div class="sec-body">
-          <div class="btn-row">
+          <div class="btn-row" id="dataBackupActions">
             <button class="btn-outline" id="exportBtn" onclick="exportAllData()">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
               Export all data (.zip)
@@ -450,7 +460,8 @@
               Sync item mirror
             </button>
           </div>
-          <div class="hint" style="margin-top:10px;">Export bundles items, suppliers, and stock transactions as CSV files in one zip. Every meaningful action is also permanently recorded — see the <a href="audit.html" style="color:var(--oxide);text-decoration:none;font-weight:600;">Audit Trail</a>.</div>
+          <div class="hint" id="dataBackupViewOnlyNote" style="display:none;">Exporting data and syncing the item mirror are restricted to owners and admins.</div>
+          <div class="hint" id="dataBackupHint" style="margin-top:10px;">Export bundles items, suppliers, and stock transactions as CSV files in one zip. Every meaningful action is also permanently recorded — see the <a href="audit.html" style="color:var(--oxide);text-decoration:none;font-weight:600;">Audit Trail</a>.</div>
         </div>
       </div>
 
@@ -564,17 +575,35 @@ watchAdmin(async (user)=>{
   gate.style.display = "none";
   if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
 
-  if(!canManage(myRole)){
-    document.getElementById("pageContent").style.display = "none";
-    document.getElementById("notAuthorized").style.display = "block";
-    return;
-  }
+  // Any active team member (owner, admin, staff, storeman, receiver) can
+  // open Settings and see current values — but only owner/admin can edit
+  // and save. This mirrors firestore.rules.txt exactly: settings/app is
+  // readable by any active user, writable only by canManage().
   document.getElementById("pageContent").style.display = "block";
   document.getElementById("notAuthorized").style.display = "none";
 
-  applyOwnerLock();
+  applyAccessMode();
   await loadSettings();
 });
+
+// Locks every business-data field (sections 1-4) and the Save bar / data
+// export & sync actions for anyone who isn't owner/admin. Appearance
+// (theme/density — device-local, not Firestore) and PWA/Device controls
+// stay interactive for everyone since they don't touch shared settings.
+function applyAccessMode(){
+  const editable = canManage(myRole);
+  const wrap = document.getElementById("editableFieldsWrap");
+  wrap.classList.toggle("locked", !editable);
+  wrap.querySelectorAll("input, select, textarea").forEach(el=>{ el.disabled = !editable; });
+
+  document.getElementById("viewOnlyBanner").style.display = editable ? "none" : "flex";
+  document.querySelector(".save-bar").style.display = editable ? "flex" : "none";
+  document.getElementById("dataBackupActions").style.display = editable ? "flex" : "none";
+  document.getElementById("dataBackupViewOnlyNote").style.display = editable ? "none" : "block";
+  document.getElementById("dataBackupHint").style.display = editable ? "block" : "none";
+
+  if(editable) applyOwnerLock();
+}
 
 function applyOwnerLock(){
   const isOwner = canManageTeam(myRole);

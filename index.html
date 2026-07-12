@@ -376,6 +376,32 @@
   }
   .btn-submit:hover{background:#ff7a2e;}
 
+  /* ===== Stock Count modal ===== */
+  .sc-search-list{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;margin-top:2px;}
+  .sc-search-item{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:10px 12px;border:1px solid var(--line);border-radius:8px;
+    cursor:pointer;background:var(--panel);
+  }
+  .sc-search-item:hover{border-color:var(--oxide);}
+  .sc-si-name{font-size:13px;font-weight:600;color:var(--text);}
+  .sc-si-cat{font-size:11px;color:var(--text-faint);}
+  .sc-si-balance{font-size:12px;color:var(--text-dim);white-space:nowrap;}
+  .sc-empty{font-size:12.5px;color:var(--text-faint);padding:10px 2px;}
+  .sc-back{
+    background:none;border:none;color:var(--text-faint);font-size:11.5px;
+    letter-spacing:0.04em;cursor:pointer;padding:0;margin-bottom:14px;
+    display:flex;align-items:center;gap:5px;font-family:'Oswald',sans-serif;
+  }
+  .sc-pill{display:inline-flex;align-items:center;padding:5px 12px;border-radius:100px;font-size:11.5px;font-weight:700;margin-bottom:16px;}
+  .sc-pill.active{background:#dcfce7;color:#16a34a;}
+  .sc-pill.low{background:#ffe6d3;color:var(--oxide-dim);}
+  .sc-pill.out{background:#fde2e2;color:var(--red);}
+  .sc-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid var(--line-soft);}
+  .sc-row:last-of-type{border-bottom:none;}
+  .sc-label{font-size:12px;color:var(--text-faint);}
+  .sc-value{font-size:13px;font-weight:600;color:var(--text);text-align:right;}
+
   /* ===== App shell ===== */
   body{background:#ffffff;}
   .app-shell{
@@ -687,11 +713,11 @@
         <a onclick="switchTab('inventory')">View All</a>
       </div>
       <div class="qa-grid">
-        <button class="qa-item" onclick="quickReceive()">
+        <button class="qa-item" onclick="location.href='grn.html'">
           <div class="qa-icon" style="color:var(--oxide);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg></div>
           <span>Receive Stock</span>
         </button>
-        <button class="qa-item" onclick="quickIssue()">
+        <button class="qa-item" onclick="location.href='issue.html'">
           <div class="qa-icon" style="color:var(--red);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></div>
           <span>Issue Stock</span>
         </button>
@@ -699,7 +725,7 @@
           <div class="qa-icon" style="color:var(--oxide);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
           <span>Stock Audit</span>
         </button>
-        <button class="qa-item" onclick="switchTab('inventory')">
+        <button class="qa-item" onclick="openStockCountModal()">
           <div class="qa-icon" style="color:var(--amber);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3"/><path d="M9 12l2 2 4-4"/></svg></div>
           <span>Stock Count</span>
         </button>
@@ -992,6 +1018,54 @@
   </div>
 </div>
 
+<!-- STOCK COUNT MODAL -->
+<div class="overlay" id="stockCountOverlay">
+  <div class="modal" style="max-width:420px;">
+
+    <!-- Step 1: search for a product -->
+    <div id="scStep1">
+      <h3>Stock Count</h3>
+      <div class="field">
+        <label>Search product</label>
+        <input type="text" id="scSearchInput" placeholder="Start typing a product name…" autocomplete="off" oninput="scHandleSearch()">
+      </div>
+      <div class="sc-search-list" id="scSuggestions"></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" style="width:100%;" onclick="closeStockCountModal()">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Step 2: product balance & last movement -->
+    <div id="scStep2" style="display:none;">
+      <button class="sc-back" onclick="scBackToSearch()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        SEARCH AGAIN
+      </button>
+      <h3 id="scItemName" style="margin-bottom:8px;">—</h3>
+      <span class="sc-pill" id="scStatusPill">—</span>
+
+      <div class="sc-row">
+        <span class="sc-label">Balance</span>
+        <span class="sc-value" id="scBalance">—</span>
+      </div>
+      <div class="sc-row">
+        <span class="sc-label">Last action</span>
+        <span class="sc-value" id="scLastMove">—</span>
+      </div>
+      <div class="sc-row">
+        <span class="sc-label">Executed by</span>
+        <span class="sc-value" id="scExecutor">—</span>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeStockCountModal()">Cancel</button>
+        <button class="btn-submit" id="scEditBtn" onclick="scGoToGRN()">Edit</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <!-- MODAL -->
 <div class="overlay" id="overlay">
   <div class="modal">
@@ -1081,9 +1155,9 @@
 /* ---------- Firebase ---------- */
 import {
   db, loginAdmin, logoutAdmin, watchAdmin, unitAbbr as sharedUnitAbbr, initialsFromEmail,
-  collection, doc, addDoc, onSnapshot, serverTimestamp, query, orderBy, limit, runTransaction,
+  collection, doc, addDoc, onSnapshot, serverTimestamp, query, where, orderBy, limit, runTransaction,
   ROLES, canManage, canManageTeam, isIssueOnly, isReceiveIssueOnly, syncPublicItem, syncPublicItemStatus, getDocs, changeMyPin,
-  fetchOrBootstrapRole, watchTeam, updateTeamMember, createTeamMember, logAudit
+  fetchOrBootstrapRole, watchTeam, updateTeamMember, createTeamMember, logAudit, statusOf as sharedStatusOf
 } from "./firebase-config.js";
 
 let isAdmin = false, currentAdminEmail = "";
@@ -1285,6 +1359,7 @@ function requireAdmin(){
   return false;
 }
 document.getElementById("adminOverlay").addEventListener("click", (e)=>{ if(e.target.id==="adminOverlay") closeAdminModal(); });
+document.getElementById("stockCountOverlay").addEventListener("click", (e)=>{ if(e.target.id==="stockCountOverlay") closeStockCountModal(); });
 
 /* ---------- Live data (kept in sync with Firestore by onSnapshot below) ---------- */
 function todayAt(h,m){ const d=new Date(); d.setHours(h,m,0,0); return d; }
@@ -1707,6 +1782,103 @@ function quickReceive(){ openModal(); setTxType("in"); }
 function quickIssue(){ openModal(); setTxType("out"); }
 function openStockAudit(){ window.location.href = "stock-list.html?mode=audit"; }
 
+/* ---------- Stock Count (3-step: search -> balance & last movement -> edit/cancel) ---------- */
+let scSelectedItem = null;
+
+function openStockCountModal(){
+  scResetToStep1();
+  document.getElementById("stockCountOverlay").classList.add("open");
+  setTimeout(()=> document.getElementById("scSearchInput").focus(), 50);
+}
+function closeStockCountModal(){
+  document.getElementById("stockCountOverlay").classList.remove("open");
+}
+function scResetToStep1(){
+  scSelectedItem = null;
+  document.getElementById("scStep1").style.display = "block";
+  document.getElementById("scStep2").style.display = "none";
+  document.getElementById("scSearchInput").value = "";
+  document.getElementById("scSuggestions").innerHTML = "";
+}
+function scBackToSearch(){
+  scResetToStep1();
+  setTimeout(()=> document.getElementById("scSearchInput").focus(), 0);
+}
+
+// Fires on every keystroke — suggestions appear as soon as typing starts.
+function scHandleSearch(){
+  const q = document.getElementById("scSearchInput").value.trim().toLowerCase();
+  const box = document.getElementById("scSuggestions");
+  if(!q){ box.innerHTML = ""; return; }
+  const matches = items.filter(it => it.name.toLowerCase().includes(q)).slice(0, 8);
+  if(matches.length === 0){
+    box.innerHTML = `<div class="sc-empty">No matching products.</div>`;
+    return;
+  }
+  box.innerHTML = matches.map(it => `
+    <div class="sc-search-item" onclick="scSelectItem('${it.id}')">
+      <div>
+        <div class="sc-si-name">${it.name}</div>
+        <div class="sc-si-cat">${it.cat || ""}</div>
+      </div>
+      <div class="sc-si-balance">${Math.round(it.balance).toLocaleString()} ${it.unit}</div>
+    </div>
+  `).join("");
+}
+
+// Step 2 — loads the product's live balance, status, and its most recent
+// stockTransactions entry (who executed it, and whether it was a receive
+// or an issue).
+async function scSelectItem(itemId){
+  const it = items.find(i => i.id === itemId);
+  if(!it) return;
+  scSelectedItem = it;
+
+  document.getElementById("scStep1").style.display = "none";
+  document.getElementById("scStep2").style.display = "block";
+  document.getElementById("scItemName").textContent = it.name;
+
+  const today = new Date().toLocaleDateString("en-GB", {day:"2-digit", month:"short", year:"numeric"});
+  document.getElementById("scBalance").textContent = `${Math.round(it.balance).toLocaleString()} ${it.unit} — as of ${today}`;
+
+  const status = sharedStatusOf(it.balance, it.min); // "Out of Stock" | "Low Stock" | "Active"
+  const pill = document.getElementById("scStatusPill");
+  pill.textContent = status === "Active" ? "Enough Stock" : status === "Low Stock" ? "Within Reorder Range" : "Out of Stock";
+  pill.className = "sc-pill " + (status === "Active" ? "active" : status === "Low Stock" ? "low" : "out");
+
+  document.getElementById("scLastMove").textContent = "Loading…";
+  document.getElementById("scExecutor").textContent = "Loading…";
+
+  try{
+    const snap = await getDocs(query(
+      collection(db, "stockTransactions"),
+      where("itemId", "==", it.id),
+      orderBy("createdAt", "desc"),
+      limit(1)
+    ));
+    if(snap.empty){
+      document.getElementById("scLastMove").textContent = "No movements yet";
+      document.getElementById("scExecutor").textContent = "—";
+    } else {
+      const t = snap.docs[0].data();
+      const ts = t.createdAt && t.createdAt.toDate ? t.createdAt.toDate() : null;
+      const verb = t.type === "in" ? "Received" : "Issued";
+      document.getElementById("scLastMove").textContent = `${verb} ${t.qty} ${t.unit} · ${relativeDay(ts)}`;
+      document.getElementById("scExecutor").textContent = t.createdBy || "Unknown";
+    }
+  }catch(err){
+    console.error("stock count — last movement fetch failed:", err);
+    document.getElementById("scLastMove").textContent = "Couldn't load";
+    document.getElementById("scExecutor").textContent = "—";
+  }
+}
+
+// Edit button — hands off to the GRN page with this item pre-loaded as a row.
+function scGoToGRN(){
+  if(!scSelectedItem) return;
+  window.location.href = "grn.html?item=" + encodeURIComponent(scSelectedItem.id);
+}
+
 /* ---------- Drawer menu ---------- */
 function openDrawer(){
   document.getElementById("drawerOverlay").classList.add("open");
@@ -1939,7 +2111,8 @@ Object.assign(window, {
   exportIssuedPDF, exportReceivedPDF, openDrawer, openModal, openNewItemModal, openStockAudit,
   quickIssue, quickReceive, setTxType, submitNewItem, submitTx, switchTab,
   openTeamModal, closeTeamModal, submitAddTeamMember, changeTeamRole, toggleTeamActive,
-  syncAllItemsToPublicMirror, openChangePinModal, closeChangePinModal, submitChangePin
+  syncAllItemsToPublicMirror, openChangePinModal, closeChangePinModal, submitChangePin,
+  openStockCountModal, closeStockCountModal, scBackToSearch, scHandleSearch, scSelectItem, scGoToGRN
 });
 </script>
 
