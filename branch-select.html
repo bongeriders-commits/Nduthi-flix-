@@ -151,7 +151,12 @@ watchAdmin(async (user)=>{
   let branches = [];
   try{ branches = await fetchBranches(); }
   catch(e){
-    showError("Couldn't load stores — check your connection and reload.");
+    console.error("fetchBranches failed:", e.code, e.message);
+    showError(
+      e.code === "permission-denied"
+        ? "You don't have access to view stores — contact the owner to check your account."
+        : "Couldn't load stores — check your connection and reload."
+    );
     return;
   }
   loadedBranches = branches;
