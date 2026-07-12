@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dispatch — Cabro City</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#f5590a">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" href="/icon-192.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+  :root{
+    --bg:#ffffff;
+    --panel:#f6f6f8;
+    --panel-alt:#eeeef1;
+    --line:#e2e2e6;
+    --line-soft:#ececf0;
+    --text:#151517;
+    --text-dim:#68686f;
+    --text-faint:#9a9aa2;
+    --oxide:#f5590a;
+    --oxide-dim:#b8420a;
+    --green:#16a34a;
+    --red:#e13a3a;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  html,body{background:#f4f4f6;color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  button,input,select,textarea{font-family:inherit;}
+
+  .app-shell{max-width:640px;margin:0 auto;min-height:100vh;background:var(--bg);position:relative;padding-bottom:96px;border-left:1px solid var(--line);border-right:1px solid var(--line);}
+  @media(max-width:660px){ .app-shell{border-left:none;border-right:none;} }
+
+  /* ===== Header ===== */
+  .mobile-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#ffffff;z-index:30;}
+  .mh-left{display:flex;align-items:center;gap:16px;}
+  .back-btn{background:none;border:none;color:var(--text);cursor:pointer;padding:4px;display:flex;}
+  .back-btn svg{width:22px;height:22px;}
+  .mh-logo{display:flex;align-items:center;gap:10px;cursor:pointer;background:none;border:none;padding:0;}
+  .brand-logo-img{height:36px;width:auto;display:block;}
+  .mh-right{display:flex;align-items:center;gap:16px;position:relative;}
+  .avatar-wrap{display:flex;align-items:center;gap:4px;cursor:pointer;background:none;border:none;padding:0;}
+  .avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#3a3a40,#1c1c1f);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;position:relative;font-family:'Oswald',sans-serif;flex-shrink:0;border:1.5px solid #3a3a40;}
+  .avatar .dot{position:absolute;bottom:0;right:0;width:10px;height:10px;border-radius:50%;background:#ff7a1f;border:2px solid #ffffff;}
+  .avatar-chev{width:13px;height:13px;color:var(--text-faint);}
+  .avatar-menu{position:absolute;top:52px;right:0;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 14px 34px -10px rgba(0,0,0,0.28);min-width:140px;padding:6px;display:none;z-index:40;}
+  .avatar-menu.open{display:block;}
+  .avatar-menu button{width:100%;text-align:left;background:none;border:none;padding:9px 10px;font-size:12.5px;color:var(--text);border-radius:7px;cursor:pointer;}
+  .avatar-menu button:hover{background:var(--panel-alt);}
+
+  /* ---------- Change PIN modal ---------- */
+  .cp-overlay{position:fixed;inset:0;z-index:200;background:rgba(10,10,11,0.72);display:none;align-items:center;justify-content:center;padding:20px;}
+  .cp-overlay.open{display:flex;}
+  .cp-modal{background:#fff;border:1px solid var(--line);border-radius:12px;width:100%;max-width:360px;padding:22px 22px 20px;}
+  .cp-modal h3{font-size:16px;font-weight:700;margin-bottom:16px;}
+  .cp-modal .field{margin-bottom:14px;}
+  .cp-modal .field label{display:block;font-size:11px;color:var(--text-dim);margin-bottom:5px;}
+  .cp-modal .field input{width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--line);font-size:13.5px;box-sizing:border-box;}
+  .cp-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:6px;}
+  .cp-btn-cancel{padding:10px 16px;border-radius:9px;border:1px solid var(--line);background:#fff;font-size:13px;cursor:pointer;}
+  .cp-btn-submit{padding:10px 16px;border-radius:9px;border:1px solid var(--oxide);background:var(--oxide);color:#fff;font-weight:700;font-size:13px;cursor:pointer;}
+
+  /* ===== Page head ===== */
+  .page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:20px 20px 4px;}
+  .page-head h1{margin:0;font-size:20px;font-weight:800;letter-spacing:-0.01em;}
+  .page-head p{margin:4px 0 0;font-size:12.5px;color:var(--text-dim);}
+
+  .wrap{padding:16px 20px 24px;}
+
+  /* ===== Cards ===== */
+  .card{margin:16px 0 0;background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;}
+  .card h3{margin:0 0 4px;font-size:16px;font-weight:800;}
+  .card .sub{font-size:12.5px;color:var(--text-dim);margin:0 0 18px;}
+
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:7px;}
+  .field label .req{color:var(--red);margin-left:2px;}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .field-row.three{grid-template-columns:2fr 1fr 1fr;}
+  @media(max-width:460px){.field-row,.field-row.three{grid-template-columns:1fr;}}
+  .input-wrap{position:relative;display:flex;align-items:stretch;}
+  .input-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-faint);pointer-events:none;}
+  .input-wrap input, .input-wrap select, .input-wrap textarea{
+    width:100%;background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:11px 12px 11px 36px;font-size:13.5px;color:var(--text);
+  }
+  .input-wrap textarea{resize:vertical;min-height:60px;padding-left:36px;}
+  .input-wrap.no-icon input, .input-wrap.no-icon select{padding-left:12px;}
+  .input-wrap select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2368686f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;background-size:16px;}
+
+  .btn-outline{display:flex;align-items:center;gap:8px;background:#fff;border:1.5px solid var(--oxide);color:var(--oxide);padding:11px 16px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+  .btn-outline:hover{background:#fff4ee;}
+  .btn-outline svg{width:16px;height:16px;}
+
+  /* ===== Items table ===== */
+  .items-table-wrap{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:14px;}
+  .table-scroll{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;min-width:520px;}
+  thead th{text-align:left;font-size:11px;letter-spacing:0.04em;color:var(--text-dim);padding:12px 14px;border-bottom:1px solid var(--line);background:#fafafb;font-weight:700;white-space:nowrap;text-transform:uppercase;}
+  tbody td{padding:12px 14px;font-size:13.5px;border-bottom:1px solid var(--line-soft);color:var(--text);vertical-align:middle;}
+  tbody tr:last-child td{border-bottom:none;}
+  .it-name{font-weight:700;font-size:13.5px;}
+  .src-tag{display:inline-flex;padding:3px 9px;border-radius:100px;font-size:10.5px;font-weight:700;}
+  .src-tag.tracked{background:#dcfce7;color:var(--green);}
+  .src-tag.new{background:#ffe6d3;color:var(--oxide-dim);}
+  .btn-del-row{background:none;border:none;color:var(--text-faint);cursor:pointer;padding:6px;border-radius:8px;}
+  .btn-del-row:hover{background:#fde2e2;color:var(--red);}
+  .btn-del-row svg{width:17px;height:17px;display:block;}
+  .items-empty td{text-align:center;color:var(--text-faint);padding:30px 14px;font-size:13px;}
+
+  .btn-issue{width:100%;display:flex;align-items:center;justify-content:center;gap:9px;background:var(--oxide);color:#fff;border:none;padding:15px;border-radius:11px;font-size:14.5px;font-weight:700;cursor:pointer;margin-top:18px;}
+  .btn-issue:hover{background:var(--oxide-dim);}
+  .btn-issue:disabled{opacity:0.6;cursor:default;}
+  .btn-issue svg{width:17px;height:17px;}
+
+  .form-error{color:var(--red);font-size:12.5px;margin:14px 0 0;}
+  .form-success{color:var(--green);font-size:12.5px;margin:14px 0 0;}
+
+  /* ===== Recent dispatches ===== */
+  .tx-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--line-soft);}
+  .tx-row:last-child{border-bottom:none;}
+  .tx-left .d{font-size:12.5px;font-weight:700;}
+  .tx-left .t{font-size:11px;color:var(--text-faint);margin-top:1px;}
+  .tx-mid{flex:1;padding:0 10px;}
+  .tx-mid .r{font-size:12.5px;font-weight:700;}
+  .tx-mid .s{font-size:11px;color:var(--text-faint);margin-top:1px;}
+  .tx-mid .tag{display:inline-flex;padding:2px 8px;border-radius:100px;font-size:9.5px;font-weight:700;background:#fff3ec;color:var(--oxide-dim);margin-top:4px;}
+  .tx-right{display:flex;align-items:center;gap:8px;}
+  .tx-pdf-btn{background:none;border:none;color:var(--text-faint);cursor:pointer;padding:4px;display:flex;}
+  .tx-pdf-btn:hover{color:var(--oxide);}
+  .tx-pdf-btn svg{width:16px;height:16px;}
+  .tx-empty{text-align:center;color:var(--text-faint);font-size:12.5px;padding:20px 0;}
+
+  /* ===== Bottom nav ===== */
+  .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:640px;background:var(--panel);border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-around;padding:11px 4px 16px;z-index:40;}
+  .nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;color:var(--text-faint);font-size:9.5px;cursor:pointer;flex:1;padding:2px 0;max-width:120px;}
+  .nav-item svg{width:19px;height:19px;}
+  .nav-item.active{color:var(--oxide);}
+
+  @media(min-width:860px){
+    .app-shell{max-width:none;width:100%;margin:0;border:none;}
+    .bottom-nav{max-width:none;}
+    .wrap{padding:20px 28px 28px;max-width:820px;margin:0 auto;}
+  }
+
+  button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--oxide);outline-offset:2px;}
+
+  .app-shell{display:none;}
+  .app-shell.ready{display:block;}
+
+  /* ---------- Access gate ---------- */
+  #accessGate{position:fixed;inset:0;z-index:9999;background:#fff;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .gate-card{width:100%;max-width:340px;text-align:center;}
+  .gate-card img{height:34px;width:auto;margin:0 auto 22px;display:block;}
+  .gate-card h2{font-size:17px;font-weight:700;margin-bottom:6px;}
+  .gate-card p{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-bottom:22px;}
+  .gate-card .field{margin-bottom:12px;text-align:left;}
+  .gate-card .field label{display:block;font-size:11px;color:var(--text-dim);margin-bottom:5px;}
+  .gate-card .field input{width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--line);font-size:13.5px;box-sizing:border-box;}
+  .gate-card .btn-submit{width:100%;padding:12px;border-radius:9px;border:1px solid var(--oxide);background:var(--oxide);color:#fff;font-weight:700;font-size:13px;cursor:pointer;margin-top:6px;}
+  .gate-error{color:var(--red);font-size:12px;margin:-4px 0 12px;text-align:left;}
+</style>
+</head>
+<body>
+
+<div id="accessGate" style="display:none;">
+  <div class="gate-card">
+    <img alt="Cabro City" class="cc-logo" src="/cabro-city-logo.png">
+    <h2>Sign in required</h2>
+    <p>Dispatching items is open to every signed-in team member — owner, admin, staff and storeman. If you don't have an account yet, ask your admin to add one for you.</p>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="gateEmail" placeholder="you@cabrocity.co.ke">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="gatePassword" placeholder="••••••••">
+    </div>
+    <div id="gateError" class="gate-error" style="display:none;"></div>
+    <button class="btn-submit" onclick="submitGateLogin()">Sign In</button>
+  </div>
+</div>
+
+<div class="app-shell">
+
+  <!-- HEADER -->
+  <div class="mobile-header">
+    <div class="mh-left">
+      <button class="back-btn" onclick="location.href='index.html'" aria-label="Back to home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <button class="mh-logo" onclick="location.href='index.html'" aria-label="Cabro City home">
+        <img alt="Cabro City — Paving the Future" class="brand-logo-img cc-logo" src="/cabro-city-logo.png">
+      </button>
+    </div>
+    <div class="mh-right">
+      <button class="avatar-wrap" onclick="toggleAvatarMenu(event)" aria-label="Account menu">
+        <div class="avatar"><span id="avatarInitials">--</span><span class="dot"></span></div>
+        <svg class="avatar-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="avatar-menu" id="avatarMenu">
+        <button onclick="location.href='index.html'">Home</button>
+        <button onclick="openChangePinModal()">Change PIN</button>
+        <button onclick="signOutNow()">Sign out</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHANGE PIN MODAL -->
+  <div class="cp-overlay" id="changePinOverlay">
+    <div class="cp-modal">
+      <h3>Change PIN</h3>
+      <div class="field">
+        <label>Current PIN</label>
+        <input type="password" id="cpCurrent" placeholder="••••••••">
+      </div>
+      <div class="field">
+        <label>New PIN</label>
+        <input type="password" id="cpNew" placeholder="At least 6 characters">
+      </div>
+      <div class="field">
+        <label>Confirm New PIN</label>
+        <input type="password" id="cpConfirm" placeholder="Repeat new PIN">
+      </div>
+      <div id="cpError" style="display:none;color:var(--red);font-size:12.5px;margin:-4px 0 10px;"></div>
+      <div id="cpSuccess" style="display:none;color:#1a8f4c;font-size:12.5px;margin:-4px 0 10px;"></div>
+      <div class="cp-modal-actions">
+        <button class="cp-btn-cancel" onclick="closeChangePinModal()">Cancel</button>
+        <button class="cp-btn-submit" id="cpSubmitBtn" onclick="submitChangePin()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE HEAD -->
+  <div class="page-head">
+    <div>
+      <h1>Dispatch Items</h1>
+      <p>Release items for repair or send them to another branch — items can already exist in the system or be added fresh.</p>
+    </div>
+  </div>
+
+  <div class="wrap">
+
+    <!-- DISPATCH DETAILS -->
+    <div class="card">
+      <h3>Dispatch Details</h3>
+      <p class="sub">Who's sending this, where it's going, and how it's travelling.</p>
+
+      <div class="field">
+        <label>Dispatching Branch <span class="req">*</span></label>
+        <div class="input-wrap no-icon">
+          <input type="text" id="branchFrom" value="Katani" placeholder="e.g. Katani">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Purpose <span class="req">*</span></label>
+        <div class="input-wrap no-icon">
+          <select id="purpose" onchange="onPurposeChange()">
+            <option value="repair">Repair — send to a mechanic</option>
+            <option value="transfer">Transfer — send to another branch</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label id="destinationLabel">Mechanic / Workshop Name <span class="req">*</span></label>
+        <div class="input-wrap no-icon">
+          <input type="text" id="destination" placeholder="e.g. John's Garage, Mlolongo">
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label>Rider / Driver Name <span class="req">*</span></label>
+          <div class="input-wrap no-icon">
+            <input type="text" id="riderName" placeholder="Full name">
+          </div>
+        </div>
+        <div class="field">
+          <label>Delivery Mode <span class="req">*</span></label>
+          <div class="input-wrap no-icon">
+            <select id="deliveryMode">
+              <option value="Motorcycle">Motorcycle</option>
+              <option value="Vehicle">Vehicle</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label>Number Plate <span class="req">*</span></label>
+          <div class="input-wrap no-icon">
+            <input type="text" id="numberPlate" placeholder="e.g. KDA 123A" style="text-transform:uppercase;">
+          </div>
+        </div>
+        <div class="field">
+          <label>Dispatch Date <span class="req">*</span></label>
+          <div class="input-wrap no-icon">
+            <input type="date" id="dispatchDate">
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Security Officer Name (optional)</label>
+        <div class="input-wrap no-icon">
+          <input type="text" id="securityName" placeholder="Gate/security officer checking the release out">
+        </div>
+      </div>
+
+      <div class="field" style="margin-bottom:0;">
+        <label>Notes (optional)</label>
+        <div class="input-wrap no-icon">
+          <textarea id="notes" placeholder="Any extra detail for this dispatch..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- ITEMS -->
+    <div class="card">
+      <h3>Items to Dispatch</h3>
+      <p class="sub">Pick an existing item or type a new one that isn't in the system yet — either works.</p>
+
+      <div class="field-row three">
+        <div class="field">
+          <label>Item Name</label>
+          <div class="input-wrap no-icon">
+            <input type="text" id="itemNameInput" list="itemNamesList" placeholder="Type or pick an item" onchange="onItemNameChange()">
+            <datalist id="itemNamesList"></datalist>
+          </div>
+        </div>
+        <div class="field">
+          <label>Quantity</label>
+          <div class="input-wrap no-icon">
+            <input type="number" id="itemQtyInput" min="0" step="any" placeholder="0">
+          </div>
+        </div>
+        <div class="field">
+          <label>Unit</label>
+          <div class="input-wrap no-icon">
+            <input type="text" id="itemUnitInput" placeholder="pc, kg, L...">
+          </div>
+        </div>
+      </div>
+      <button class="btn-outline" onclick="addDispatchItem()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        Add Item
+      </button>
+
+      <div class="items-table-wrap">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr><th>#</th><th>Item</th><th>Qty</th><th>Unit</th><th>Source</th><th></th></tr>
+            </thead>
+            <tbody id="dispatchItemsBody">
+              <tr class="items-empty"><td colspan="6">No items added yet — search above or type a new item name.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="form-error" id="dispatchError" style="display:none;"></div>
+      <div class="form-success" id="dispatchSuccess" style="display:none;"></div>
+
+      <button class="btn-issue" id="dispatchBtn" onclick="submitDispatch()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1.5"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        Create Dispatch &amp; Print Release Note
+      </button>
+    </div>
+
+    <!-- RECENT DISPATCHES -->
+    <div class="card" id="recentCard">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <h3 style="margin:0;">Recent Dispatches</h3>
+      </div>
+      <div id="recentDispatchList"><div class="tx-empty">No dispatches recorded yet.</div></div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <button class="nav-item" onclick="location.href='index.html'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+      Home
+    </button>
+    <button class="nav-item active" onclick="location.href='dispatch.html'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1.5"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+      Dispatch
+    </button>
+    <button class="nav-item" onclick="location.href='audit.html'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 3v9h6"/></svg>
+      Audit
+    </button>
+    <button class="nav-item" onclick="location.href='index.html#reports'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+      Reports
+    </button>
+  </div>
+
+</div>
+
+<script type="module">
+/* ---------- Firebase ---------- */
+import {
+  db, loginAdmin, logoutAdmin, watchAdmin, initialsFromEmail, unitAbbr,
+  doc, getDoc, addDoc, onSnapshot, serverTimestamp, runTransaction,
+  collection, query, orderBy, limit, fetchOrBootstrapRole, changeMyPin, logAudit
+} from "./firebase-config.js";
+
+/* =========================================================================
+   PERMISSIONS
+   Dispatch is an open task: any signed-in, active team member can use it —
+   owner, admin, staff, storeman, receiver. Unlike issue.html/grn.html this
+   page never redirects based on role and never gates the form behind
+   canManage()/isIssueOnly() — the only requirement is being signed in.
+   ========================================================================= */
+let currentUser = null, currentUserEmail = "", myName = "";
+let myRole = null, myUid = "";
+let appRevealed = false;
+
+watchAdmin(async (user)=>{
+  currentUser = user;
+  currentUserEmail = user ? user.email : "";
+  myUid = user ? user.uid : "";
+  document.getElementById("avatarInitials").textContent = user ? initialsFromEmail(currentUserEmail) : "--";
+
+  const gate = document.getElementById("accessGate");
+  const gateErr = document.getElementById("gateError");
+  if(!user){
+    myRole = null;
+    gate.style.display = "flex";
+    document.querySelector(".app-shell").classList.remove("ready");
+    appRevealed = false;
+    return;
+  }
+  let roleDoc;
+  try{ roleDoc = await fetchOrBootstrapRole(user); }catch(e){ roleDoc = null; }
+  if(!roleDoc){
+    myRole = null;
+    if(gateErr){
+      gateErr.textContent = "This account isn't set up in Cabro City. Ask the main admin to add you as a team member.";
+      gateErr.style.display = "block";
+    }
+    gate.style.display = "flex";
+    document.querySelector(".app-shell").classList.remove("ready");
+    appRevealed = false;
+    logoutAdmin();
+    return;
+  }
+  myRole = roleDoc.role;
+  myName = roleDoc.displayName || nameFromEmail(currentUserEmail);
+  gate.style.display = "none";
+  if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
+  loadItemNames();
+  watchRecentDispatches();
+});
+
+function nameFromEmail(email){
+  if(!email) return "Team member";
+  const local = email.split("@")[0];
+  return local.split(/[._\-+]+/).filter(Boolean)
+    .map(p => p.charAt(0).toUpperCase() + p.slice(1))
+    .join(" ") || email;
+}
+
+function submitGateLogin(){
+  const email = document.getElementById("gateEmail").value.trim();
+  const password = document.getElementById("gatePassword").value;
+  const errBox = document.getElementById("gateError");
+  errBox.style.display = "none";
+  loginAdmin(email, password).catch(()=>{
+    errBox.textContent = "Sign-in failed — check your email and password, or ask your admin for access.";
+    errBox.style.display = "block";
+  });
+}
+function signOutNow(){
+  if(confirm("Sign out?")) logoutAdmin();
+}
+function toggleAvatarMenu(e){
+  e.stopPropagation();
+  document.getElementById("avatarMenu").classList.toggle("open");
+}
+document.addEventListener("click", (e)=>{
+  const menu = document.getElementById("avatarMenu");
+  if(menu.classList.contains("open") && !menu.contains(e.target) && !e.target.closest(".avatar-wrap")){
+    menu.classList.remove("open");
+  }
+});
+
+/* ---------- Change PIN modal ---------- */
+function openChangePinModal(){
+  document.getElementById("avatarMenu").classList.remove("open");
+  document.getElementById("cpCurrent").value = "";
+  document.getElementById("cpNew").value = "";
+  document.getElementById("cpConfirm").value = "";
+  document.getElementById("cpError").style.display = "none";
+  document.getElementById("cpSuccess").style.display = "none";
+  document.getElementById("changePinOverlay").classList.add("open");
+}
+function closeChangePinModal(){ document.getElementById("changePinOverlay").classList.remove("open"); }
+document.getElementById("changePinOverlay").addEventListener("click", (e)=>{
+  if(e.target.id==="changePinOverlay") closeChangePinModal();
+});
+function submitChangePin(){
+  const current = document.getElementById("cpCurrent").value;
+  const next = document.getElementById("cpNew").value;
+  const confirmPin = document.getElementById("cpConfirm").value;
+  const errBox = document.getElementById("cpError");
+  const okBox = document.getElementById("cpSuccess");
+  errBox.style.display = "none";
+  okBox.style.display = "none";
+
+  if(!current){ errBox.textContent = "Enter your current PIN."; errBox.style.display = "block"; return; }
+  if(!next || next.length < 6){ errBox.textContent = "New PIN must be at least 6 characters."; errBox.style.display = "block"; return; }
+  if(next !== confirmPin){ errBox.textContent = "New PIN and confirmation don't match."; errBox.style.display = "block"; return; }
+
+  const btn = document.getElementById("cpSubmitBtn");
+  btn.disabled = true; btn.textContent = "Saving…";
+  changeMyPin(current, next).then(()=>{
+    okBox.textContent = "PIN updated.";
+    okBox.style.display = "block";
+    document.getElementById("cpCurrent").value = "";
+    document.getElementById("cpNew").value = "";
+    document.getElementById("cpConfirm").value = "";
+  }).catch(err=>{
+    const msg = (err.code === "auth/wrong-password" || err.code === "auth/invalid-credential")
+      ? "Current PIN is incorrect."
+      : (err.message || "Could not update PIN.");
+    errBox.textContent = msg;
+    errBox.style.display = "block";
+  }).finally(()=>{
+    btn.disabled = false; btn.textContent = "Save";
+  });
+}
+
+/* ---------- Formatting / escaping ---------- */
+function fmtNum(n){ return Math.round((n + Number.EPSILON) * 100) / 100; }
+function escapeHtml(s){
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function todayISO(){
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+}
+document.getElementById("dispatchDate").value = todayISO();
+
+/* ---------- Purpose toggle (mechanic vs branch) ---------- */
+window.onPurposeChange = function onPurposeChange(){
+  const purpose = document.getElementById("purpose").value;
+  const label = document.getElementById("destinationLabel");
+  const input = document.getElementById("destination");
+  if(purpose === "transfer"){
+    label.innerHTML = 'Receiving Branch <span class="req">*</span>';
+    input.placeholder = "e.g. Mlolongo Branch";
+  } else {
+    label.innerHTML = 'Mechanic / Workshop Name <span class="req">*</span>';
+    input.placeholder = "e.g. John's Garage, Mlolongo";
+  }
+};
+
+/* ---------- Known item names (existing stock, for the datalist + matching) ---------- */
+let knownItems = []; // [{id, name, uom}] from stockItemsPublic
+function loadItemNames(){
+  onSnapshot(query(collection(db, "stockItemsPublic")), (snap)=>{
+    knownItems = snap.docs.map(d=>({ id:d.id, name:d.data().name || "", uom:d.data().uom || "" }));
+    const dl = document.getElementById("itemNamesList");
+    dl.innerHTML = knownItems.map(it=>`<option value="${escapeHtml(it.name)}">`).join("");
+  }, (err)=>{ console.error("stockItemsPublic listener error:", err); });
+}
+window.onItemNameChange = function onItemNameChange(){
+  const typed = document.getElementById("itemNameInput").value.trim().toLowerCase();
+  const match = knownItems.find(it => it.name.toLowerCase() === typed);
+  if(match && !document.getElementById("itemUnitInput").value.trim()){
+    document.getElementById("itemUnitInput").value = unitAbbr(match.uom);
+  }
+};
+
+/* ---------- Dispatch line items (state) ---------- */
+let dispatchRows = []; // { rowId, itemId|null, name, qty, unit, tracked }
+let rowSeq = 0;
+
+window.addDispatchItem = function addDispatchItem(){
+  const nameInput = document.getElementById("itemNameInput");
+  const qtyInput = document.getElementById("itemQtyInput");
+  const unitInput = document.getElementById("itemUnitInput");
+  const name = nameInput.value.trim();
+  const qty = parseFloat(qtyInput.value);
+  let unit = unitInput.value.trim();
+
+  clearDispatchError();
+  if(!name){ return showDispatchError("Enter an item name."); }
+  if(!qty || qty <= 0){ return showDispatchError("Enter a quantity greater than 0 for " + name + "."); }
+
+  const match = knownItems.find(it => it.name.toLowerCase() === name.toLowerCase());
+  if(!unit) unit = match ? unitAbbr(match.uom) : "pc";
+
+  dispatchRows.push({
+    rowId: "r" + (++rowSeq),
+    itemId: match ? match.id : null,
+    name, qty, unit,
+    tracked: !!match
+  });
+  renderDispatchRows();
+
+  nameInput.value = "";
+  qtyInput.value = "";
+  unitInput.value = "";
+  nameInput.focus();
+};
+
+window.removeDispatchRow = function removeDispatchRow(rowId){
+  dispatchRows = dispatchRows.filter(r => r.rowId !== rowId);
+  renderDispatchRows();
+};
+
+function renderDispatchRows(){
+  const body = document.getElementById("dispatchItemsBody");
+  if(dispatchRows.length === 0){
+    body.innerHTML = `<tr class="items-empty"><td colspan="6">No items added yet — search above or type a new item name.</td></tr>`;
+    return;
+  }
+  body.innerHTML = dispatchRows.map((r, idx)=>`
+    <tr>
+      <td>${idx+1}</td>
+      <td><div class="it-name">${escapeHtml(r.name)}</div></td>
+      <td>${fmtNum(r.qty)}</td>
+      <td>${escapeHtml(r.unit)}</td>
+      <td><span class="src-tag ${r.tracked ? "tracked" : "new"}">${r.tracked ? "In System" : "New / Untracked"}</span></td>
+      <td style="text-align:right;">
+        <button class="btn-del-row" onclick="removeDispatchRow('${r.rowId}')" aria-label="Remove item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        </button>
+      </td>
+    </tr>`).join("");
+}
+
+function showDispatchError(msg){
+  const okBox = document.getElementById("dispatchSuccess");
+  okBox.style.display = "none";
+  const errBox = document.getElementById("dispatchError");
+  errBox.textContent = msg;
+  errBox.style.display = "block";
+}
+function clearDispatchError(){
+  document.getElementById("dispatchError").style.display = "none";
+}
+function showDispatchSuccess(msg){
+  document.getElementById("dispatchError").style.display = "none";
+  const okBox = document.getElementById("dispatchSuccess");
+  okBox.textContent = msg;
+  okBox.style.display = "block";
+}
+
+/* =========================================================================
+   SUBMIT DISPATCH
+   For any line item that matched an existing stockItems record, balance is
+   deducted inside a Firestore transaction (same safety pattern as
+   issue.html) and a stockTransactions "out" record is written so it still
+   shows up in Audit / Reports / Fuel Activity. Untracked / new items are
+   recorded on the dispatch document only — nothing to deduct.
+   ========================================================================= */
+window.submitDispatch = async function submitDispatch(){
+  if(!currentUser){ document.getElementById("accessGate").style.display = "flex"; return; }
+  clearDispatchError();
+  document.getElementById("dispatchSuccess").style.display = "none";
+
+  const branchFrom = document.getElementById("branchFrom").value.trim();
+  const purpose = document.getElementById("purpose").value;
+  const destination = document.getElementById("destination").value.trim();
+  const riderName = document.getElementById("riderName").value.trim();
+  const deliveryMode = document.getElementById("deliveryMode").value;
+  const numberPlate = document.getElementById("numberPlate").value.trim().toUpperCase();
+  const dispatchDate = document.getElementById("dispatchDate").value;
+  const securityName = document.getElementById("securityName").value.trim();
+  const notes = document.getElementById("notes").value.trim();
+
+  if(!branchFrom){ return showDispatchError("Enter the dispatching branch."); }
+  if(!destination){ return showDispatchError(purpose === "transfer" ? "Enter the receiving branch." : "Enter the mechanic / workshop name."); }
+  if(!riderName){ return showDispatchError("Enter the rider / driver name."); }
+  if(!numberPlate){ return showDispatchError("Enter the number plate."); }
+  if(!dispatchDate){ return showDispatchError("Enter the dispatch date."); }
+  if(dispatchRows.length === 0){ return showDispatchError("Add at least one item to dispatch."); }
+
+  const btn = document.getElementById("dispatchBtn");
+  btn.disabled = true;
+
+  try{
+    // Deduct stock for any row that matched an existing item, one at a time
+    // so a shortfall on one item doesn't silently under-deduct another.
+    for(const row of dispatchRows){
+      if(!row.tracked) continue;
+      const itemRef = doc(db, "stockItems", row.itemId);
+      let newBalanceAfter = null;
+      await runTransaction(db, async (tx)=>{
+        const snap = await tx.get(itemRef);
+        if(!snap.exists()) throw new Error(`"${row.name}" no longer exists in stock — remove it from the list and try again.`);
+        const curBalance = snap.data().balance || 0;
+        if(row.qty > curBalance){
+          throw new Error(`Only ${fmtNum(curBalance)} ${row.unit} of "${row.name}" in stock — cannot dispatch ${row.qty}.`);
+        }
+        newBalanceAfter = curBalance - row.qty;
+        tx.update(itemRef, { balance: newBalanceAfter, updatedAt: serverTimestamp(), updatedBy: currentUserEmail });
+      });
+      row.balanceAfter = newBalanceAfter;
+    }
+
+    const dateStr = new Date(dispatchDate + "T00:00:00").toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
+
+    const dispatchDoc = {
+      branchFrom, purpose, destination, riderName, deliveryMode, numberPlate,
+      dispatchDate, securityName, notes,
+      items: dispatchRows.map(r=>({ itemId: r.itemId, name: r.name, qty: r.qty, unit: r.unit, tracked: r.tracked })),
+      createdAt: serverTimestamp(), createdBy: currentUserEmail, createdByName: myName, createdByRole: myRole
+    };
+    const docRef = await addDoc(collection(db, "dispatches"), dispatchDoc);
+    const ref = "DSP-" + docRef.id.slice(0,8).toUpperCase();
+
+    // Write a ledger entry per tracked item so Reports / Audit / Fuel
+    // Activity keep seeing dispatches, same as an issue.
+    await Promise.all(dispatchRows.filter(r=>r.tracked).map(r=>
+      addDoc(collection(db, "stockTransactions"), {
+        itemId: r.itemId, itemName: r.name, type: "out", qty: r.qty, unit: r.unit,
+        machine: destination, who: riderName,
+        note: `Dispatch ${ref} — ${purpose === "transfer" ? "Transfer to " : "Repair at "}${destination}`,
+        issueTime: "", createdAt: serverTimestamp(), createdBy: currentUserEmail, createdByName: myName
+      }).catch(err=>console.error("stockTransactions write failed:", err))
+    ));
+
+    logAudit({
+      actorUid: myUid, actorName: myName || currentUserEmail, actorRole: myRole,
+      action: "dispatch.create", entityType: "dispatch", entityId: docRef.id, entityLabel: ref,
+      summary: `Dispatched ${dispatchRows.length} item(s) from ${branchFrom} to ${destination} via ${riderName}`,
+      meta: { branchFrom, purpose, destination, riderName, deliveryMode, numberPlate, items: dispatchDoc.items }
+    });
+
+    await generateDispatchPDF({
+      ref, dateStr, branchFrom, purpose, destination, riderName, deliveryMode, numberPlate,
+      securityName, notes, dispatcherName: myName || currentUserEmail,
+      items: dispatchRows.map(r=>({ name:r.name, qty:r.qty, unit:r.unit, tracked:r.tracked }))
+    });
+
+    showDispatchSuccess(`Dispatch ${ref} created and release note downloaded.`);
+
+    dispatchRows = [];
+    renderDispatchRows();
+    document.getElementById("destination").value = "";
+    document.getElementById("riderName").value = "";
+    document.getElementById("numberPlate").value = "";
+    document.getElementById("securityName").value = "";
+    document.getElementById("notes").value = "";
+    document.getElementById("dispatchDate").value = todayISO();
+  }catch(err){
+    showDispatchError(err.message || "Could not create dispatch.");
+  }finally{
+    btn.disabled = false;
+  }
+};
+
+/* ---------- Recent dispatches list ---------- */
+let rawDispatches = [];
+function watchRecentDispatches(){
+  onSnapshot(query(collection(db, "dispatches"), orderBy("createdAt","desc"), limit(15)), (snap)=>{
+    rawDispatches = snap.docs.map(d=>{
+      const data = d.data();
+      const ts = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : null;
+      return { id:d.id, ...data, ts };
+    });
+    renderRecentDispatches();
+  }, (err)=>{ console.error("dispatches listener error:", err); });
+}
+function renderRecentDispatches(){
+  const box = document.getElementById("recentDispatchList");
+  if(rawDispatches.length === 0){
+    box.innerHTML = `<div class="tx-empty">No dispatches recorded yet.</div>`;
+    return;
+  }
+  box.innerHTML = rawDispatches.map(d=>{
+    const dateStr = d.ts ? d.ts.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}) : (d.dispatchDate || "—");
+    const timeStr = d.ts ? d.ts.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}) : "";
+    const ref = "DSP-" + d.id.slice(0,8).toUpperCase();
+    const itemCount = (d.items || []).length;
+    const purposeLabel = d.purpose === "transfer" ? "Transfer" : "Repair";
+    return `
+      <div class="tx-row">
+        <div class="tx-left">
+          <div class="d">${dateStr}</div>
+          <div class="t">${timeStr}</div>
+        </div>
+        <div class="tx-mid">
+          <div class="r">${ref}</div>
+          <div class="s">${escapeHtml(d.destination || "—")} · ${escapeHtml(d.riderName || "—")} · ${itemCount} item${itemCount===1?"":"s"}</div>
+          <span class="tag">${purposeLabel.toUpperCase()}</span>
+        </div>
+        <div class="tx-right">
+          <button class="tx-pdf-btn" onclick="reprintDispatch('${d.id}')" aria-label="Download release note">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M6 9l6 6 6-6"/><path d="M4 21h16"/></svg>
+          </button>
+        </div>
+      </div>`;
+  }).join("");
+}
+window.reprintDispatch = function reprintDispatch(id){
+  const d = rawDispatches.find(x=>x.id===id);
+  if(!d){ alert("Could not find that dispatch."); return; }
+  const dateStr = d.ts ? d.ts.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}) : (d.dispatchDate || "—");
+  generateDispatchPDF({
+    ref: "DSP-" + d.id.slice(0,8).toUpperCase(), dateStr,
+    branchFrom: d.branchFrom, purpose: d.purpose, destination: d.destination,
+    riderName: d.riderName, deliveryMode: d.deliveryMode, numberPlate: d.numberPlate,
+    securityName: d.securityName, notes: d.notes, dispatcherName: d.createdByName || d.createdBy || "—",
+    items: (d.items || []).map(it=>({ name: it.name, qty: it.qty, unit: it.unit, tracked: it.tracked }))
+  });
+};
+
+/* ---------- Company logo for the PDF header ----------
+   Prefers a custom logo uploaded in Settings (already a data URL, so it
+   drops straight into jsPDF); falls back to the bundled Cabro City logo
+   file, converted to a data URL on the fly. ---------- */
+async function getLogoDataUrl(){
+  try{
+    const snap = await getDoc(doc(db, "settings", "app"));
+    if(snap.exists() && snap.data().bizLogoDataUrl) return snap.data().bizLogoDataUrl;
+  }catch(e){ /* fall through to the bundled default */ }
+  try{
+    const res = await fetch("/cabro-city-logo.png");
+    const blob = await res.blob();
+    return await new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onload = ()=> resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }catch(e){
+    console.error("logo load failed:", e);
+    return null;
+  }
+}
+
+/* ---------- PDF: dispatch / release note ---------- */
+async function generateDispatchPDF(data){
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF();
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const marginX = 14;
+
+  const logoUrl = await getLogoDataUrl();
+  let headerBottomY = 20;
+  if(logoUrl){
+    try{
+      const logoW = 50, logoH = 50 * (385/1284);
+      pdf.addImage(logoUrl, "PNG", marginX, 12, logoW, logoH);
+      headerBottomY = Math.max(headerBottomY, 12 + logoH + 4);
+    }catch(e){ console.error("addImage failed:", e); }
+  }
+
+  pdf.setFont("helvetica","bold");
+  pdf.setFontSize(15);
+  pdf.text("DISPATCH / RELEASE NOTE", pageWidth - marginX, 18, { align:"right" });
+  pdf.setFont("helvetica","normal");
+  pdf.setFontSize(10);
+  pdf.setTextColor(90);
+  pdf.text(`Reference: ${data.ref}`, pageWidth - marginX, 25, { align:"right" });
+  pdf.text(`Date: ${data.dateStr}`, pageWidth - marginX, 30, { align:"right" });
+  pdf.setTextColor(0);
+
+  const ruleY = Math.max(headerBottomY, 32);
+  pdf.setDrawColor(220);
+  pdf.line(marginX, ruleY, pageWidth - marginX, ruleY);
+
+  const purposeLabel = data.purpose === "transfer" ? "Transfer to another branch" : "Repair (sent to a mechanic)";
+  const destinationLabel = data.purpose === "transfer" ? "Receiving branch" : "Mechanic / workshop";
+
+  pdf.autoTable({
+    startY: ruleY + 8,
+    theme: "grid",
+    head: [["Field","Details"]],
+    body: [
+      ["Dispatching branch", data.branchFrom || "—"],
+      ["Purpose", purposeLabel],
+      [destinationLabel, data.destination || "—"],
+      ["Rider / Driver", data.riderName || "—"],
+      ["Delivery mode", data.deliveryMode || "—"],
+      ["Number plate", data.numberPlate || "—"],
+      ["Notes", data.notes || "—"]
+    ],
+    headStyles: { fillColor: [245,89,10] },
+    styles: { fontSize: 10 },
+    margin: { left: marginX, right: marginX }
+  });
+
+  const itemsRows = (data.items && data.items.length)
+    ? data.items.map((it,idx)=>[ idx+1, it.name, fmtNum(it.qty), it.unit, it.tracked ? "In system" : "New / untracked" ])
+    : [["—","No items recorded","","",""]];
+
+  pdf.autoTable({
+    startY: pdf.lastAutoTable.finalY + 10,
+    theme: "grid",
+    head: [["#","Item","Quantity","Unit","Source"]],
+    body: itemsRows,
+    headStyles: { fillColor: [245,89,10] },
+    styles: { fontSize: 10 },
+    margin: { left: marginX, right: marginX }
+  });
+
+  let y = pdf.lastAutoTable.finalY + 20;
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  if(y + 90 > pageHeight){
+    pdf.addPage();
+    y = 24;
+  }
+
+  pdf.setFont("helvetica","bold");
+  pdf.setFontSize(11);
+  pdf.text("Sign-off", marginX, y);
+  y += 10;
+
+  const sigLineWidth = 80;
+  const signers = [
+    { num: "1.", label: "Dispatcher", name: data.dispatcherName },
+    { num: "2.", label: "Security Officer", name: data.securityName },
+    { num: "3.", label: "Rider / Driver", name: data.riderName }
+  ];
+  signers.forEach(s=>{
+    pdf.setFont("helvetica","bold");
+    pdf.setFontSize(10);
+    pdf.text(`${s.num} ${s.label}`, marginX, y);
+    pdf.setFont("helvetica","normal");
+    pdf.setFontSize(9);
+    pdf.setTextColor(90);
+    pdf.text(`Name: ${s.name || "_________________________"}`, marginX, y + 6);
+    pdf.setTextColor(0);
+    pdf.setDrawColor(150);
+    pdf.line(marginX, y + 18, marginX + sigLineWidth, y + 18);
+    pdf.setFontSize(8);
+    pdf.setTextColor(140);
+    pdf.text("Signature & Date", marginX, y + 23);
+    pdf.setTextColor(0);
+    y += 32;
+  });
+
+  pdf.save(`${data.ref}-dispatch-note.pdf`);
+}
+
+Object.assign(window, { toggleAvatarMenu, signOutNow, submitGateLogin, openChangePinModal, closeChangePinModal, submitChangePin });
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then((reg) => { reg.update(); })
+        .catch((err) => console.error('SW registration failed:', err));
+
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'SW_UPDATED') {
+          window.location.reload();
+        }
+      });
+    });
+  }
+</script>
+</body>
+</html>

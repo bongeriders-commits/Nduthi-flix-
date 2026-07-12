@@ -126,6 +126,20 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ---------------------------------------------------------------------
+    // Dispatches — release notes for items sent out for repair or
+    // transferred to another branch. Open to every active team member,
+    // including storeman, same as stockTransactions/grns: any signed-in,
+    // active user can create one; nothing can be edited or deleted once
+    // written, since it's a paper-trail record backing a printed release
+    // note that's already been signed.
+    // ---------------------------------------------------------------------
+    match /dispatches/{dispatchId} {
+      allow read: if isActiveUser();
+      allow create: if isActiveUser();
+      allow update, delete: if false;
+    }
+
     match /counters/{counterId} {
       allow read, write: if isActiveUser();
     }

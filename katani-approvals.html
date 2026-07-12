@@ -321,7 +321,7 @@ const ICONS = {
 };
 
 /* ---------- Admin auth (same pattern as index.html / stock-list.html) ---------- */
-let isAdmin = false, currentAdminEmail = "";
+let isAdmin = false, currentAdminEmail = "", currentAdminName = "";
 let myRole = null, myUid = "";
 let appRevealed = false;
 watchAdmin(async (user)=>{
@@ -356,6 +356,7 @@ watchAdmin(async (user)=>{
     return;
   }
   myRole = roleDoc.role;
+  currentAdminName = roleDoc.displayName || currentAdminEmail;
 
   // Storeman and receiver are limited to issuing/receiving stock only.
   if(isIssueOnly(myRole)){ window.location.replace("issue.html"); return; }
@@ -565,7 +566,7 @@ window.resolveApproval = async function(id, status){
       resolvedBy: currentAdminEmail || "admin"
     });
     logAudit({
-      actorUid: myUid, actorName: currentAdminEmail, actorRole: myRole,
+      actorUid: myUid, actorName: currentAdminName || currentAdminEmail, actorRole: myRole,
       action: status === "approved" ? "approval.approve" : "approval.reject",
       entityType: "approval", entityId: id, entityLabel: a.title || a.itemName || a.type,
       summary: `${status === "approved" ? "Approved" : "Rejected"} ${labelFor(a.type)}: ${a.title || a.itemName || ""}`,

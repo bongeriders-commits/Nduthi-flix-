@@ -377,7 +377,7 @@ import {
 
 let isAdmin = false;
 let myRole = null, myUid = "";
-let currentAdminEmail = "";
+let currentAdminEmail = "", currentAdminName = "";
 let appRevealed = false;
 
 watchAdmin(async (user)=>{
@@ -411,6 +411,7 @@ watchAdmin(async (user)=>{
     return;
   }
   myRole = roleDoc.role;
+  currentAdminName = roleDoc.displayName || currentAdminEmail;
 
   // Storeman must never see stock balances; receiver is limited to
   // receive/issue only — neither gets the inventory list.
@@ -621,7 +622,7 @@ function deleteItem(idx){
     deleteDoc(doc(db, "stockItems", it.id)).then(()=>{
       deletePublicItem(it.id).catch(err=>console.error("public mirror cleanup failed:", err));
       logAudit({
-        actorUid: myUid, actorName: currentAdminEmail, actorRole: myRole,
+        actorUid: myUid, actorName: currentAdminName || currentAdminEmail, actorRole: myRole,
         action: "item.delete", entityType: "stockItem", entityId: it.id, entityLabel: it.name,
         summary: `Deleted item ${it.name} (${it.code})`,
         meta: { code: it.code, balanceAtDeletion: it.balance }

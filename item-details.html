@@ -563,7 +563,7 @@ if(!itemId){
 }
 
 /* ---------- Admin auth ---------- */
-let isAdmin = false, currentAdminEmail = "";
+let isAdmin = false, currentAdminEmail = "", currentAdminName = "";
 let myRole = null, myUid = "";
 let appRevealed = false;
 watchAdmin(async (user)=>{
@@ -597,6 +597,7 @@ watchAdmin(async (user)=>{
     return;
   }
   myRole = roleDoc.role;
+  currentAdminName = roleDoc.displayName || currentAdminEmail;
 
   // Storeman must never see stock balances; receiver is limited to
   // receive/issue only — neither gets item detail pages.
@@ -934,7 +935,7 @@ function submitEditItem(){
     const after = { name, category, uom, min, balance, price };
     const changes = Object.keys(after).filter(k => String(before[k]) !== String(after[k]));
     logAudit({
-      actorUid: myUid, actorName: currentAdminEmail, actorRole: myRole,
+      actorUid: myUid, actorName: currentAdminName || currentAdminEmail, actorRole: myRole,
       action: "item.edit", entityType: "stockItem", entityId: itemId, entityLabel: name,
       summary: changes.length
         ? `Edited ${name}: ${changes.map(k=>`${k} ${before[k]}\u2192${after[k]}`).join(", ")}`

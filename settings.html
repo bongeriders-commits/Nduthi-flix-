@@ -541,7 +541,7 @@ import {
 } from "./firebase-config.js";
 
 let myRole = null, myUid = "";
-let currentAdminEmail = "";
+let currentAdminEmail = "", currentAdminName = "";
 let appRevealed = false;
 let settingsDoc = null; // last-loaded doc from Firestore, for dirty diffing
 
@@ -573,6 +573,7 @@ watchAdmin(async (user)=>{
     return;
   }
   myRole = roleDoc.role;
+  currentAdminName = roleDoc.displayName || currentAdminEmail;
   gate.style.display = "none";
   if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
 

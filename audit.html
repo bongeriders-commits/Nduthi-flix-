@@ -368,6 +368,7 @@
         <label class="filter-row"><input type="checkbox" class="catFilter" value="item" checked> Item</label>
         <label class="filter-row"><input type="checkbox" class="catFilter" value="stock" checked> Receive / Issue</label>
         <label class="filter-row"><input type="checkbox" class="catFilter" value="grn" checked> GRN</label>
+        <label class="filter-row"><input type="checkbox" class="catFilter" value="dispatch" checked> Dispatch</label>
         <label class="filter-row"><input type="checkbox" class="catFilter" value="approval" checked> Approvals</label>
         <label class="filter-row"><input type="checkbox" class="catFilter" value="team" checked> Team</label>
         <label class="filter-row"><input type="checkbox" class="catFilter" value="supplier" checked> Suppliers</label>
@@ -467,6 +468,7 @@ const CATEGORY_OF = {
   "item.create":"item", "item.edit":"item", "item.delete":"item",
   "stock.receive":"stock", "stock.issue":"stock",
   "grn.submit":"grn",
+  "dispatch.create":"dispatch",
   "approval.approve":"approval", "approval.reject":"approval",
   "team.add":"team", "team.role_change":"team", "team.deactivate":"team", "team.reactivate":"team",
   "supplier.create":"supplier", "supplier.edit":"supplier", "supplier.delete":"supplier",
@@ -492,6 +494,7 @@ function iconFor(action){
     case "stock.receive": return {icon:"arrowDown", color:"green"};
     case "stock.issue": return {icon:"arrowUp", color:"red"};
     case "grn.submit": return {icon:"truck", color:"green"};
+    case "dispatch.create": return {icon:"truck", color:"purple"};
     case "approval.approve": return {icon:"check", color:"green"};
     case "approval.reject": return {icon:"x", color:"red"};
     case "team.add": return {icon:"users", color:"blue"};
@@ -631,7 +634,7 @@ function clearEntityFilter(){
 }
 
 /* ---------- Filters ---------- */
-let allowedCats = new Set(["item","stock","grn","approval","team","supplier","auth"]);
+let allowedCats = new Set(["item","stock","grn","dispatch","approval","team","supplier","auth"]);
 let dateRange = "all";
 let actorPick = "all";
 

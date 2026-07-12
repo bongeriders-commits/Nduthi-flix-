@@ -433,7 +433,7 @@ import {
 
 let isAdmin = false;
 let myRole = null, myUid = "";
-let currentAdminEmail = "";
+let currentAdminEmail = "", currentAdminName = "";
 let appRevealed = false;
 
 watchAdmin(async (user)=>{
@@ -466,6 +466,7 @@ watchAdmin(async (user)=>{
     return;
   }
   myRole = roleDoc.role;
+  currentAdminName = roleDoc.displayName || currentAdminEmail;
 
   // Storeman and receiver are limited to issuing/receiving stock only.
   if(isIssueOnly(myRole)){ window.location.replace("issue.html"); return; }
@@ -726,7 +727,7 @@ async function submitSupplier(){
         updatedAt: serverTimestamp(), updatedBy: currentAdminEmail
       });
       logAudit({
-        actorUid: myUid, actorName: currentAdminEmail, actorRole: myRole,
+        actorUid: myUid, actorName: currentAdminName || currentAdminEmail, actorRole: myRole,
         action: "supplier.edit", entityType: "supplier", entityId: editingId, entityLabel: name,
         summary: `Edited supplier ${name}`,
         meta: { name, phone, category, status }
@@ -739,7 +740,7 @@ async function submitSupplier(){
         createdAt: serverTimestamp(), createdBy: currentAdminEmail
       });
       logAudit({
-        actorUid: myUid, actorName: currentAdminEmail, actorRole: myRole,
+        actorUid: myUid, actorName: currentAdminName || currentAdminEmail, actorRole: myRole,
         action: "supplier.create", entityType: "supplier", entityId: ref.id, entityLabel: name,
         summary: `Added supplier ${name} (${code})`,
         meta: { code, phone, category, status }
@@ -760,7 +761,7 @@ function deleteSupplier(id){
   if(confirm(`Remove "${s.name}" (${s.code}) from your suppliers list?`)){
     deleteDoc(doc(db, "suppliers", id)).then(()=>{
       logAudit({
-        actorUid: myUid, actorName: currentAdminEmail, actorRole: myRole,
+        actorUid: myUid, actorName: currentAdminName || currentAdminEmail, actorRole: myRole,
         action: "supplier.delete", entityType: "supplier", entityId: id, entityLabel: s.name,
         summary: `Deleted supplier ${s.name} (${s.code})`
       });

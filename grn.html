@@ -506,7 +506,7 @@ import {
 } from "./firebase-config.js";
 
 /* ---------- Admin auth (same pattern as the rest of the app) ---------- */
-let isAdmin = false, currentAdminEmail = "";
+let isAdmin = false, currentAdminEmail = "", currentAdminName = "";
 let myRole = null, myUid = "";
 let appRevealed = false;
 let grnNoReady = false;
@@ -541,6 +541,7 @@ watchAdmin(async (user)=>{
     return;
   }
   myRole = roleDoc.role;
+  currentAdminName = roleDoc.displayName || currentAdminEmail;
 
   // Storeman can issue stock only — receiving (GRN) is off-limits.
   if(isIssueOnly(myRole)){ window.location.replace("issue.html"); return; }
@@ -1016,7 +1017,7 @@ async function submitGRN(){
 
     showMsg(`${window.__grnNo} submitted — stock balances updated.`, true);
     logAudit({
-      actorUid: myUid, actorName: currentAdminEmail, actorRole: myRole,
+      actorUid: myUid, actorName: currentAdminName || currentAdminEmail, actorRole: myRole,
       action: "grn.submit", entityType: "grn", entityId: window.__grnNo, entityLabel: window.__grnNo,
       summary: `Submitted ${window.__grnNo}: received ${rows.length} item(s) from ${h.supplier}, total ${totalQty} units`,
       meta: { supplier: h.supplier, totalItems: rows.length, totalQty, totalAmount, items: rows.map(r=>({itemId:r.itemId, name:r.name, qty:r.received, unit:r.unit})) }
