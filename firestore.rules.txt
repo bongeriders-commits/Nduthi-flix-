@@ -143,6 +143,22 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ---------------------------------------------------------------------
+    // App settings — single document holding business profile, stock
+    // thresholds, notification prefs, and team/access policy defaults.
+    // Any active team member can read it (pages may want to show the
+    // business name, currency, etc.), but only owner/admin can write it.
+    // settings.html additionally disables the owner-only fields client-side
+    // for admins, but the write rule itself only checks canManage() since
+    // Firestore rules can't easily diff "which fields changed" against a
+    // role that isn't stored on the request — settings.html is trusted to
+    // omit those fields when the signed-in user isn't the owner.
+    // ---------------------------------------------------------------------
+    match /settings/app {
+      allow read: if isActiveUser();
+      allow write: if canManage();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

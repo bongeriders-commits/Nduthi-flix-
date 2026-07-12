@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="/logo-data.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings — Cabro City</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#f5590a">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" href="/icon-192.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root{
+    --bg:#ffffff;
+    --panel:#f6f6f8;
+    --panel-alt:#eeeef1;
+    --panel-raise:#ffffff;
+    --line:#e2e2e6;
+    --line-soft:#ececf0;
+    --text:#151517;
+    --text-dim:#68686f;
+    --text-faint:#9a9aa2;
+    --oxide:#f5590a;
+    --oxide-dim:#b8420a;
+    --amber:#b45309;
+    --red:#e13a3a;
+    --green:#16a34a;
+    --blue:#2563eb;
+    --purple:#7c3aed;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  html,body{
+    background:#f4f4f6;
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  button,input,select,textarea{font-family:inherit;}
+  h1,h2,h3{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:0.03em;margin:0;}
+
+  /* ===== App shell ===== */
+  .app-shell{
+    max-width:820px;margin:0 auto;min-height:100vh;
+    background:var(--bg);position:relative;
+    padding-bottom:60px;
+    border-left:1px solid var(--line);border-right:1px solid var(--line);
+  }
+  @media(max-width:840px){ .app-shell{border-left:none;border-right:none;} }
+  .app-shell{display:none;}
+  .app-shell.ready{display:block;}
+
+  /* ===== Mobile header ===== */
+  .mobile-header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 20px;border-bottom:1px solid var(--line);
+    position:sticky;top:0;background:#ffffff;z-index:30;
+  }
+  .mh-left{display:flex;align-items:center;gap:14px;}
+  .hamburger{width:22px;height:15px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;background:none;border:none;padding:0;}
+  .hamburger span{display:block;height:2.5px;background:#1a1a1d;border-radius:2px;}
+  .mh-logo{display:flex;align-items:center;gap:10px;cursor:pointer;background:none;border:none;padding:0;}
+  .brand-logo-img{height:36px;width:auto;display:block;}
+  .mh-right{display:flex;align-items:center;gap:18px;}
+  .avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#3a3a40,#1c1c1f);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;position:relative;font-family:'Oswald',sans-serif;flex-shrink:0;border:1.5px solid #3a3a40;}
+
+  /* ===== Page head ===== */
+  .page-head{padding:22px 20px 6px;}
+  .page-head h1{margin:0;font-size:25px;font-weight:800;letter-spacing:-0.01em;color:var(--text);}
+  .page-head p{margin:5px 0 0;font-size:12.5px;color:var(--text-dim);}
+
+  /* ===== Sections ===== */
+  .settings-wrap{padding:16px 20px 20px;display:flex;flex-direction:column;gap:16px;}
+  .sec{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;}
+  .sec-head{
+    display:flex;align-items:center;gap:10px;padding:15px 16px;
+    border-bottom:1px solid var(--line-soft);cursor:pointer;user-select:none;
+  }
+  .sec-head .sec-icon{
+    width:30px;height:30px;border-radius:9px;background:var(--panel-alt);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--oxide);
+  }
+  .sec-icon svg{width:16px;height:16px;}
+  .sec-head h2{font-size:14px;font-weight:700;color:var(--text);letter-spacing:0.01em;flex:1;}
+  .sec-head .sec-sub{font-size:11px;color:var(--text-faint);font-family:'Inter',sans-serif;text-transform:none;letter-spacing:0;margin-top:2px;}
+  .sec-chev{width:14px;height:14px;color:var(--text-faint);transition:transform 0.15s;flex-shrink:0;}
+  .sec.open .sec-chev{transform:rotate(180deg);}
+  .sec-body{display:none;padding:16px;}
+  .sec.open .sec-body{display:block;}
+
+  .field{margin-bottom:14px;}
+  .field:last-child{margin-bottom:0;}
+  .field label{display:block;font-size:11.5px;color:var(--text-dim);font-weight:600;margin-bottom:6px;}
+  .field .hint{font-size:11px;color:var(--text-faint);margin-top:5px;line-height:1.4;}
+  .field select,.field input[type=text],.field input[type=number],.field input[type=tel],.field textarea{
+    width:100%;background:var(--panel);border:1px solid var(--line);color:var(--text);
+    padding:10px 12px;border-radius:9px;font-size:13.5px;
+  }
+  .field textarea{resize:vertical;min-height:60px;}
+  .field-row{display:flex;gap:10px;}
+  .field-row .field{flex:1;}
+
+  /* toggle switch */
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:2px 0;margin-bottom:14px;}
+  .toggle-row:last-child{margin-bottom:0;}
+  .toggle-row .t-label{font-size:13px;color:var(--text);font-weight:600;}
+  .toggle-row .t-sub{font-size:11px;color:var(--text-faint);margin-top:2px;}
+  .switch{position:relative;width:42px;height:24px;flex-shrink:0;}
+  .switch input{opacity:0;width:0;height:0;}
+  .slider{position:absolute;inset:0;background:var(--line);border-radius:100px;cursor:pointer;transition:background 0.15s;}
+  .slider:before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform 0.15s;box-shadow:0 1px 3px rgba(0,0,0,0.3);}
+  .switch input:checked + .slider{background:var(--oxide);}
+  .switch input:checked + .slider:before{transform:translateX(18px);}
+
+  /* chip multi-select */
+  .chip-group{display:flex;flex-wrap:wrap;gap:8px;}
+  .chip-opt{
+    padding:8px 14px;border-radius:100px;border:1.5px solid var(--line);
+    font-size:12.5px;font-weight:600;color:var(--text-dim);cursor:pointer;background:#fff;
+  }
+  .chip-opt.on{background:var(--oxide);border-color:var(--oxide);color:#fff;}
+
+  /* role checkbox rows */
+  .role-check-row{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:13px;color:var(--text);}
+  .role-check-row input{width:16px;height:16px;accent-color:var(--oxide);}
+
+  /* radio segmented */
+  .seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;}
+  .seg button{
+    flex:1;padding:9px 6px;background:#fff;border:none;font-size:12px;font-weight:600;
+    color:var(--text-dim);cursor:pointer;border-right:1px solid var(--line);
+  }
+  .seg button:last-child{border-right:none;}
+  .seg button.on{background:var(--oxide);color:#fff;}
+
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;}
+  .btn-outline{
+    background:#fff;border:1px solid var(--line);color:var(--text);
+    padding:10px 16px;border-radius:9px;font-size:12.5px;font-weight:600;cursor:pointer;
+    display:flex;align-items:center;gap:7px;
+  }
+  .btn-outline svg{width:14px;height:14px;color:var(--text-dim);}
+  .btn-outline:hover{border-color:var(--text-faint);}
+  .btn-outline:disabled{opacity:0.5;cursor:default;}
+  .btn-danger-outline{border-color:#f7c9c9;color:var(--red);}
+
+  .owner-lock{
+    display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-faint);
+    background:var(--panel-alt);padding:8px 10px;border-radius:8px;margin-top:6px;
+  }
+  .owner-lock svg{width:12px;height:12px;flex-shrink:0;}
+
+  .logo-preview{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+  .logo-preview img{height:44px;width:auto;max-width:120px;border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:4px;object-fit:contain;}
+  .logo-preview .no-logo{
+    height:44px;width:80px;border:1px dashed var(--line);border-radius:8px;
+    display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text-faint);
+  }
+
+  .phone-list{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
+  .phone-row{display:flex;gap:8px;align-items:center;}
+  .phone-row input{flex:1;}
+  .phone-row button{
+    background:none;border:1px solid var(--line);color:var(--red);width:34px;height:34px;
+    border-radius:8px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  }
+  .phone-row button svg{width:14px;height:14px;}
+
+  .version-row{display:flex;align-items:center;justify-content:space-between;padding:4px 0;font-size:12.5px;color:var(--text-dim);}
+  .version-row b{color:var(--text);}
+
+  .save-bar{
+    position:sticky;bottom:0;left:0;right:0;background:#fff;
+    border-top:1px solid var(--line);padding:12px 20px;
+    display:flex;align-items:center;justify-content:flex-end;gap:10px;z-index:20;
+  }
+  .save-bar .save-status{flex:1;font-size:12px;color:var(--text-faint);}
+  .btn-save{
+    background:var(--oxide);border:none;color:#fff;padding:11px 22px;border-radius:10px;
+    font-size:13.5px;font-weight:700;cursor:pointer;
+  }
+  .btn-save:hover{background:#ff6b1f;}
+  .btn-save:disabled{opacity:0.6;cursor:default;}
+
+  .toast{
+    position:fixed;bottom:74px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:#151517;color:#fff;padding:11px 20px;border-radius:100px;font-size:12.5px;
+    font-weight:600;opacity:0;pointer-events:none;transition:all 0.25s;z-index:200;
+    box-shadow:0 12px 30px -8px rgba(0,0,0,0.4);
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* dark preview mode (this page only — see appearance section note) */
+  html[data-cc-theme="dark"]{ --bg:#131315; --panel:#1c1c1f; --panel-alt:#232327; --panel-raise:#1c1c1f;
+    --line:#2c2c31; --line-soft:#26262a; --text:#f2f2f4; --text-dim:#a8a8b0; --text-faint:#6f6f78; }
+  html[data-cc-theme="dark"] .mobile-header, html[data-cc-theme="dark"] .sec, html[data-cc-theme="dark"] .save-bar{background:var(--panel-raise);}
+  html[data-cc-theme="dark"] .field select,html[data-cc-theme="dark"] .field input,html[data-cc-theme="dark"] .field textarea{background:var(--panel-alt);color:var(--text);}
+  html[data-cc-theme="dark"] .chip-opt,html[data-cc-theme="dark"] .btn-outline,html[data-cc-theme="dark"] .seg button{background:var(--panel-alt);color:var(--text);}
+
+  button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--oxide);outline-offset:2px;}
+
+  /* ---------- Access gate ---------- */
+  #accessGate{position:fixed;inset:0;z-index:9999;background:#fff;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .gate-card{width:100%;max-width:340px;text-align:center;}
+  .gate-card img{height:34px;width:auto;margin:0 auto 22px;display:block;}
+  .gate-card h2{font-family:'Inter',sans-serif;text-transform:none;font-size:17px;font-weight:700;margin-bottom:6px;}
+  .gate-card p{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-bottom:22px;}
+  .gate-card .field{margin-bottom:12px;text-align:left;}
+  .gate-card .field label{display:block;font-size:11px;color:var(--text-dim);margin-bottom:5px;}
+  .gate-card .field input{width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--line);font-size:13.5px;font-family:'Inter',sans-serif;box-sizing:border-box;}
+  .gate-card .btn-submit{width:100%;padding:12px;border-radius:9px;border:1px solid var(--oxide);background:var(--oxide);color:#fff;font-weight:700;font-size:13px;cursor:pointer;margin-top:6px;font-family:'Inter',sans-serif;}
+  .gate-error{color:var(--red);font-size:12px;margin:-4px 0 12px;text-align:left;}
+
+  /* ---------- Not-authorized ---------- */
+  #notAuthorized{display:none;text-align:center;padding:80px 24px;}
+  #notAuthorized svg{width:40px;height:40px;color:var(--text-faint);margin-bottom:14px;}
+  #notAuthorized h2{font-size:16px;margin:0 0 6px;font-family:'Inter',sans-serif;text-transform:none;}
+  #notAuthorized p{font-size:13px;color:var(--text-dim);margin:0;}
+</style>
+</head>
+<body>
+
+<div id="accessGate" style="display:none;">
+  <div class="gate-card">
+    <img alt="Cabro City" class="cc-logo" data-fallback="/cabro-city-logo.png">
+    <h2>Sign in required</h2>
+    <p>Cabro City is restricted to approved staff. If you don't have an account yet, ask your admin to add one for you.</p>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="gateEmail" placeholder="you@cabrocity.co.ke">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="gatePassword" placeholder="••••••••">
+    </div>
+    <div id="gateError" class="gate-error" style="display:none;"></div>
+    <button class="btn-submit" onclick="submitGateLogin()">Sign In</button>
+  </div>
+</div>
+
+<div class="app-shell">
+
+  <div class="mobile-header">
+    <div class="mh-left">
+      <button class="hamburger" aria-label="Back to home" onclick="location.href='index.html'"><span></span><span></span><span></span></button>
+      <button class="mh-logo" onclick="location.href='index.html'" aria-label="Cabro City home">
+        <img alt="Cabro City — Paving the Future" class="brand-logo-img cc-logo" data-fallback="/cabro-city-logo.png">
+      </button>
+    </div>
+    <div class="mh-right">
+      <div class="avatar" onclick="location.href='index.html'"><span id="avatarInitials">--</span></div>
+    </div>
+  </div>
+
+  <div id="notAuthorized">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    <h2>Owner/admin access only</h2>
+    <p>Settings are restricted to owners and admins.</p>
+  </div>
+
+  <div id="pageContent">
+    <div class="page-head">
+      <h1>Settings</h1>
+      <p>Business defaults, notifications, team policy, backups &amp; the app itself</p>
+    </div>
+
+    <div class="settings-wrap">
+
+      <!-- 1. BUSINESS PROFILE -->
+      <div class="sec" data-sec="profile">
+        <div class="sec-head" onclick="toggleSec(this)">
+          <div class="sec-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1.5"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
+          <div><h2>Business Profile</h2><div class="sec-sub">Name, logo, address &amp; payment details</div></div>
+          <svg class="sec-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div class="sec-body">
+          <div class="field">
+            <label>Company name</label>
+            <input type="text" id="s-bizName" placeholder="Cabro City">
+            <div class="hint">Shown on GRN and issue PDF headers.</div>
+          </div>
+          <div class="field">
+            <label>Logo</label>
+            <div class="logo-preview">
+              <div id="logoPreviewSlot"><div class="no-logo">No logo</div></div>
+              <input type="file" id="s-bizLogoFile" accept="image/png,image/jpeg,image/svg+xml" onchange="onLogoFile(event)">
+            </div>
+            <div class="hint">Used on printed GRN/issue documents. The app-wide logo in the header stays as configured in logo-data.js.</div>
+          </div>
+          <div class="field">
+            <label>Address</label>
+            <textarea id="s-bizAddress" placeholder="e.g. Katani Quarry, Mombasa Road, Nairobi"></textarea>
+          </div>
+          <div class="field">
+            <label>M-Pesa / Paybill or bank details</label>
+            <textarea id="s-paymentDetails" placeholder="e.g. Paybill 400200, Acc: Cabro City Ltd — or bank name, account number, branch"></textarea>
+            <div class="hint">Referenced on supplier payment documents.</div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Default currency</label>
+              <select id="s-currency">
+                <option value="KES">KES — Kenyan Shilling</option>
+                <option value="USD">USD — US Dollar</option>
+                <option value="TZS">TZS — Tanzanian Shilling</option>
+                <option value="UGX">UGX — Ugandan Shilling</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Default unit of measure</label>
+              <select id="s-defaultUom">
+                <option value="Piece">Piece</option>
+                <option value="Kg">Kg</option>
+                <option value="Litre">Litre</option>
+                <option value="Bag">Bag</option>
+                <option value="Pair">Pair</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. STOCK & THRESHOLDS -->
+      <div class="sec" data-sec="stock">
+        <div class="sec-head" onclick="toggleSec(this)">
+          <div class="sec-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg></div>
+          <div><h2>Stock &amp; Thresholds</h2><div class="sec-sub">Low-stock rules &amp; approval-gated categories</div></div>
+          <svg class="sec-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div class="sec-body">
+          <div class="field">
+            <label>Global default low-stock threshold</label>
+            <input type="number" id="s-lowStockThreshold" min="0" placeholder="e.g. 10">
+            <div class="hint">Pre-fills the "Minimum threshold" field whenever a new item is created.</div>
+          </div>
+          <div class="toggle-row">
+            <div><div class="t-label">Auto-create approval on low stock</div><div class="t-sub">Raises a threshold approval automatically when balance drops below minimum</div></div>
+            <label class="switch"><input type="checkbox" id="s-autoLowStockApproval"><span class="slider"></span></label>
+          </div>
+          <div class="field" style="margin-top:16px;">
+            <label>Categories requiring owner approval to create</label>
+            <div class="chip-group" id="approvalCatChips">
+              <span class="chip-opt" data-cat="Fuel">Fuel</span>
+              <span class="chip-opt" data-cat="Oils">Oils</span>
+              <span class="chip-opt" data-cat="Spares">Spares</span>
+            </div>
+            <div class="hint">Unselected categories can be created by any admin without extra sign-off.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. NOTIFICATIONS -->
+      <div class="sec" data-sec="notifications">
+        <div class="sec-head" onclick="toggleSec(this)">
+          <div class="sec-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+          <div><h2>Notifications</h2><div class="sec-sub">WhatsApp/SMS numbers &amp; alert preferences</div></div>
+          <svg class="sec-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div class="sec-body">
+          <div class="field">
+            <label>WhatsApp / SMS number(s) for alerts</label>
+            <div class="phone-list" id="phoneList"></div>
+            <button class="btn-outline" onclick="addPhoneRow()" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+              Add number
+            </button>
+            <div class="hint">Receives low-stock and approval alerts via the Africa's Talking integration.</div>
+          </div>
+          <div class="field" style="margin-top:16px;">
+            <label>Stock summary notification</label>
+            <div class="seg" id="summarySeg">
+              <button data-v="off" type="button">Off</button>
+              <button data-v="daily" type="button">Daily</button>
+              <button data-v="weekly" type="button">Weekly</button>
+            </div>
+          </div>
+          <div class="field" style="margin-top:16px;">
+            <label>Roles notified on new approval requests</label>
+            <div id="approvalRoleChecks">
+              <label class="role-check-row"><input type="checkbox" value="owner" checked disabled> Owner (always notified)</label>
+              <label class="role-check-row"><input type="checkbox" value="admin"> Admin</label>
+              <label class="role-check-row"><input type="checkbox" value="staff"> Staff</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. TEAM & ACCESS -->
+      <div class="sec" data-sec="team">
+        <div class="sec-head" onclick="toggleSec(this)">
+          <div class="sec-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          <div><h2>Team &amp; Access</h2><div class="sec-sub">Session policy &amp; defaults for new members</div></div>
+          <svg class="sec-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div class="sec-body">
+          <div class="field">
+            <label>Session timeout (auto-logout after inactivity)</label>
+            <select id="s-sessionTimeout">
+              <option value="0">Never</option>
+              <option value="15">15 minutes</option>
+              <option value="30">30 minutes</option>
+              <option value="60">1 hour</option>
+              <option value="240">4 hours</option>
+            </select>
+          </div>
+          <div class="toggle-row" style="margin-top:6px;">
+            <div><div class="t-label">Require PIN re-entry for high-value actions</div><div class="t-sub">Large issue quantities and deletes ask for the PIN again</div></div>
+            <label class="switch"><input type="checkbox" id="s-requirePinHighValue"><span class="slider"></span></label>
+          </div>
+          <div class="field" id="highValueThresholdField" style="display:none;margin-top:10px;">
+            <label>"High-value" issue quantity threshold</label>
+            <input type="number" id="s-highValueThreshold" min="0" placeholder="e.g. 500">
+          </div>
+          <div class="field" style="margin-top:16px;">
+            <label>Default role for newly invited team members</label>
+            <select id="s-defaultInviteRole">
+              <option value="staff">Staff</option>
+              <option value="storeman">Storeman</option>
+              <option value="receiver">Receiver</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div class="owner-lock" id="teamOwnerLock" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Only the owner can change team &amp; access policy — you can view but not edit this section.
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. DATA & BACKUP -->
+      <div class="sec" data-sec="data">
+        <div class="sec-head" onclick="toggleSec(this)">
+          <div class="sec-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></div>
+          <div><h2>Data &amp; Backup</h2><div class="sec-sub">Export, sync, and the audit trail</div></div>
+          <svg class="sec-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div class="sec-body">
+          <div class="btn-row">
+            <button class="btn-outline" id="exportBtn" onclick="exportAllData()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+              Export all data (.zip)
+            </button>
+            <button class="btn-outline" id="syncMirrorBtnSettings" onclick="syncAllItemsToPublicMirrorFromSettings()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              Sync item mirror
+            </button>
+          </div>
+          <div class="hint" style="margin-top:10px;">Export bundles items, suppliers, and stock transactions as CSV files in one zip. Every meaningful action is also permanently recorded — see the <a href="audit.html" style="color:var(--oxide);text-decoration:none;font-weight:600;">Audit Trail</a>.</div>
+        </div>
+      </div>
+
+      <!-- 6. APPEARANCE -->
+      <div class="sec" data-sec="appearance">
+        <div class="sec-head" onclick="toggleSec(this)">
+          <div class="sec-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></div>
+          <div><h2>Appearance</h2><div class="sec-sub">Theme &amp; list density on this device</div></div>
+          <svg class="sec-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div class="sec-body">
+          <div class="field">
+            <label>Theme</label>
+            <div class="seg" id="themeSeg">
+              <button data-v="light" type="button">Light</button>
+              <button data-v="dark" type="button">Dark</button>
+            </div>
+            <div class="hint">Applies to this device only, on the Settings page. A full app-wide dark theme is planned separately.</div>
+          </div>
+          <div class="field" style="margin-top:16px;">
+            <label>Table density</label>
+            <div class="seg" id="densitySeg">
+              <button data-v="comfortable" type="button">Comfortable</button>
+              <button data-v="compact" type="button">Compact</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. PWA / DEVICE -->
+      <div class="sec" data-sec="pwa">
+        <div class="sec-head" onclick="toggleSec(this)">
+          <div class="sec-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg></div>
+          <div><h2>PWA / Device</h2><div class="sec-sub">Install, cache &amp; version</div></div>
+          <svg class="sec-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div class="sec-body">
+          <div class="btn-row">
+            <button class="btn-outline" id="installBtn" onclick="triggerInstall()" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+              Install app
+            </button>
+            <button class="btn-outline btn-danger-outline" onclick="clearCacheAndUpdate()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              Clear cache &amp; force update
+            </button>
+          </div>
+          <div class="hint" style="margin:10px 0 14px;">Since you deploy manually from your phone, use "Clear cache &amp; force update" any time a fresh deploy doesn't seem to show up.</div>
+          <div class="version-row"><span>App</span><b>Cabro City — Stores</b></div>
+          <div class="version-row"><span>Service worker cache</span><b id="swCacheName">—</b></div>
+          <div class="version-row"><span>Install status</span><b id="installStatus">—</b></div>
+          <button class="btn-outline" style="margin-top:12px;" onclick="checkForUpdates()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            Check for updates
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="save-bar">
+      <span class="save-status" id="saveStatus"></span>
+      <button class="btn-save" id="saveBtn" onclick="saveSettings()">Save changes</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import {
+  db, auth, loginAdmin, logoutAdmin, watchAdmin, initialsFromEmail,
+  doc, getDoc, setDoc, serverTimestamp, canManage, canManageTeam, fetchOrBootstrapRole,
+  collection, getDocs, syncPublicItem
+} from "./firebase-config.js";
+
+let myRole = null, myUid = "";
+let currentAdminEmail = "";
+let appRevealed = false;
+let settingsDoc = null; // last-loaded doc from Firestore, for dirty diffing
+
+const DEFAULT_CATEGORIES = ["Fuel", "Oils", "Spares"];
+
+/* ---------- Auth / role gate ---------- */
+watchAdmin(async (user)=>{
+  const isAdmin = !!user;
+  currentAdminEmail = user ? user.email : "";
+  myUid = user ? user.uid : "";
+  document.getElementById("avatarInitials").textContent = isAdmin ? initialsFromEmail(currentAdminEmail) : "--";
+
+  const gate = document.getElementById("accessGate");
+  if(!isAdmin){
+    myRole = null;
+    gate.style.display = "flex";
+    document.querySelector(".app-shell").classList.remove("ready");
+    appRevealed = false;
+    return;
+  }
+  let roleDoc;
+  try{ roleDoc = await fetchOrBootstrapRole(user); }catch(e){ roleDoc = null; }
+  if(!roleDoc){
+    myRole = null;
+    gate.style.display = "flex";
+    document.querySelector(".app-shell").classList.remove("ready");
+    appRevealed = false;
+    logoutAdmin();
+    return;
+  }
+  myRole = roleDoc.role;
+  gate.style.display = "none";
+  if(!appRevealed){ appRevealed = true; document.querySelector(".app-shell").classList.add("ready"); }
+
+  if(!canManage(myRole)){
+    document.getElementById("pageContent").style.display = "none";
+    document.getElementById("notAuthorized").style.display = "block";
+    return;
+  }
+  document.getElementById("pageContent").style.display = "block";
+  document.getElementById("notAuthorized").style.display = "none";
+
+  applyOwnerLock();
+  await loadSettings();
+});
+
+function applyOwnerLock(){
+  const isOwner = canManageTeam(myRole);
+  document.getElementById("teamOwnerLock").style.display = isOwner ? "none" : "flex";
+  ["s-sessionTimeout","s-requirePinHighValue","s-highValueThreshold","s-defaultInviteRole"].forEach(id=>{
+    document.getElementById(id).disabled = !isOwner;
+  });
+}
+
+function submitGateLogin(){
+  const email = document.getElementById("gateEmail").value.trim();
+  const password = document.getElementById("gatePassword").value;
+  const errBox = document.getElementById("gateError");
+  errBox.style.display = "none";
+  loginAdmin(email, password).catch(()=>{
+    errBox.textContent = "Sign-in failed — check your email and password, or ask your admin for access.";
+    errBox.style.display = "block";
+  });
+}
+window.submitGateLogin = submitGateLogin;
+
+/* ---------- Collapsible sections ---------- */
+function toggleSec(headEl){
+  headEl.parentElement.classList.toggle("open");
+}
+window.toggleSec = toggleSec;
+// open the first section by default
+document.addEventListener("DOMContentLoaded", ()=>{
+  const first = document.querySelector(".sec");
+  if(first) first.classList.add("open");
+});
+
+/* ---------- Segmented + chip helpers ---------- */
+function wireSeg(id, onChange){
+  const seg = document.getElementById(id);
+  seg.querySelectorAll("button").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      seg.querySelectorAll("button").forEach(x=>x.classList.remove("on"));
+      b.classList.add("on");
+      onChange(b.dataset.v);
+      markDirty();
+    });
+  });
+}
+function setSeg(id, value){
+  const seg = document.getElementById(id);
+  seg.querySelectorAll("button").forEach(b=> b.classList.toggle("on", b.dataset.v === value));
+}
+function getSeg(id){
+  const on = document.querySelector(`#${id} button.on`);
+  return on ? on.dataset.v : null;
+}
+
+wireSeg("summarySeg", ()=>{});
+wireSeg("themeSeg", (v)=>{
+  document.documentElement.setAttribute("data-cc-theme", v);
+  localStorage.setItem("cc_theme", v);
+});
+wireSeg("densitySeg", (v)=>{
+  localStorage.setItem("cc_density", v);
+});
+
+document.getElementById("approvalCatChips").addEventListener("click", (e)=>{
+  const chip = e.target.closest(".chip-opt");
+  if(!chip) return;
+  chip.classList.toggle("on");
+  markDirty();
+});
+
+document.getElementById("s-requirePinHighValue").addEventListener("change", (e)=>{
+  document.getElementById("highValueThresholdField").style.display = e.target.checked ? "block" : "none";
+  markDirty();
+});
+
+document.querySelectorAll(".settings-wrap input, .settings-wrap select, .settings-wrap textarea").forEach(el=>{
+  el.addEventListener("input", markDirty);
+  el.addEventListener("change", markDirty);
+});
+
+let dirty = false;
+function markDirty(){
+  dirty = true;
+  document.getElementById("saveStatus").textContent = "Unsaved changes";
+}
+
+/* ---------- Phone number list ---------- */
+function phoneRowTemplate(value){
+  const wrap = document.createElement("div");
+  wrap.className = "phone-row";
+  wrap.innerHTML = `
+    <input type="tel" placeholder="+254 7XX XXX XXX" value="${value ? value.replace(/"/g,'&quot;') : ''}">
+    <button type="button" aria-label="Remove number">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>`;
+  wrap.querySelector("input").addEventListener("input", markDirty);
+  wrap.querySelector("button").addEventListener("click", ()=>{ wrap.remove(); markDirty(); });
+  return wrap;
+}
+function addPhoneRow(value){
+  document.getElementById("phoneList").appendChild(phoneRowTemplate(value || ""));
+}
+window.addPhoneRow = addPhoneRow;
+function getPhoneNumbers(){
+  return Array.from(document.querySelectorAll("#phoneList input"))
+    .map(i=>i.value.trim()).filter(Boolean);
+}
+
+/* ---------- Logo upload (base64) ---------- */
+let pendingLogoDataUrl = undefined; // undefined = untouched, null = cleared, string = new value
+function onLogoFile(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  if(file.size > 900000){
+    showToast("Logo too large — please use an image under ~900KB");
+    e.target.value = "";
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    pendingLogoDataUrl = reader.result;
+    renderLogoPreview(pendingLogoDataUrl);
+    markDirty();
+  };
+  reader.readAsDataURL(file);
+}
+window.onLogoFile = onLogoFile;
+function renderLogoPreview(dataUrl){
+  const slot = document.getElementById("logoPreviewSlot");
+  slot.innerHTML = dataUrl
+    ? `<img src="${dataUrl}" alt="Business logo preview">`
+    : `<div class="no-logo">No logo</div>`;
+}
+
+/* ---------- Load settings from Firestore + localStorage ---------- */
+async function loadSettings(){
+  try{
+    const snap = await getDoc(doc(db, "settings", "app"));
+    settingsDoc = snap.exists() ? snap.data() : {};
+  }catch(err){
+    settingsDoc = {};
+  }
+  const s = settingsDoc;
+
+  document.getElementById("s-bizName").value = s.bizName || "";
+  document.getElementById("s-bizAddress").value = s.bizAddress || "";
+  document.getElementById("s-paymentDetails").value = s.paymentDetails || "";
+  document.getElementById("s-currency").value = s.currency || "KES";
+  document.getElementById("s-defaultUom").value = s.defaultUom || "Piece";
+  renderLogoPreview(s.bizLogoDataUrl || null);
+
+  document.getElementById("s-lowStockThreshold").value = (s.lowStockThreshold != null) ? s.lowStockThreshold : 10;
+  document.getElementById("s-autoLowStockApproval").checked = !!s.autoLowStockApproval;
+  const cats = s.approvalCategories || [];
+  document.querySelectorAll("#approvalCatChips .chip-opt").forEach(chip=>{
+    chip.classList.toggle("on", cats.includes(chip.dataset.cat));
+  });
+
+  document.getElementById("phoneList").innerHTML = "";
+  (s.notifyPhones && s.notifyPhones.length ? s.notifyPhones : [""]).forEach(p=> addPhoneRow(p));
+  setSeg("summarySeg", s.notifySummaryFrequency || "off");
+  const notifyRoles = s.notifyRolesOnApproval || [];
+  document.querySelectorAll("#approvalRoleChecks input:not(:disabled)").forEach(cb=>{
+    cb.checked = notifyRoles.includes(cb.value);
+  });
+
+  document.getElementById("s-sessionTimeout").value = (s.sessionTimeoutMinutes != null) ? String(s.sessionTimeoutMinutes) : "0";
+  document.getElementById("s-requirePinHighValue").checked = !!s.requirePinHighValue;
+  document.getElementById("highValueThresholdField").style.display = s.requirePinHighValue ? "block" : "none";
+  document.getElementById("s-highValueThreshold").value = (s.highValueThreshold != null) ? s.highValueThreshold : 500;
+  document.getElementById("s-defaultInviteRole").value = s.defaultInviteRole || "staff";
+
+  // device-local prefs
+  setSeg("themeSeg", localStorage.getItem("cc_theme") || "light");
+  document.documentElement.setAttribute("data-cc-theme", localStorage.getItem("cc_theme") || "light");
+  setSeg("densitySeg", localStorage.getItem("cc_density") || "comfortable");
+
+  pendingLogoDataUrl = undefined;
+  dirty = false;
+  document.getElementById("saveStatus").textContent = s.updatedAt ? "" : "Not saved yet";
+}
+
+/* ---------- Save ---------- */
+async function saveSettings(){
+  if(!canManage(myRole)) return;
+  const btn = document.getElementById("saveBtn");
+  btn.disabled = true;
+  btn.textContent = "Saving…";
+  try{
+    const isOwner = canManageTeam(myRole);
+    const payload = {
+      bizName: document.getElementById("s-bizName").value.trim(),
+      bizAddress: document.getElementById("s-bizAddress").value.trim(),
+      paymentDetails: document.getElementById("s-paymentDetails").value.trim(),
+      currency: document.getElementById("s-currency").value,
+      defaultUom: document.getElementById("s-defaultUom").value,
+      lowStockThreshold: Number(document.getElementById("s-lowStockThreshold").value) || 0,
+      autoLowStockApproval: document.getElementById("s-autoLowStockApproval").checked,
+      approvalCategories: Array.from(document.querySelectorAll("#approvalCatChips .chip-opt.on")).map(c=>c.dataset.cat),
+      notifyPhones: getPhoneNumbers(),
+      notifySummaryFrequency: getSeg("summarySeg") || "off",
+      notifyRolesOnApproval: Array.from(document.querySelectorAll("#approvalRoleChecks input:checked")).map(c=>c.value),
+      updatedAt: serverTimestamp(),
+      updatedBy: currentAdminEmail
+    };
+    if(pendingLogoDataUrl !== undefined){
+      payload.bizLogoDataUrl = pendingLogoDataUrl;
+    }
+    // Owner-only fields: only include if this user is the owner, so an admin's
+    // save can never blank these out even though the inputs are disabled.
+    if(isOwner){
+      payload.sessionTimeoutMinutes = Number(document.getElementById("s-sessionTimeout").value) || 0;
+      payload.requirePinHighValue = document.getElementById("s-requirePinHighValue").checked;
+      payload.highValueThreshold = Number(document.getElementById("s-highValueThreshold").value) || 0;
+      payload.defaultInviteRole = document.getElementById("s-defaultInviteRole").value;
+    }
+    await setDoc(doc(db, "settings", "app"), payload, { merge: true });
+    dirty = false;
+    document.getElementById("saveStatus").textContent = "Saved just now";
+    showToast("Settings saved");
+    await loadSettings();
+  }catch(err){
+    showToast("Could not save: " + err.message);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = "Save changes";
+  }
+}
+window.saveSettings = saveSettings;
+
+function showToast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(()=> t.classList.remove("show"), 2600);
+}
+
+/* ---------- Data export (CSV bundled in a zip) ---------- */
+function toCSV(rows, columns){
+  const esc = (v)=>{
+    if(v === null || v === undefined) return "";
+    const s = String(v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+  };
+  const header = columns.join(",");
+  const lines = rows.map(r => columns.map(c => esc(r[c])).join(","));
+  return [header, ...lines].join("\n");
+}
+function tsToStr(ts){
+  try{
+    if(ts && typeof ts.toDate === "function") return ts.toDate().toISOString();
+  }catch(e){}
+  return "";
+}
+async function exportAllData(){
+  const btn = document.getElementById("exportBtn");
+  btn.disabled = true;
+  const originalHTML = btn.innerHTML;
+  btn.innerHTML = "Exporting…";
+  try{
+    const [itemsSnap, suppliersSnap, txSnap] = await Promise.all([
+      getDocs(collection(db, "stockItems")),
+      getDocs(collection(db, "suppliers")),
+      getDocs(collection(db, "stockTransactions"))
+    ]);
+
+    const items = itemsSnap.docs.map(d=>{
+      const v = d.data();
+      return { id: d.id, code: v.code, name: v.name, category: v.category, uom: v.uom, balance: v.balance, min: v.min, updatedAt: tsToStr(v.updatedAt) };
+    });
+    const suppliers = suppliersSnap.docs.map(d=>{
+      const v = d.data();
+      return { id: d.id, code: v.code, name: v.name, phone: v.phone, contactPerson: v.contactPerson, category: v.category, email: v.email, status: v.status, lastSupplyAt: tsToStr(v.lastSupplyAt) };
+    });
+    const transactions = txSnap.docs.map(d=>{
+      const v = d.data();
+      return { id: d.id, itemName: v.itemName, type: v.type, qty: v.qty, unit: v.unit, who: v.who, note: v.note, createdAt: tsToStr(v.createdAt), createdBy: v.createdBy };
+    });
+
+    const zip = new JSZip();
+    zip.file("items.csv", toCSV(items, ["id","code","name","category","uom","balance","min","updatedAt"]));
+    zip.file("suppliers.csv", toCSV(suppliers, ["id","code","name","phone","contactPerson","category","email","status","lastSupplyAt"]));
+    zip.file("stock_transactions.csv", toCSV(transactions, ["id","itemName","type","qty","unit","who","note","createdAt","createdBy"]));
+
+    const blob = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = new Date().toISOString().slice(0,10);
+    a.href = url;
+    a.download = `cabro-city-backup-${stamp}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showToast(`Exported ${items.length} items, ${suppliers.length} suppliers, ${transactions.length} transactions`);
+  }catch(err){
+    showToast("Export failed: " + err.message);
+  }finally{
+    btn.disabled = false;
+    btn.innerHTML = originalHTML;
+  }
+}
+window.exportAllData = exportAllData;
+
+/* ---------- Sync item mirror (same logic as the drawer button on index.html) ---------- */
+async function syncAllItemsToPublicMirrorFromSettings(){
+  const btn = document.getElementById("syncMirrorBtnSettings");
+  btn.disabled = true;
+  const originalHTML = btn.innerHTML;
+  btn.innerHTML = "Syncing…";
+  try{
+    const snap = await getDocs(collection(db, "stockItems"));
+    let count = 0;
+    for(const d of snap.docs){
+      const data = d.data();
+      await syncPublicItem(d.id, { name: data.name, code: data.code, uom: data.uom, balance: data.balance, min: data.min });
+      count++;
+    }
+    showToast(`Synced ${count} item(s) to the public mirror`);
+  }catch(err){
+    showToast("Sync failed: " + err.message);
+  }finally{
+    btn.disabled = false;
+    btn.innerHTML = originalHTML;
+  }
+}
+window.syncAllItemsToPublicMirrorFromSettings = syncAllItemsToPublicMirrorFromSettings;
+
+/* ---------- PWA install / cache controls ---------- */
+let deferredInstallPrompt = null;
+window.addEventListener("beforeinstallprompt", (e)=>{
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  document.getElementById("installBtn").disabled = false;
+  document.getElementById("installStatus").textContent = "Available to install";
+});
+window.addEventListener("appinstalled", ()=>{
+  document.getElementById("installStatus").textContent = "Installed on this device";
+  document.getElementById("installBtn").disabled = true;
+});
+function triggerInstall(){
+  if(!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  deferredInstallPrompt.userChoice.finally(()=>{ deferredInstallPrompt = null; });
+}
+window.triggerInstall = triggerInstall;
+
+if(window.matchMedia && window.matchMedia("(display-mode: standalone)").matches){
+  document.getElementById("installStatus").textContent = "Installed on this device";
+} else {
+  document.getElementById("installStatus").textContent = "Not installed";
+}
+
+async function clearCacheAndUpdate(){
+  if(!confirm("This clears the app's offline cache and reloads with the latest deployed version. Continue?")) return;
+  try{
+    if("caches" in window){
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    if("serviceWorker" in navigator){
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+  }catch(err){
+    console.error("cache clear failed:", err);
+  }
+  location.reload(true);
+}
+window.clearCacheAndUpdate = clearCacheAndUpdate;
+
+async function checkForUpdates(){
+  if(!("serviceWorker" in navigator)){
+    showToast("Service worker not supported in this browser");
+    return;
+  }
+  const reg = await navigator.serviceWorker.getRegistration();
+  if(reg){
+    await reg.update();
+    showToast("Checked for updates — reload if a new version was found");
+  }else{
+    showToast("No service worker registered yet");
+  }
+}
+window.checkForUpdates = checkForUpdates;
+
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.getRegistration().then(reg=>{
+    if(reg && reg.active && reg.active.scriptURL){
+      fetch(reg.active.scriptURL).then(r=>r.text()).then(txt=>{
+        const m = txt.match(/CACHE_NAME\s*=\s*["']([^"']+)["']/);
+        document.getElementById("swCacheName").textContent = m ? m[1] : "unknown";
+      }).catch(()=>{ document.getElementById("swCacheName").textContent = "unknown"; });
+    }else{
+      document.getElementById("swCacheName").textContent = "not registered";
+    }
+  });
+}
+
+window.addEventListener("beforeunload", (e)=>{
+  if(dirty){ e.preventDefault(); e.returnValue = ""; }
+});
+</script>
+</body>
+</html>

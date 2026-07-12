@@ -1,6 +1,6 @@
 // Cabro City — service worker
 // Bump CACHE_NAME to force all clients to refresh cached assets.
-const CACHE_NAME = "cabro-city-v2";
+const CACHE_NAME = "cabro-city-v3";
 
 const PRECACHE_URLS = [
   "/",
@@ -10,6 +10,8 @@ const PRECACHE_URLS = [
   "/suppliers",
   "/grn",
   "/issue",
+  "/settings",
+  "/audit",
   "/manifest.json",
   "/logo-data.js",
   "/cabro-city-logo.png",
