@@ -922,29 +922,33 @@ async function generateDispatchPDF(data){
   pdf.text("Sign-off", marginX, y);
   y += 10;
 
-  const sigLineWidth = 80;
+  const colGap = 6;
+  const colWidth = (pageWidth - marginX * 2 - colGap * 2) / 3;
+  const sigLineWidth = colWidth - 4;
   const signers = [
     { num: "1.", label: "Dispatcher", name: data.dispatcherName },
     { num: "2.", label: "Security Officer", name: data.securityName },
     { num: "3.", label: "Rider / Driver", name: data.riderName }
   ];
-  signers.forEach(s=>{
+  signers.forEach((s, i)=>{
+    const x = marginX + i * (colWidth + colGap);
     pdf.setFont("helvetica","bold");
     pdf.setFontSize(10);
-    pdf.text(`${s.num} ${s.label}`, marginX, y);
+    pdf.text(`${s.num} ${s.label}`, x, y);
     pdf.setFont("helvetica","normal");
     pdf.setFontSize(9);
     pdf.setTextColor(90);
-    pdf.text(`Name: ${s.name || "_________________________"}`, marginX, y + 6);
+    const nameLines = pdf.splitTextToSize(`Name: ${s.name || "_______________"}`, colWidth);
+    pdf.text(nameLines, x, y + 6);
     pdf.setTextColor(0);
     pdf.setDrawColor(150);
-    pdf.line(marginX, y + 18, marginX + sigLineWidth, y + 18);
+    pdf.line(x, y + 18, x + sigLineWidth, y + 18);
     pdf.setFontSize(8);
     pdf.setTextColor(140);
-    pdf.text("Signature & Date", marginX, y + 23);
+    pdf.text("Signature & Date", x, y + 23);
     pdf.setTextColor(0);
-    y += 32;
   });
+  y += 32;
 
   pdf.save(`${data.ref}-dispatch-note.pdf`);
 }
