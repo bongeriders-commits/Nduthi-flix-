@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Employees — Cabro City</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#f5590a">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" href="/icon-192.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ffffff; --panel:#f6f6f8; --panel-alt:#eeeef1; --panel-raise:#ffffff;
+    --line:#e2e2e6; --line-soft:#ececf0; --text:#151517; --text-dim:#68686f; --text-faint:#9a9aa2;
+    --oxide:#f5590a; --oxide-dim:#b8420a; --amber:#b45309; --red:#e13a3a; --green:#16a34a; --blue:#2563eb;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  html,body{background:#f4f4f6;color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  button,input,select,textarea{font-family:inherit;}
+
+  .app-shell{max-width:1040px;margin:0 auto;min-height:100vh;background:var(--bg);position:relative;padding-bottom:96px;border-left:1px solid var(--line);border-right:1px solid var(--line);}
+  @media(max-width:1060px){ .app-shell{border-left:none;border-right:none;} }
+  .app-shell{display:none;} .app-shell.ready{display:block;}
+
+  .mobile-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#ffffff;z-index:30;}
+  .mh-left{display:flex;align-items:center;gap:14px;}
+  .back-btn{background:none;border:none;color:var(--text);cursor:pointer;padding:4px;display:flex;}
+  .back-btn svg{width:22px;height:22px;}
+  .mh-logo{display:flex;align-items:center;gap:10px;cursor:pointer;background:none;border:none;padding:0;}
+  .brand-logo-img{height:36px;width:auto;display:block;}
+  .avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#3a3a40,#1c1c1f);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;font-family:'Oswald',sans-serif;flex-shrink:0;border:1.5px solid #3a3a40;cursor:pointer;}
+
+  .page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:22px 20px 16px;}
+  .page-head h1{margin:0;font-size:25px;font-weight:800;letter-spacing:-0.01em;color:var(--text);}
+  .page-head p{margin:5px 0 0;font-size:12.5px;color:var(--text-dim);}
+  .btn-add{display:flex;align-items:center;gap:8px;background:var(--oxide);border:none;color:#fff;padding:11px 18px;border-radius:11px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+  .btn-add:hover{background:#ff6b1f;}
+  .btn-add svg{width:15px;height:15px;}
+
+  /* ===== Search / filter ===== */
+  .toolbar{display:flex;gap:10px;padding:0 20px 16px;flex-wrap:wrap;}
+  .search{flex:1;min-width:220px;position:relative;}
+  .search input{width:100%;background:#ffffff;border:1px solid var(--line);color:var(--text);padding:12px 40px 12px 16px;border-radius:11px;font-size:13.5px;}
+  .search input::placeholder{color:var(--text-faint);}
+  .search input:focus{outline:2px solid var(--oxide);outline-offset:-1px;}
+  .search svg{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-faint);pointer-events:none;}
+  .btn-filter{display:flex;align-items:center;gap:8px;background:#ffffff;border:1px solid var(--line);color:var(--text);padding:12px 16px;border-radius:11px;font-size:13.5px;font-weight:600;cursor:pointer;white-space:nowrap;}
+  .btn-filter svg{width:15px;height:15px;color:var(--text-dim);}
+  .btn-filter.on{border-color:var(--oxide);color:var(--oxide);}
+
+  /* ===== Stats ===== */
+  .hr-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:0 20px 16px;}
+  .hr-stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;}
+  .hr-stat .n{font-size:20px;font-weight:800;font-family:'Oswald',sans-serif;}
+  .hr-stat .l{font-size:11px;color:var(--text-dim);margin-top:2px;}
+
+  /* ===== Cards ===== */
+  .hr-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:0 20px 10px;display:flex;align-items:center;gap:12px;cursor:pointer;}
+  .hr-card:hover{border-color:var(--text-faint);}
+  .hr-card .ic{width:40px;height:40px;border-radius:50%;background:var(--panel-alt);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;font-family:'Oswald',sans-serif;}
+  .hr-card .body{flex:1;min-width:0;}
+  .hr-card .name{font-weight:700;font-size:14px;}
+  .hr-card .sub{font-size:12px;color:var(--text-dim);margin-top:2px;}
+  .hr-card .side{text-align:right;flex-shrink:0;}
+  .pill{display:inline-flex;align-items:center;padding:5px 12px;border-radius:100px;font-size:11.5px;font-weight:700;white-space:nowrap;}
+  .pill.active{background:#dcfce7;color:var(--green);}
+  .pill.inactive{background:#fde2e2;color:var(--red);}
+  .empty-state{text-align:center;color:var(--text-faint);padding:40px 18px;font-size:13px;}
+
+  /* ===== Bottom nav ===== */
+  .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:1040px;background:var(--panel);border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-around;padding:11px 4px 16px;z-index:40;}
+  .nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;color:var(--text-faint);font-size:9.5px;cursor:pointer;flex:1;padding:2px 0;max-width:120px;}
+  .nav-item svg{width:19px;height:19px;}
+  .nav-item.active{color:var(--oxide);}
+  @media(min-width:860px){ .app-shell{max-width:none;width:100%;margin:0;border:none;} .bottom-nav{max-width:none;} }
+
+  /* ===== Modal ===== */
+  .overlay{position:fixed;inset:0;background:rgba(10,10,11,0.55);display:none;align-items:center;justify-content:center;z-index:100;padding:20px;}
+  .overlay.open{display:flex;}
+  .modal{background:#fff;border:1px solid var(--line);border-radius:14px;width:100%;max-width:460px;padding:22px 22px 20px;max-height:88vh;overflow-y:auto;}
+  .modal h3{font-size:16px;margin:0 0 16px;color:var(--text);font-weight:800;}
+  .field{margin-bottom:13px;}
+  .field label{display:block;font-size:11.5px;color:var(--text-dim);font-weight:600;margin-bottom:6px;}
+  .field select,.field input,.field textarea{width:100%;background:var(--panel);border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:8px;font-size:13.5px;}
+  .field textarea{resize:vertical;min-height:60px;}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .modal-actions{display:flex;gap:10px;margin-top:18px;}
+  .btn-cancel{flex:1;padding:11px;border-radius:9px;border:1px solid var(--line);background:transparent;color:var(--text-dim);font-size:13px;font-weight:600;cursor:pointer;}
+  .btn-submit{flex:2;padding:11px;border-radius:9px;border:none;background:var(--oxide);color:#fff;font-size:13px;font-weight:700;cursor:pointer;}
+  .btn-submit:hover{background:#ff6b1f;}
+  .btn-delete{flex:1;padding:11px;border-radius:9px;border:1px solid var(--red);background:transparent;color:var(--red);font-size:13px;font-weight:700;cursor:pointer;}
+  #formError{display:none;color:var(--red);font-size:12.5px;margin:-4px 0 10px;}
+
+  button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--oxide);outline-offset:2px;}
+
+  #accessGate{position:fixed;inset:0;z-index:9999;background:#fff;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .gate-card{width:100%;max-width:340px;text-align:center;}
+  .gate-card img{height:34px;width:auto;margin:0 auto 22px;display:block;}
+  .gate-card h2{font-size:17px;font-weight:700;margin-bottom:6px;}
+  .gate-card p{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-bottom:22px;}
+  .gate-card .field{margin-bottom:12px;text-align:left;}
+  .gate-card .field input{width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--line);font-size:13.5px;box-sizing:border-box;}
+  .gate-card .btn-submit{width:100%;padding:12px;border-radius:9px;border:1px solid var(--oxide);background:var(--oxide);color:#fff;font-weight:700;font-size:13px;cursor:pointer;margin-top:6px;}
+  .gate-error{color:var(--red);font-size:12px;margin:-4px 0 12px;text-align:left;}
+</style>
+</head>
+<body>
+
+<div id="accessGate" style="display:none;">
+  <div class="gate-card">
+    <img alt="Cabro City" class="cc-logo" src="/cabro-city-logo.png">
+    <h2>Sign in required</h2>
+    <p>Employee records are restricted to owner and admin accounts.</p>
+    <div class="field"><label>Email</label><input type="email" id="gateEmail" placeholder="you@cabrocity.co.ke"></div>
+    <div class="field"><label>Password</label><input type="password" id="gatePassword" placeholder="••••••••"></div>
+    <div id="gateError" class="gate-error" style="display:none;"></div>
+    <button class="btn-submit" onclick="submitGateLogin()">Sign In</button>
+  </div>
+</div>
+
+<div class="app-shell">
+  <div class="mobile-header">
+    <div class="mh-left">
+      <button class="back-btn" aria-label="Back to HR" onclick="location.href='hr.html'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <button class="mh-logo" onclick="location.href='index.html'" aria-label="Cabro City home">
+        <img alt="Cabro City" class="brand-logo-img cc-logo" src="/cabro-city-logo.png">
+      </button>
+    </div>
+    <div class="avatar" onclick="location.href='index.html'"><span id="avatarInitials">--</span></div>
+  </div>
+
+  <div class="page-head">
+    <div><h1>Employees</h1><p>Staff records for Cabro City</p></div>
+    <button class="btn-add" onclick="openEmployeeModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      Add Employee
+    </button>
+  </div>
+
+  <div class="hr-stats" id="empStats"></div>
+
+  <div class="toolbar">
+    <div class="search">
+      <input type="text" id="empSearch" placeholder="Search by name, position or department">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    </div>
+    <button class="btn-filter" id="statusFilterBtn" onclick="cycleStatusFilter()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+      <span id="statusFilterLabel">All Statuses</span>
+    </button>
+  </div>
+
+  <div id="employeeList"></div>
+
+  <div class="bottom-nav">
+    <button class="nav-item" onclick="location.href='index.html'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home
+    </button>
+    <button class="nav-item" onclick="location.href='stock-list.html'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Inventory
+    </button>
+    <button class="nav-item active" onclick="location.href='hr.html'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>HR
+    </button>
+    <button class="nav-item" onclick="location.href='index.html#reports'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Reports
+    </button>
+  </div>
+</div>
+
+<!-- EMPLOYEE MODAL -->
+<div class="overlay" id="employeeOverlay">
+  <div class="modal">
+    <h3 id="employeeModalTitle">Add Employee</h3>
+    <div class="field"><label>Full Name *</label><input type="text" id="empName" placeholder="e.g. Peter Kamau"></div>
+    <div class="field-row">
+      <div class="field"><label>Position *</label><input type="text" id="empPosition" placeholder="e.g. Storeman"></div>
+      <div class="field"><label>Department</label><input type="text" id="empDepartment" placeholder="e.g. Warehouse"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Phone *</label><input type="tel" id="empPhone" placeholder="0722 123 456"></div>
+      <div class="field"><label>Email</label><input type="email" id="empEmail" placeholder="optional"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>ID Number</label><input type="text" id="empIdNumber" placeholder="National ID"></div>
+      <div class="field"><label>Date Joined</label><input type="date" id="empDateJoined"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Salary (KSh)</label><input type="number" id="empSalary" placeholder="e.g. 25000"></div>
+      <div class="field"><label>Salary Type</label>
+        <select id="empSalaryType"><option value="monthly">Monthly</option><option value="daily">Daily</option></select>
+      </div>
+    </div>
+    <div class="field"><label>Emergency Contact</label><input type="text" id="empEmergencyContact" placeholder="Name — phone number"></div>
+    <div class="field"><label>Status</label>
+      <select id="empStatus"><option value="Active">Active</option><option value="Exited">Exited</option></select>
+    </div>
+    <div id="formError"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('employeeOverlay')">Cancel</button>
+      <button class="btn-submit" onclick="submitEmployee()">Save Employee</button>
+    </div>
+  </div>
+</div>
+
+<!-- EMPLOYEE DETAIL MODAL -->
+<div class="overlay" id="employeeDetailOverlay">
+  <div class="modal" style="max-width:520px;">
+    <h3 id="empDetailName">Employee</h3>
+    <div id="empDetailBody" style="font-size:13.5px;color:var(--text-dim);"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('employeeDetailOverlay')">Close</button>
+      <button class="btn-delete" id="empDetailDeleteBtn">Remove</button>
+      <button class="btn-submit" id="empDetailEditBtn">Edit</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import {
+  db, loginAdmin, logoutAdmin, watchAdmin, initialsFromEmail,
+  collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot,
+  serverTimestamp, query, orderBy, canManage, fetchOrBootstrapRole, logAudit
+} from "./firebase-config.js";
+
+let myRole = null, myUid = "", myName = "";
+let employees = [];
+let editingEmployeeId = null;
+let statusFilter = "all"; // all -> active -> exited -> all
+
+/* ---------- Access gate (owner/admin only) ---------- */
+watchAdmin(async (user) => {
+  const gate = document.getElementById("accessGate");
+  const gateErr = document.getElementById("gateError");
+  document.getElementById("avatarInitials").textContent = user ? initialsFromEmail(user.email) : "--";
+
+  if (!user) {
+    gate.style.display = "flex";
+    document.querySelector(".app-shell").classList.remove("ready");
+    return;
+  }
+  let roleDoc;
+  try { roleDoc = await fetchOrBootstrapRole(user); } catch (e) { roleDoc = null; }
+  if (!roleDoc || !canManage(roleDoc.role)) {
+    gateErr.textContent = "Employee records are restricted to owner and admin accounts.";
+    gateErr.style.display = "block";
+    gate.style.display = "flex";
+    document.querySelector(".app-shell").classList.remove("ready");
+    logoutAdmin();
+    return;
+  }
+  myRole = roleDoc.role;
+  myUid = user.uid;
+  myName = roleDoc.displayName || user.email;
+  gate.style.display = "none";
+  document.querySelector(".app-shell").classList.add("ready");
+  boot();
+});
+
+window.submitGateLogin = function () {
+  const email = document.getElementById("gateEmail").value.trim();
+  const password = document.getElementById("gatePassword").value;
+  const err = document.getElementById("gateError");
+  err.style.display = "none";
+  loginAdmin(email, password).catch(() => {
+    err.textContent = "Sign-in failed — check your email and password.";
+    err.style.display = "block";
+  });
+};
+
+function closeModal(id) { document.getElementById(id).classList.remove("open"); }
+window.closeModal = closeModal;
+function openModal(id) { document.getElementById(id).classList.add("open"); }
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+function fmtDate(d) {
+  if (!d) return "—";
+  if (typeof d === "string") return d;
+  const dt = d.toDate ? d.toDate() : new Date(d);
+  return dt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+}
+function initials(name) {
+  const parts = (name || "").trim().split(/\s+/);
+  return ((parts[0]?.[0] || "") + (parts[1]?.[0] || "")).toUpperCase() || "?";
+}
+
+function boot() {
+  watchEmployees();
+  document.getElementById("empSearch").addEventListener("input", renderEmployees);
+}
+
+/* ---------- Employees ---------- */
+function watchEmployees() {
+  const q = query(collection(db, "hrEmployees"), orderBy("name", "asc"));
+  onSnapshot(q, (snap) => {
+    employees = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderEmployees();
+  });
+}
+
+window.cycleStatusFilter = function () {
+  statusFilter = statusFilter === "all" ? "active" : statusFilter === "active" ? "exited" : "all";
+  const label = statusFilter === "all" ? "All Statuses" : statusFilter === "active" ? "Active Only" : "Exited Only";
+  document.getElementById("statusFilterLabel").textContent = label;
+  document.getElementById("statusFilterBtn").classList.toggle("on", statusFilter !== "all");
+  renderEmployees();
+};
+
+function renderEmployees() {
+  const active = employees.filter(e => e.status !== "Exited").length;
+  document.getElementById("empStats").innerHTML = `
+    <div class="hr-stat"><div class="n">${employees.length}</div><div class="l">Total Employees</div></div>
+    <div class="hr-stat"><div class="n">${active}</div><div class="l">Active</div></div>
+    <div class="hr-stat"><div class="n">${employees.length - active}</div><div class="l">Exited</div></div>
+  `;
+
+  const term = (document.getElementById("empSearch").value || "").toLowerCase().trim();
+  let rows = employees;
+  if (statusFilter === "active") rows = rows.filter(e => e.status !== "Exited");
+  if (statusFilter === "exited") rows = rows.filter(e => e.status === "Exited");
+  if (term) rows = rows.filter(e =>
+    (e.name || "").toLowerCase().includes(term) ||
+    (e.position || "").toLowerCase().includes(term) ||
+    (e.department || "").toLowerCase().includes(term)
+  );
+
+  const list = document.getElementById("employeeList");
+  if (!rows.length) { list.innerHTML = `<div class="empty-state">No employees match — try adding one or adjusting your search.</div>`; return; }
+  list.innerHTML = rows.map(e => `
+    <div class="hr-card" onclick="openEmployeeDetail('${e.id}')">
+      <div class="ic">${initials(e.name)}</div>
+      <div class="body">
+        <div class="name">${e.name}</div>
+        <div class="sub">${e.position || "—"}${e.department ? " · " + e.department : ""} · ${e.phone || "—"}</div>
+      </div>
+      <div class="side"><span class="pill ${e.status === "Exited" ? "inactive" : "active"}">${e.status || "Active"}</span></div>
+    </div>
+  `).join("");
+}
+
+window.openEmployeeModal = function (id) {
+  editingEmployeeId = id || null;
+  const e = id ? employees.find(x => x.id === id) : null;
+  document.getElementById("employeeModalTitle").textContent = e ? "Edit Employee" : "Add Employee";
+  document.getElementById("empName").value = e?.name || "";
+  document.getElementById("empPosition").value = e?.position || "";
+  document.getElementById("empDepartment").value = e?.department || "";
+  document.getElementById("empPhone").value = e?.phone || "";
+  document.getElementById("empEmail").value = e?.email || "";
+  document.getElementById("empIdNumber").value = e?.idNumber || "";
+  document.getElementById("empDateJoined").value = e?.dateJoined || todayStr();
+  document.getElementById("empSalary").value = e?.salaryAmount || "";
+  document.getElementById("empSalaryType").value = e?.salaryType || "monthly";
+  document.getElementById("empEmergencyContact").value = e?.emergencyContact || "";
+  document.getElementById("empStatus").value = e?.status || "Active";
+  document.getElementById("formError").style.display = "none";
+  openModal("employeeOverlay");
+};
+
+window.submitEmployee = async function () {
+  const name = document.getElementById("empName").value.trim();
+  const position = document.getElementById("empPosition").value.trim();
+  const phone = document.getElementById("empPhone").value.trim();
+  const err = document.getElementById("formError");
+  if (!name || !position || !phone) {
+    err.textContent = "Name, position and phone are required."; err.style.display = "block"; return;
+  }
+  const payload = {
+    name, position,
+    department: document.getElementById("empDepartment").value.trim(),
+    phone, email: document.getElementById("empEmail").value.trim(),
+    idNumber: document.getElementById("empIdNumber").value.trim(),
+    dateJoined: document.getElementById("empDateJoined").value,
+    salaryAmount: Number(document.getElementById("empSalary").value) || 0,
+    salaryType: document.getElementById("empSalaryType").value,
+    emergencyContact: document.getElementById("empEmergencyContact").value.trim(),
+    status: document.getElementById("empStatus").value,
+    updatedAt: serverTimestamp()
+  };
+  try {
+    if (editingEmployeeId) {
+      await updateDoc(doc(db, "hrEmployees", editingEmployeeId), payload);
+      await logAudit({ actorUid: myUid, actorName: myName, actorRole: myRole, action: "hr_employee_update", entityType: "hrEmployee", entityId: editingEmployeeId, entityLabel: name, summary: `Updated employee record for ${name}` });
+    } else {
+      payload.createdAt = serverTimestamp();
+      const ref = await addDoc(collection(db, "hrEmployees"), payload);
+      await logAudit({ actorUid: myUid, actorName: myName, actorRole: myRole, action: "hr_employee_create", entityType: "hrEmployee", entityId: ref.id, entityLabel: name, summary: `Added new employee ${name}` });
+    }
+    closeModal("employeeOverlay");
+  } catch (e) {
+    err.textContent = "Could not save — check your connection and try again."; err.style.display = "block";
+  }
+};
+
+window.openEmployeeDetail = function (id) {
+  const e = employees.find(x => x.id === id);
+  if (!e) return;
+  document.getElementById("empDetailName").textContent = e.name;
+  document.getElementById("empDetailBody").innerHTML = `
+    <p><strong>Position:</strong> ${e.position || "—"}${e.department ? " · " + e.department : ""}</p>
+    <p><strong>Phone:</strong> ${e.phone || "—"} &nbsp; <strong>Email:</strong> ${e.email || "—"}</p>
+    <p><strong>ID Number:</strong> ${e.idNumber || "—"}</p>
+    <p><strong>Date Joined:</strong> ${fmtDate(e.dateJoined)}</p>
+    <p><strong>Salary:</strong> ${e.salaryAmount ? "KSh " + Number(e.salaryAmount).toLocaleString() + " / " + e.salaryType : "—"}</p>
+    <p><strong>Emergency Contact:</strong> ${e.emergencyContact || "—"}</p>
+    <p><strong>Status:</strong> <span class="pill ${e.status === "Exited" ? "inactive" : "active"}">${e.status || "Active"}</span></p>
+  `;
+  document.getElementById("empDetailEditBtn").onclick = () => { closeModal("employeeDetailOverlay"); openEmployeeModal(id); };
+  document.getElementById("empDetailDeleteBtn").onclick = async () => {
+    if (!confirm(`Remove ${e.name} from employee records? This cannot be undone.`)) return;
+    try {
+      await deleteDoc(doc(db, "hrEmployees", id));
+      await logAudit({ actorUid: myUid, actorName: myName, actorRole: myRole, action: "hr_employee_delete", entityType: "hrEmployee", entityId: id, entityLabel: e.name, summary: `Removed employee record for ${e.name}` });
+      closeModal("employeeDetailOverlay");
+    } catch (err) { alert("Could not remove — try again."); }
+  };
+  openModal("employeeDetailOverlay");
+};
+</script>
+</body>
+</html>

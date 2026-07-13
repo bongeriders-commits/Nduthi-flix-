@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Human Resources — Cabro City</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#f5590a">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" href="/icon-192.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ffffff; --panel:#f6f6f8; --panel-alt:#eeeef1; --panel-raise:#ffffff;
+    --line:#e2e2e6; --line-soft:#ececf0; --text:#151517; --text-dim:#68686f; --text-faint:#9a9aa2;
+    --oxide:#f5590a; --oxide-dim:#b8420a; --amber:#b45309; --red:#e13a3a; --green:#16a34a; --blue:#2563eb;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  html,body{background:#f4f4f6;color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  button,input,select,textarea{font-family:inherit;}
+
+  .app-shell{max-width:1040px;margin:0 auto;min-height:100vh;background:var(--bg);position:relative;padding-bottom:96px;border-left:1px solid var(--line);border-right:1px solid var(--line);}
+  @media(max-width:1060px){ .app-shell{border-left:none;border-right:none;} }
+  .app-shell{display:none;} .app-shell.ready{display:block;}
+
+  .mobile-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#ffffff;z-index:30;}
+  .mh-left{display:flex;align-items:center;gap:14px;}
+  .back-btn{background:none;border:none;color:var(--text);cursor:pointer;padding:4px;display:flex;}
+  .back-btn svg{width:22px;height:22px;}
+  .mh-logo{display:flex;align-items:center;gap:10px;cursor:pointer;background:none;border:none;padding:0;}
+  .brand-logo-img{height:36px;width:auto;display:block;}
+  .avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#3a3a40,#1c1c1f);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;font-family:'Oswald',sans-serif;flex-shrink:0;border:1.5px solid #3a3a40;cursor:pointer;}
+
+  .page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:22px 20px 4px;}
+  .page-head h1{margin:0;font-size:25px;font-weight:800;letter-spacing:-0.01em;color:var(--text);}
+  .page-head p{margin:5px 0 0;font-size:12.5px;color:var(--text-dim);}
+  .btn-add{display:flex;align-items:center;gap:8px;background:var(--oxide);border:none;color:#fff;padding:11px 18px;border-radius:11px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+  .btn-add:hover{background:#ff6b1f;}
+  .btn-add svg{width:15px;height:15px;}
+
+  /* ===== Tabs ===== */
+  .hr-tabs{display:flex;gap:4px;padding:16px 20px 0;overflow-x:auto;border-bottom:1px solid var(--line);}
+  .hr-tab{flex-shrink:0;background:none;border:none;padding:10px 14px;font-size:13px;font-weight:700;color:var(--text-faint);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;}
+  .hr-tab.active{color:var(--oxide);border-bottom-color:var(--oxide);}
+  .hr-pane{display:none;padding:16px 20px 8px;}
+  .hr-pane.active{display:block;}
+
+  /* ===== Summary strip ===== */
+  .hr-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px;}
+  .hr-stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;}
+  .hr-stat .n{font-size:20px;font-weight:800;font-family:'Oswald',sans-serif;}
+  .hr-stat .l{font-size:11px;color:var(--text-dim);margin-top:2px;}
+
+  /* ===== Cards / rows ===== */
+  .hr-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer;}
+  .hr-card:hover{border-color:var(--text-faint);}
+  .hr-card .ic{width:40px;height:40px;border-radius:50%;background:var(--panel-alt);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;font-family:'Oswald',sans-serif;}
+  .hr-card .body{flex:1;min-width:0;}
+  .hr-card .name{font-weight:700;font-size:14px;}
+  .hr-card .sub{font-size:12px;color:var(--text-dim);margin-top:2px;}
+  .hr-card .side{text-align:right;flex-shrink:0;}
+  .pill{display:inline-flex;align-items:center;padding:5px 12px;border-radius:100px;font-size:11.5px;font-weight:700;white-space:nowrap;}
+  .pill.active,.pill.approved,.pill.present,.pill.paid,.pill.done{background:#dcfce7;color:var(--green);}
+  .pill.inactive,.pill.rejected,.pill.absent{background:#fde2e2;color:var(--red);}
+  .pill.pending,.pill.late{background:#fef3c7;color:var(--amber);}
+  .pill.leave{background:#e0e7ff;color:var(--blue);}
+  .empty-state{text-align:center;color:var(--text-faint);padding:40px 18px;font-size:13px;}
+
+  /* ===== Buttons ===== */
+  .btn-sm{padding:8px 14px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--text);}
+  .btn-sm.primary{background:var(--oxide);border-color:var(--oxide);color:#fff;}
+  .btn-sm.approve{background:#dcfce7;border-color:#dcfce7;color:var(--green);}
+  .btn-sm.reject{background:#fde2e2;border-color:#fde2e2;color:var(--red);}
+  .row-actions{display:flex;gap:8px;flex-shrink:0;}
+
+  /* ===== Checklist ===== */
+  .chk-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line-soft);}
+  .chk-row:last-child{border-bottom:none;}
+  .chk-row input{width:18px;height:18px;accent-color:var(--oxide);}
+  .chk-row span{font-size:13.5px;}
+  .chk-row.done span{text-decoration:line-through;color:var(--text-faint);}
+  .progress-bar{height:8px;background:var(--panel-alt);border-radius:5px;overflow:hidden;margin-top:6px;}
+  .progress-bar .fill{height:100%;background:var(--oxide);}
+
+  /* ===== Payroll table ===== */
+  .table-wrap{margin:0 0 14px;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;}
+  .table-scroll{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;min-width:640px;}
+  thead th{text-align:left;font-size:11.5px;letter-spacing:0.04em;color:var(--text-dim);padding:13px 16px;border-bottom:1px solid var(--line);background:#fafafb;font-weight:700;white-space:nowrap;}
+  tbody td{padding:12px 16px;font-size:13.5px;border-bottom:1px solid var(--line-soft);color:var(--text);vertical-align:middle;}
+  tbody tr:last-child td{border-bottom:none;}
+
+  /* ===== Bottom nav ===== */
+  .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:1040px;background:var(--panel);border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-around;padding:11px 4px 16px;z-index:40;}
+  .nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;color:var(--text-faint);font-size:9.5px;cursor:pointer;flex:1;padding:2px 0;max-width:120px;}
+  .nav-item svg{width:19px;height:19px;}
+  .nav-item.active{color:var(--oxide);}
+  @media(min-width:860px){ .app-shell{max-width:none;width:100%;margin:0;border:none;} .bottom-nav{max-width:none;} }
+
+  /* ===== Modal ===== */
+  .overlay{position:fixed;inset:0;background:rgba(10,10,11,0.55);display:none;align-items:center;justify-content:center;z-index:100;padding:20px;}
+  .overlay.open{display:flex;}
+  .modal{background:#fff;border:1px solid var(--line);border-radius:14px;width:100%;max-width:460px;padding:22px 22px 20px;max-height:88vh;overflow-y:auto;}
+  .modal h3{font-size:16px;margin:0 0 16px;color:var(--text);font-weight:800;}
+  .field{margin-bottom:13px;}
+  .field label{display:block;font-size:11.5px;color:var(--text-dim);font-weight:600;margin-bottom:6px;}
+  .field select,.field input,.field textarea{width:100%;background:var(--panel);border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:8px;font-size:13.5px;}
+  .field textarea{resize:vertical;min-height:60px;}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .modal-actions{display:flex;gap:10px;margin-top:18px;}
+  .btn-cancel{flex:1;padding:11px;border-radius:9px;border:1px solid var(--line);background:transparent;color:var(--text-dim);font-size:13px;font-weight:600;cursor:pointer;}
+  .btn-submit{flex:2;padding:11px;border-radius:9px;border:none;background:var(--oxide);color:#fff;font-size:13px;font-weight:700;cursor:pointer;}
+  .btn-submit:hover{background:#ff6b1f;}
+  #formError{display:none;color:var(--red);font-size:12.5px;margin:-4px 0 10px;}
+
+  button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--oxide);outline-offset:2px;}
+
+  #accessGate{position:fixed;inset:0;z-index:9999;background:#fff;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .gate-card{width:100%;max-width:340px;text-align:center;}
+  .gate-card img{height:34px;width:auto;margin:0 auto 22px;display:block;}
+  .gate-card h2{font-size:17px;font-weight:700;margin-bottom:6px;}
+  .gate-card p{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-bottom:22px;}
+  .gate-card .field{margin-bottom:12px;text-align:left;}
+  .gate-card .field input{width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--line);font-size:13.5px;box-sizing:border-box;}
+  .gate-card .btn-submit{width:100%;padding:12px;border-radius:9px;border:1px solid var(--oxide);background:var(--oxide);color:#fff;font-weight:700;font-size:13px;cursor:pointer;margin-top:6px;}
+  .gate-error{color:var(--red);font-size:12px;margin:-4px 0 12px;text-align:left;}
+</style>
+</head>
+<body>
+
+<div id="accessGate" style="display:none;">
+  <div class="gate-card">
+    <img alt="Cabro City" class="cc-logo" src="/cabro-city-logo.png">
+    <h2>Sign in required</h2>
+    <p>Human Resources is restricted to owner and admin accounts.</p>
+    <div class="field"><label>Email</label><input type="email" id="gateEmail" placeholder="you@cabrocity.co.ke"></div>
+    <div class="field"><label>Password</label><input type="password" id="gatePassword" placeholder="••••••••"></div>
+    <div id="gateError" class="gate-error" style="display:none;"></div>
+    <button class="btn-submit" onclick="submitGateLogin()">Sign In</button>
+  </div>
+</div>
+
+<div class="app-shell">
+  <div class="mobile-header">
+    <div class="mh-left">
+      <button class="back-btn" aria-label="Back to home" onclick="location.href='index.html'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <button class="mh-logo" onclick="location.href='index.html'" aria-label="Cabro City home">
+        <img alt="Cabro City" class="brand-logo-img cc-logo" src="/cabro-city-logo.png">
+      </button>
+    </div>
+    <div class="avatar" onclick="location.href='index.html'"><span id="avatarInitials">--</span></div>
+  </div>
+
+  <div class="page-head">
+    <div><h1>Human Resources</h1><p>Attendance, leave, payroll, onboarding &amp; performance</p></div>
+    <button class="btn-add" onclick="location.href='employees.html'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Employees
+    </button>
+  </div>
+
+  <div class="hr-tabs" id="hrTabs">
+    <button class="hr-tab active" data-tab="attendance">Attendance</button>
+    <button class="hr-tab" data-tab="leave">Leave</button>
+    <button class="hr-tab" data-tab="payroll">Payroll</button>
+    <button class="hr-tab" data-tab="onboarding">Onboarding</button>
+    <button class="hr-tab" data-tab="performance">Performance</button>
+  </div>
+
+  <!-- ===== ATTENDANCE ===== -->
+  <div class="hr-pane active" id="pane-attendance">
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+      <input type="date" id="attDate" style="padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:13.5px;">
+      <span style="font-size:12px;color:var(--text-dim);" id="attDateLabel"></span>
+    </div>
+    <div id="attendanceList"></div>
+  </div>
+
+  <!-- ===== LEAVE ===== -->
+  <div class="hr-pane" id="pane-leave">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+      <button class="btn-add" onclick="openLeaveModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        New Leave Request
+      </button>
+    </div>
+    <div id="leaveList"></div>
+  </div>
+
+  <!-- ===== PAYROLL ===== -->
+  <div class="hr-pane" id="pane-payroll">
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+      <input type="month" id="payrollPeriod" style="padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:13.5px;">
+      <button class="btn-add" onclick="generatePayrollRun()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        Generate Run
+      </button>
+    </div>
+    <div class="hr-stats" id="payrollStats"></div>
+    <div class="table-wrap"><div class="table-scroll">
+      <table>
+        <thead><tr><th>Employee</th><th>Base</th><th>Bonuses</th><th>Deductions</th><th>Net Pay</th><th>Status</th><th></th></tr></thead>
+        <tbody id="payrollTableBody"></tbody>
+      </table>
+    </div></div>
+  </div>
+
+  <!-- ===== ONBOARDING ===== -->
+  <div class="hr-pane" id="pane-onboarding">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+      <button class="btn-add" onclick="openOnboardingModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        Start Onboarding
+      </button>
+    </div>
+    <div id="onboardingList"></div>
+  </div>
+
+  <!-- ===== PERFORMANCE ===== -->
+  <div class="hr-pane" id="pane-performance">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+      <button class="btn-add" onclick="openPerformanceModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        Add Note
+      </button>
+    </div>
+    <div id="performanceList"></div>
+  </div>
+
+  <div class="bottom-nav">
+    <button class="nav-item" onclick="location.href='index.html'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home
+    </button>
+    <button class="nav-item" onclick="location.href='stock-list.html'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Inventory
+    </button>
+    <button class="nav-item active" onclick="location.href='hr.html'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>HR
+    </button>
+    <button class="nav-item" onclick="location.href='index.html#reports'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Reports
+    </button>
+  </div>
+</div>
+
+<!-- LEAVE MODAL -->
+<div class="overlay" id="leaveOverlay">
+  <div class="modal">
+    <h3>New Leave Request</h3>
+    <div class="field"><label>Employee *</label><select id="leaveEmployee"></select></div>
+    <div class="field"><label>Leave Type</label>
+      <select id="leaveType"><option>Annual</option><option>Sick</option><option>Compassionate</option><option>Maternity/Paternity</option><option>Unpaid</option></select>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Start Date *</label><input type="date" id="leaveStart"></div>
+      <div class="field"><label>End Date *</label><input type="date" id="leaveEnd"></div>
+    </div>
+    <div class="field"><label>Reason</label><textarea id="leaveReason" placeholder="Optional"></textarea></div>
+    <div id="formError2"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('leaveOverlay')">Cancel</button>
+      <button class="btn-submit" onclick="submitLeave()">Submit Request</button>
+    </div>
+  </div>
+</div>
+
+<!-- ONBOARDING MODAL -->
+<div class="overlay" id="onboardingOverlay">
+  <div class="modal">
+    <h3>Start Onboarding</h3>
+    <div class="field"><label>Employee *</label><select id="onbEmployee"></select></div>
+    <div class="field"><label>Start Date</label><input type="date" id="onbStartDate"></div>
+    <div id="formError3"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('onboardingOverlay')">Cancel</button>
+      <button class="btn-submit" onclick="submitOnboarding()">Start Checklist</button>
+    </div>
+  </div>
+</div>
+
+<!-- ONBOARDING CHECKLIST MODAL -->
+<div class="overlay" id="checklistOverlay">
+  <div class="modal">
+    <h3 id="checklistTitle">Onboarding Checklist</h3>
+    <div id="checklistBody"></div>
+    <div class="progress-bar"><div class="fill" id="checklistProgress" style="width:0%"></div></div>
+    <div class="modal-actions"><button class="btn-cancel" onclick="closeModal('checklistOverlay')">Close</button></div>
+  </div>
+</div>
+
+<!-- PERFORMANCE MODAL -->
+<div class="overlay" id="performanceOverlay">
+  <div class="modal">
+    <h3>Add Performance Note</h3>
+    <div class="field"><label>Employee *</label><select id="perfEmployee"></select></div>
+    <div class="field"><label>Type</label>
+      <select id="perfType"><option>Commendation</option><option>Review</option><option>Warning</option><option>Disciplinary</option></select>
+    </div>
+    <div class="field"><label>Date</label><input type="date" id="perfDate"></div>
+    <div class="field"><label>Note *</label><textarea id="perfNote" placeholder="What happened, and any follow-up needed"></textarea></div>
+    <div id="formError4"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('performanceOverlay')">Cancel</button>
+      <button class="btn-submit" onclick="submitPerformance()">Save Note</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import {
+  db, loginAdmin, logoutAdmin, watchAdmin, initialsFromEmail,
+  collection, doc, addDoc, updateDoc, deleteDoc, getDoc, getDocs, setDoc, onSnapshot,
+  serverTimestamp, query, orderBy, where, canManage, canManageTeam, fetchOrBootstrapRole, logAudit
+} from "./firebase-config.js";
+
+let myRole = null, myUid = "", myName = "";
+let employees = [];       // cached for dropdowns
+let editingEmployeeId = null;
+
+/* ---------- Access gate (owner/admin only) ---------- */
+watchAdmin(async (user) => {
+  const gate = document.getElementById("accessGate");
+  const gateErr = document.getElementById("gateError");
+  document.getElementById("avatarInitials").textContent = user ? initialsFromEmail(user.email) : "--";
+
+  if (!user) {
+    gate.style.display = "flex";
+    document.querySelector(".app-shell").classList.remove("ready");
+    return;
+  }
+  let roleDoc;
+  try { roleDoc = await fetchOrBootstrapRole(user); } catch (e) { roleDoc = null; }
+  if (!roleDoc || !canManage(roleDoc.role)) {
+    gateErr.textContent = "Human Resources is restricted to owner and admin accounts.";
+    gateErr.style.display = "block";
+    gate.style.display = "flex";
+    document.querySelector(".app-shell").classList.remove("ready");
+    logoutAdmin();
+    return;
+  }
+  myRole = roleDoc.role;
+  myUid = user.uid;
+  myName = roleDoc.displayName || user.email;
+  gate.style.display = "none";
+  document.querySelector(".app-shell").classList.add("ready");
+  boot();
+});
+
+window.submitGateLogin = function () {
+  const email = document.getElementById("gateEmail").value.trim();
+  const password = document.getElementById("gatePassword").value;
+  const err = document.getElementById("gateError");
+  err.style.display = "none";
+  loginAdmin(email, password).catch(() => {
+    err.textContent = "Sign-in failed — check your email and password.";
+    err.style.display = "block";
+  });
+};
+
+/* ---------- Tabs ---------- */
+document.getElementById("hrTabs").addEventListener("click", (e) => {
+  const btn = e.target.closest(".hr-tab");
+  if (!btn) return;
+  document.querySelectorAll(".hr-tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".hr-pane").forEach(p => p.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById("pane-" + btn.dataset.tab).classList.add("active");
+});
+
+window.closeModal = (id) => document.getElementById(id).classList.remove("open");
+function openModal(id) { document.getElementById(id).classList.add("open"); }
+
+function fmtDate(d) {
+  if (!d) return "—";
+  if (typeof d === "string") return d;
+  const dt = d.toDate ? d.toDate() : new Date(d);
+  return dt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+}
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+function initials(name) {
+  const parts = (name || "").trim().split(/\s+/);
+  return ((parts[0]?.[0] || "") + (parts[1]?.[0] || "")).toUpperCase() || "?";
+}
+
+function boot() {
+  document.getElementById("attDate").value = todayStr();
+  document.getElementById("payrollPeriod").value = todayStr().slice(0, 7);
+  document.getElementById("perfDate").value = todayStr();
+  watchEmployees();
+  watchAttendance();
+  watchLeave();
+  watchPayroll();
+  watchOnboarding();
+  watchPerformance();
+  document.getElementById("attDate").addEventListener("change", renderAttendance);
+  document.getElementById("payrollPeriod").addEventListener("change", renderPayroll);
+}
+
+/* =========================================================
+   EMPLOYEES (read-only feed — managed on employees.html)
+   ========================================================= */
+function watchEmployees() {
+  const q = query(collection(db, "hrEmployees"), orderBy("name", "asc"));
+  onSnapshot(q, (snap) => {
+    employees = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    refreshEmployeeDropdowns();
+    renderAttendance();
+    renderPayroll();
+  });
+}
+
+function refreshEmployeeDropdowns() {
+  const activeOnly = employees.filter(e => e.status !== "Exited");
+  const opts = activeOnly.map(e => `<option value="${e.id}">${e.name}</option>`).join("");
+  ["leaveEmployee", "onbEmployee", "perfEmployee"].forEach(id => {
+    const sel = document.getElementById(id);
+    const current = sel.value;
+    sel.innerHTML = opts || `<option value="">No active employees</option>`;
+    if (current) sel.value = current;
+  });
+}
+
+/* =========================================================
+   ATTENDANCE
+   ========================================================= */
+let attendanceToday = {}; // employeeId -> record for selected date
+
+function watchAttendance() {
+  onSnapshot(collection(db, "hrAttendance"), (snap) => {
+    window._allAttendance = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderAttendance();
+  });
+}
+
+function renderAttendance() {
+  const dateVal = document.getElementById("attDate").value || todayStr();
+  document.getElementById("attDateLabel").textContent = "Showing " + fmtDate(dateVal);
+  const all = window._allAttendance || [];
+  attendanceToday = {};
+  all.filter(a => a.date === dateVal).forEach(a => { attendanceToday[a.employeeId] = a; });
+
+  const active = employees.filter(e => e.status !== "Exited");
+  const list = document.getElementById("attendanceList");
+  if (!active.length) { list.innerHTML = `<div class="empty-state">Add employees first to track attendance.</div>`; return; }
+
+  list.innerHTML = active.map(e => {
+    const rec = attendanceToday[e.id];
+    const status = rec?.status || "Not marked";
+    const pillClass = status === "Present" ? "present" : status === "Late" ? "late" : status === "Absent" ? "absent" : status === "On Leave" ? "leave" : "pending";
+    return `
+    <div class="hr-card" style="cursor:default;">
+      <div class="ic">${initials(e.name)}</div>
+      <div class="body">
+        <div class="name">${e.name}</div>
+        <div class="sub">${rec ? (rec.clockIn ? "In: " + rec.clockIn : "") + (rec.clockOut ? " · Out: " + rec.clockOut : "") : "No record yet"}</div>
+      </div>
+      <div class="row-actions">
+        <span class="pill ${pillClass}">${status}</span>
+        ${!rec?.clockIn ? `<button class="btn-sm primary" onclick="clockAction('${e.id}','${e.name}','in')">Clock In</button>` :
+          !rec?.clockOut ? `<button class="btn-sm" onclick="clockAction('${e.id}','${e.name}','out')">Clock Out</button>` : ""}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+window.clockAction = async function (empId, empName, kind) {
+  const dateVal = document.getElementById("attDate").value || todayStr();
+  const timeNow = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  const existing = attendanceToday[empId];
+  try {
+    if (kind === "in") {
+      const isLate = timeNow > "09:00";
+      if (existing) {
+        await updateDoc(doc(db, "hrAttendance", existing.id), { clockIn: timeNow, status: isLate ? "Late" : "Present" });
+      } else {
+        await addDoc(collection(db, "hrAttendance"), {
+          employeeId: empId, employeeName: empName, date: dateVal,
+          clockIn: timeNow, clockOut: "", status: isLate ? "Late" : "Present",
+          createdAt: serverTimestamp()
+        });
+      }
+    } else {
+      if (existing) await updateDoc(doc(db, "hrAttendance", existing.id), { clockOut: timeNow });
+    }
+    await logAudit({ actorUid: myUid, actorName: myName, actorRole: myRole, action: "hr_attendance_" + kind, entityType: "hrAttendance", entityId: empId, entityLabel: empName, summary: `${empName} clocked ${kind} at ${timeNow}` });
+  } catch (e) { alert("Could not record attendance — try again."); }
+};
+
+/* =========================================================
+   LEAVE
+   ========================================================= */
+function watchLeave() {
+  const q = query(collection(db, "hrLeave"), orderBy("createdAt", "desc"));
+  onSnapshot(q, (snap) => {
+    window._allLeave = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderLeave();
+  });
+}
+
+function renderLeave() {
+  const list = document.getElementById("leaveList");
+  const rows = window._allLeave || [];
+  if (!rows.length) { list.innerHTML = `<div class="empty-state">No leave requests yet.</div>`; return; }
+  list.innerHTML = rows.map(r => `
+    <div class="hr-card" style="cursor:default;">
+      <div class="ic">${initials(r.employeeName)}</div>
+      <div class="body">
+        <div class="name">${r.employeeName}</div>
+        <div class="sub">${r.type} · ${fmtDate(r.startDate)} → ${fmtDate(r.endDate)}${r.reason ? " · " + r.reason : ""}</div>
+      </div>
+      <div class="row-actions">
+        <span class="pill ${r.status.toLowerCase()}">${r.status}</span>
+        ${r.status === "Pending" ? `
+          <button class="btn-sm approve" onclick="reviewLeave('${r.id}','Approved','${r.employeeName}')">Approve</button>
+          <button class="btn-sm reject" onclick="reviewLeave('${r.id}','Rejected','${r.employeeName}')">Reject</button>` : ""}
+      </div>
+    </div>
+  `).join("");
+}
+
+window.openLeaveModal = function () {
+  document.getElementById("leaveStart").value = todayStr();
+  document.getElementById("leaveEnd").value = todayStr();
+  document.getElementById("leaveReason").value = "";
+  document.getElementById("formError2").style.display = "none";
+  refreshEmployeeDropdowns();
+  openModal("leaveOverlay");
+};
+
+window.submitLeave = async function () {
+  const empId = document.getElementById("leaveEmployee").value;
+  const emp = employees.find(e => e.id === empId);
+  const start = document.getElementById("leaveStart").value;
+  const end = document.getElementById("leaveEnd").value;
+  const err = document.getElementById("formError2");
+  if (!empId || !start || !end) { err.textContent = "Employee, start and end date are required."; err.style.display = "block"; return; }
+  try {
+    const ref = await addDoc(collection(db, "hrLeave"), {
+      employeeId: empId, employeeName: emp.name,
+      type: document.getElementById("leaveType").value,
+      startDate: start, endDate: end,
+      reason: document.getElementById("leaveReason").value.trim(),
+      status: "Pending", requestedBy: myName, createdAt: serverTimestamp()
+    });
+    await logAudit({ actorUid: myUid, actorName: myName, actorRole: myRole, action: "hr_leave_request", entityType: "hrLeave", entityId: ref.id, entityLabel: emp.name, summary: `Leave request for ${emp.name} (${start} to ${end})` });
+    closeModal("leaveOverlay");
+  } catch (e) { err.textContent = "Could not submit — try again."; err.style.display = "block"; }
+};
+
+window.reviewLeave = async function (id, decision, empName) {
+  try {
+    await updateDoc(doc(db, "hrLeave", id), { status: decision, reviewedBy: myName, reviewedAt: serverTimestamp() });
+    await logAudit({ actorUid: myUid, actorName: myName, actorRole: myRole, action: "hr_leave_" + decision.toLowerCase(), entityType: "hrLeave", entityId: id, entityLabel: empName, summary: `${decision} leave request for ${empName}` });
+  } catch (e) { alert("Could not update the request — try again."); }
+};
+
+/* =========================================================
+   PAYROLL
+   ========================================================= */
+function watchPayroll() {
+  onSnapshot(collection(db, "hrPayroll"), (snap) => {
+    window._allPayroll = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderPayroll();
+  });
+}
+
+function netPay(r) { return (Number(r.baseSalary) || 0) + (Number(r.bonuses) || 0) - (Number(r.deductions) || 0); }
+
+function renderPayroll() {
+  const period = document.getElementById("payrollPeriod").value || todayStr().slice(0, 7);
+  const all = window._allPayroll || [];
+  const rows = all.filter(r => r.period === period);
+
+  const totalNet = rows.reduce((s, r) => s + netPay(r), 0);
+  const paidCount = rows.filter(r => r.status === "Paid").length;
+  document.getElementById("payrollStats").innerHTML = `
+    <div class="hr-stat"><div class="n">${rows.length}</div><div class="l">Employees in run</div></div>
+    <div class="hr-stat"><div class="n">${paidCount}</div><div class="l">Paid</div></div>
+    <div class="hr-stat"><div class="n">KSh ${totalNet.toLocaleString()}</div><div class="l">Total net pay</div></div>
+  `;
+
+  const tbody = document.getElementById("payrollTableBody");
+  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="7" class="empty-state">No payroll run for this period yet — tap "Generate Run".</td></tr>`; return; }
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td>${r.employeeName}</td>
+      <td>KSh ${Number(r.baseSalary || 0).toLocaleString()}</td>
+      <td><input type="number" value="${r.bonuses || 0}" style="width:80px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;" onchange="updatePayrollLine('${r.id}','bonuses',this.value)"></td>
+      <td><input type="number" value="${r.deductions || 0}" style="width:80px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;" onchange="updatePayrollLine('${r.id}','deductions',this.value)"></td>
+      <td><strong>KSh ${netPay(r).toLocaleString()}</strong></td>
+      <td><span class="pill ${r.status === "Paid" ? "paid" : "pending"}">${r.status}</span></td>
+      <td>${r.status !== "Paid" ? `<button class="btn-sm primary" onclick="markPaid('${r.id}','${r.employeeName}')">Mark Paid</button>` : ""}</td>
+    </tr>
+  `).join("");
+}
+
+window.generatePayrollRun = async function () {
+  const period = document.getElementById("payrollPeriod").value;
+  if (!period) { alert("Pick a month first."); return; }
+  const existing = (window._allPayroll || []).filter(r => r.period === period).map(r => r.employeeId);
+  const toCreate = employees.filter(e => e.status !== "Exited" && !existing.includes(e.id));
+  if (!toCreate.length) { alert("Every active employee already has a payroll line for this period."); return; }
+  try {
+    for (const e of toCreate) {
+      await addDoc(collection(db, "hrPayroll"), {
+        employeeId: e.id, employeeName: e.name, period,
+        baseSalary: Number(e.salaryAmount) || 0, bonuses: 0, deductions: 0,
+        status: "Pending", createdAt: serverTimestamp()
+      });
+    }
+    await logAudit({ actorUid: myUid, actorName: myName, actorRole: myRole, action: "hr_payroll_run", entityType: "hrPayroll", entityId: period, entityLabel: period, summary: `Generated payroll run for ${period} (${toCreate.length} employees)` });
+  } catch (e) { alert("Could not generate payroll run — try again."); }
+};
+
+window.updatePayrollLine = async function (id, field, value) {
+  try { await updateDoc(doc(db, "hrPayroll", id), { [field]: Number(value) || 0 }); }
+  catch (e) { alert("Could not save that value — try again."); }
+};
+
+window.markPaid = async function (id, empName) {
+  try {
+    await updateDoc(doc(db, "hrPayroll", id), { status: "Paid", paidAt: serverTimestamp(), paidBy: myName });
+    await logAudit({ actorUid: myUid, actorName: myName, actorRole: myRole, action: "hr_payroll_paid", entityType: "hrPayroll", entityId: id, entityLabel: empName, summary: `Marked payroll as paid for ${empName}` });
+  } catch (e) { alert("Could not mark as paid — try again."); }
+};
+
+/* =========================================================
+   ONBOARDING
+   ========================================================= */
+const DEFAULT_CHECKLIST = [
+  "Collect copy of national ID",
+  "Sign employment contract",
+  "Create Cabro City login account",
+  "Collect emergency contact details",
+  "Issue uniform / safety gear",
+  "Introduce to team and branch manager",
+  "Collect bank / M-Pesa details for payroll"
+];
+
+function watchOnboarding() {
+  onSnapshot(collection(db, "hrOnboarding"), (snap) => {
+    window._allOnboarding = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderOnboarding();
+  });
+}
+
+function renderOnboarding() {
+  const list = document.getElementById("onboardingList");
+  const rows = window._allOnboarding || [];
+  if (!rows.length) { list.innerHTML = `<div class="empty-state">No onboarding in progress.</div>`; return; }
+  list.innerHTML = rows.map(r => {
+    const done = (r.checklist || []).filter(c => c.done).length;
+    const total = (r.checklist || []).length || 1;
+    const pct = Math.round((done / total) * 100);
+    return `
+    <div class="hr-card" onclick='openChecklist(${JSON.stringify(r.id)})'>
+      <div class="ic">${initials(r.employeeName)}</div>
+      <div class="body">
+        <div class="name">${r.employeeName}</div>
+        <div class="sub">Started ${fmtDate(r.startDate)} · ${done}/${total} steps done</div>
+        <div class="progress-bar"><div class="fill" style="width:${pct}%"></div></div>
+      </div>
+      <div class="side"><span class="pill ${pct === 100 ? "done" : "pending"}">${pct === 100 ? "Complete" : pct + "%"}</span></div>
+    </div>`;
+  }).join("");
+}
+
+window.openOnboardingModal = function () {
+  document.getElementById("onbStartDate").value = todayStr();
+  document.getElementById("formError3").style.display = "none";
+  refreshEmployeeDropdowns();
+  openModal("onboardingOverlay");
+};
+
+window.submitOnboarding = async function () {
+  const empId = document.getElementById("onbEmployee").value;
+  const emp = employees.find(e => e.id === empId);
+  const err = document.getElementById("formError3");
+  if (!empId) { err.textContent = "Pick an employee first."; err.style.display = "block"; return; }
+  try {
+    const ref = await addDoc(collection(db, "hrOnboarding"), {
+      employeeId: empId, employeeName: emp.name,
+      startDate: document.getElementById("onbStartDate").value,
+      checklist: DEFAULT_CHECKLIST.map(task => ({ task, done: false })),
+      createdAt: serverTimestamp()
+    });
+    await logAudit({ actorUid: myUid, actorName: myName, actorRole: myRole, action: "hr_onboarding_start", entityType: "hrOnboarding", entityId: ref.id, entityLabel: emp.name, summary: `Started onboarding for ${emp.name}` });
+    closeModal("onboardingOverlay");
+  } catch (e) { err.textContent = "Could not start onboarding — try again."; err.style.display = "block"; }
+};
+
+window.openChecklist = function (id) {
+  const r = (window._allOnboarding || []).find(x => x.id === id);
+  if (!r) return;
+  document.getElementById("checklistTitle").textContent = "Onboarding — " + r.employeeName;
+  renderChecklistBody(r);
+  openModal("checklistOverlay");
+};
+
+function renderChecklistBody(r) {
+  const body = document.getElementById("checklistBody");
+  const list = r.checklist || [];
+  body.innerHTML = list.map((c, i) => `
+    <div class="chk-row ${c.done ? "done" : ""}">
+      <input type="checkbox" ${c.done ? "checked" : ""} onchange="toggleChecklistItem('${r.id}',${i},this.checked)">
+      <span>${c.task}</span>
+    </div>
+  `).join("");
+  const done = list.filter(c => c.done).length;
+  document.getElementById("checklistProgress").style.width = Math.round((done / (list.length || 1)) * 100) + "%";
+}
+
+window.toggleChecklistItem = async function (id, index, checked) {
+  const r = (window._allOnboarding || []).find(x => x.id === id);
+  if (!r) return;
+  const checklist = r.checklist.map((c, i) => i === index ? { ...c, done: checked } : c);
+  try {
+    await updateDoc(doc(db, "hrOnboarding", id), { checklist });
+  } catch (e) { alert("Could not save — try again."); }
+};
+
+/* =========================================================
+   PERFORMANCE
+   ========================================================= */
+function watchPerformance() {
+  const q = query(collection(db, "hrPerformance"), orderBy("createdAt", "desc"));
+  onSnapshot(q, (snap) => {
+    window._allPerformance = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderPerformance();
+  });
+}
+
+function renderPerformance() {
+  const list = document.getElementById("performanceList");
+  const rows = window._allPerformance || [];
+  if (!rows.length) { list.innerHTML = `<div class="empty-state">No performance notes yet.</div>`; return; }
+  const typeClass = { Commendation: "active", Warning: "pending", Disciplinary: "inactive", Review: "leave" };
+  list.innerHTML = rows.map(r => `
+    <div class="hr-card" style="cursor:default;align-items:flex-start;">
+      <div class="ic">${initials(r.employeeName)}</div>
+      <div class="body">
+        <div class="name">${r.employeeName} <span class="pill ${typeClass[r.type] || "pending"}" style="margin-left:6px;">${r.type}</span></div>
+        <div class="sub">${fmtDate(r.date)} — ${r.note}</div>
+      </div>
+    </div>
+  `).join("");
+}
+
+window.openPerformanceModal = function () {
+  document.getElementById("perfDate").value = todayStr();
+  document.getElementById("perfNote").value = "";
+  document.getElementById("formError4").style.display = "none";
+  refreshEmployeeDropdowns();
+  openModal("performanceOverlay");
+};
+
+window.submitPerformance = async function () {
+  const empId = document.getElementById("perfEmployee").value;
+  const emp = employees.find(e => e.id === empId);
+  const note = document.getElementById("perfNote").value.trim();
+  const err = document.getElementById("formError4");
+  if (!empId || !note) { err.textContent = "Employee and note are required."; err.style.display = "block"; return; }
+  try {
+    const ref = await addDoc(collection(db, "hrPerformance"), {
+      employeeId: empId, employeeName: emp.name,
+      type: document.getElementById("perfType").value,
+      date: document.getElementById("perfDate").value,
+      note, createdBy: myName, createdAt: serverTimestamp()
+    });
+    await logAudit({ actorUid: myUid, actorName: myName, actorRole: myRole, action: "hr_performance_note", entityType: "hrPerformance", entityId: ref.id, entityLabel: emp.name, summary: `Added ${document.getElementById("perfType").value.toLowerCase()} note for ${emp.name}` });
+    closeModal("performanceOverlay");
+  } catch (e) { err.textContent = "Could not save — try again."; err.style.display = "block"; }
+};
+</script>
+</body>
+</html>
