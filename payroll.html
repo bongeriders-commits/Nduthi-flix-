@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payroll — Cabro City</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#f5590a">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" href="/icon-192.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+  :root{
+    --bg:#ffffff; --panel:#f6f6f8; --panel-alt:#eeeef1; --panel-raise:#ffffff;
+    --line:#e2e2e6; --line-soft:#ececf0; --text:#151517; --text-dim:#68686f; --text-faint:#9a9aa2;
+    --oxide:#f5590a; --oxide-dim:#b8420a; --amber:#b45309; --red:#e13a3a; --green:#16a34a; --blue:#2563eb;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  html,body{background:#f4f4f6;color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  button,input,select,textarea{font-family:inherit;}
+
+  .app-shell{max-width:1040px;margin:0 auto;min-height:100vh;background:var(--bg);position:relative;padding-bottom:96px;border-left:1px solid var(--line);border-right:1px solid var(--line);}
+  @media(max-width:1060px){ .app-shell{border-left:none;border-right:none;} }
+  .app-shell{display:none;} .app-shell.ready{display:block;}
+
+  .mobile-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#ffffff;z-index:30;}
+  .mh-left{display:flex;align-items:center;gap:14px;}
+  .back-btn{background:none;border:none;color:var(--text);cursor:pointer;padding:4px;display:flex;}
+  .back-btn svg{width:22px;height:22px;}
+  .mh-logo{display:flex;align-items:center;gap:10px;cursor:pointer;background:none;border:none;padding:0;}
+  .brand-logo-img{height:36px;width:auto;display:block;}
+  .avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#3a3a40,#1c1c1f);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;font-family:'Oswald',sans-serif;flex-shrink:0;border:1.5px solid #3a3a40;cursor:pointer;}
+
+  .page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:22px 20px 4px;}
+  .page-head h1{margin:0;font-size:25px;font-weight:800;letter-spacing:-0.01em;color:var(--text);}
+  .page-head p{margin:5px 0 0;font-size:12.5px;color:var(--text-dim);}
+  .btn-add{display:flex;align-items:center;gap:8px;background:var(--oxide);border:none;color:#fff;padding:11px 18px;border-radius:11px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+  .btn-add:hover{background:#ff6b1f;}
+  .btn-add svg{width:15px;height:15px;}
+  .btn-ghost{display:flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--line);color:var(--text);padding:10px 15px;border-radius:11px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;}
+  .btn-ghost:hover{border-color:var(--text-faint);}
+  .btn-ghost svg{width:14px;height:14px;}
+  .btn-ghost.danger{color:var(--red);border-color:#f3caca;}
+  .btn-sm{padding:6px 11px;border-radius:7px;border:1px solid var(--line);background:#fff;font-size:11.5px;font-weight:700;cursor:pointer;color:var(--text);white-space:nowrap;}
+  .btn-sm.primary{background:var(--oxide);border-color:var(--oxide);color:#fff;}
+  .btn-sm.primary:hover{background:#ff6b1f;}
+  .btn-sm.ghost{background:transparent;}
+
+  .toolbar{display:flex;gap:10px;padding:14px 20px 0;flex-wrap:wrap;align-items:center;}
+  .toolbar input[type="month"]{padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:13.5px;background:#fff;}
+  .period-chips{display:flex;gap:6px;flex-wrap:wrap;padding:10px 20px 0;}
+  .period-chip{font-size:11px;font-weight:700;padding:6px 11px;border-radius:20px;border:1px solid var(--line);background:#fff;color:var(--text-dim);cursor:pointer;}
+  .period-chip.active{border-color:var(--oxide);color:var(--oxide);background:#fff3ec;}
+
+  .search-row{display:flex;gap:10px;padding:14px 20px 0;flex-wrap:wrap;}
+  .search{flex:1;min-width:200px;position:relative;}
+  .search input{width:100%;background:#ffffff;border:1px solid var(--line);color:var(--text);padding:11px 38px 11px 14px;border-radius:11px;font-size:13.5px;}
+  .search input::placeholder{color:var(--text-faint);}
+  .search svg{position:absolute;right:13px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--text-faint);pointer-events:none;}
+  .status-select{padding:11px 12px;border:1px solid var(--line);border-radius:11px;font-size:13px;background:#fff;color:var(--text);}
+
+  .hr-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:14px 20px 4px;}
+  .hr-stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;}
+  .hr-stat .n{font-size:19px;font-weight:800;font-family:'Oswald',sans-serif;}
+  .hr-stat .l{font-size:10.5px;color:var(--text-dim);margin-top:2px;}
+  .hr-stat.warn .n{color:var(--amber);}
+  .hr-stat.good .n{color:var(--green);}
+
+  .rates-note{margin:14px 20px 0;background:#fff8f2;border:1px solid #fbdcc4;border-radius:12px;padding:12px 14px;font-size:12px;color:#8a4a12;line-height:1.55;}
+  .rates-note b{color:var(--oxide-dim);}
+  .rates-toggle{background:none;border:none;color:var(--oxide-dim);font-weight:700;font-size:12px;cursor:pointer;padding:0;text-decoration:underline;}
+  .rates-detail{display:none;margin-top:8px;padding-top:8px;border-top:1px solid #fbdcc4;}
+  .rates-detail.open{display:block;}
+  .rates-detail table{width:100%;font-size:11.5px;border-collapse:collapse;}
+  .rates-detail td{padding:3px 4px;border:none;}
+
+  .bulk-bar{display:flex;gap:8px;justify-content:flex-end;padding:14px 20px 0;flex-wrap:wrap;}
+
+  .table-wrap{margin:14px 20px 90px;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;}
+  .table-scroll{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;min-width:920px;}
+  thead th{text-align:left;font-size:11px;letter-spacing:0.03em;color:var(--text-dim);padding:12px 14px;border-bottom:1px solid var(--line);background:#fafafb;font-weight:700;white-space:nowrap;}
+  tbody td{padding:11px 14px;font-size:13px;border-bottom:1px solid var(--line-soft);color:var(--text);vertical-align:middle;white-space:nowrap;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:#fafafb;}
+  .num-in{width:78px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12.5px;text-align:right;}
+  .emp-cell .nm{font-weight:700;}
+  .emp-cell .sub{font-size:10.5px;color:var(--text-faint);}
+  .pill{display:inline-block;font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:20px;}
+  .pill.paid{background:#e7f7ec;color:var(--green);}
+  .pill.pending{background:#fdf2e3;color:var(--amber);}
+  .row-actions{display:flex;gap:6px;}
+  .empty-state{text-align:center;padding:40px 20px;color:var(--text-faint);font-size:13px;}
+
+  .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:1040px;background:var(--panel);border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-around;padding:11px 4px 16px;z-index:40;}
+  .nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;color:var(--text-faint);font-size:9.5px;cursor:pointer;flex:1;padding:2px 0;max-width:120px;}
+  .nav-item svg{width:19px;height:19px;}
+  .nav-item.active{color:var(--oxide);}
+  @media(min-width:860px){ .app-shell{max-width:none;width:100%;margin:0;border:none;} .bottom-nav{max-width:none;} }
+
+  .overlay{position:fixed;inset:0;background:rgba(10,10,11,0.55);display:none;align-items:center;justify-content:center;z-index:100;padding:20px;}
+  .overlay.open{display:flex;}
+  .modal{background:#fff;border:1px solid var(--line);border-radius:14px;width:100%;max-width:480px;padding:22px 22px 20px;max-height:88vh;overflow-y:auto;}
+  .modal.wide{max-width:560px;}
+  .modal h3{font-size:16px;margin:0 0 4px;color:var(--text);font-weight:800;}
+  .modal .modal-sub{font-size:12px;color:var(--text-dim);margin:0 0 16px;}
+  .field{margin-bottom:13px;}
+  .field label{display:block;font-size:11.5px;color:var(--text-dim);font-weight:600;margin-bottom:6px;}
+  .field select,.field input,.field textarea{width:100%;background:var(--panel);border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:8px;font-size:13.5px;}
+  .field textarea{resize:vertical;min-height:60px;}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .modal-actions{display:flex;gap:10px;margin-top:18px;}
+  .btn-cancel{flex:1;padding:11px;border-radius:9px;border:1px solid var(--line);background:transparent;color:var(--text-dim);font-size:13px;font-weight:600;cursor:pointer;}
+  .btn-submit{flex:2;padding:11px;border-radius:9px;border:none;background:var(--oxide);color:#fff;font-size:13px;font-weight:700;cursor:pointer;}
+  .btn-submit:hover{background:#ff6b1f;}
+  #formError{display:none;color:var(--red);font-size:12.5px;margin:-4px 0 10px;}
+
+  /* payslip */
+  .payslip{border:1px solid var(--line);border-radius:12px;overflow:hidden;}
+  .payslip-head{background:var(--panel);padding:16px 18px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .payslip-head h4{margin:0;font-size:15px;font-weight:800;}
+  .payslip-head .sub{font-size:11.5px;color:var(--text-dim);margin-top:3px;}
+  .payslip-row{display:flex;justify-content:space-between;padding:9px 18px;font-size:13px;border-bottom:1px solid var(--line-soft);}
+  .payslip-row.total{font-weight:800;background:var(--panel);border-bottom:none;}
+  .payslip-row .lbl{color:var(--text-dim);}
+  .payslip-row .neg{color:var(--red);}
+  .payslip-section-title{padding:10px 18px 2px;font-size:10.5px;font-weight:700;letter-spacing:0.04em;color:var(--text-faint);text-transform:uppercase;}
+
+  button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--oxide);outline-offset:2px;}
+
+  #accessGate{position:fixed;inset:0;z-index:9999;background:#fff;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .gate-card{width:100%;max-width:340px;text-align:center;}
+  .gate-card img{height:34px;width:auto;margin:0 auto 22px;display:block;}
+  .gate-card h2{font-size:17px;font-weight:700;margin-bottom:6px;}
+  .gate-card p{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-bottom:22px;}
+  .gate-card .field{margin-bottom:12px;text-align:left;}
+  .gate-card .field input{width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--line);font-size:13.5px;box-sizing:border-box;}
+  .gate-card .btn-submit{width:100%;padding:12px;border-radius:9px;border:1px solid var(--oxide);background:var(--oxide);color:#fff;font-weight:700;font-size:13px;cursor:pointer;margin-top:6px;}
+  .gate-error{color:var(--red);font-size:12px;margin:-4px 0 12px;text-align:left;}
+
+  @media print {
+    body *{visibility:hidden;}
+    #printArea, #printArea *{visibility:visible;}
+    #printArea{position:absolute;top:0;left:0;width:100%;padding:0;margin:0;}
+  }
+</style>
+</head>
+<body>
+
+<div id="accessGate" style="display:none;">
+  <div class="gate-card">
+    <img alt="Cabro City" class="cc-logo" src="/cabro-city-logo.png">
+    <h2>Sign in required</h2>
+    <p>Payroll is restricted to owner and admin accounts.</p>
+    <div class="field"><label>Email</label><input type="email" id="gateEmail" placeholder="you@cabrocity.co.ke"></div>
+    <div class="field"><label>Password</label><input type="password" id="gatePassword" placeholder="••••••••"></div>
+    <div id="gateError" class="gate-error" style="display:none;"></div>
+    <button class="btn-submit" onclick="submitGateLogin()">Sign In</button>
+  </div>
+</div>
+
+<div class="app-shell">
+  <div class="mobile-header">
+    <div class="mh-left">
+      <button class="back-btn" aria-label="Back to HR" onclick="location.href='hr.html'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <button class="mh-logo" onclick="location.href='index.html'" aria-label="Cabro City home">
+        <img alt="Cabro City" class="brand-logo-img cc-logo" src="/cabro-city-logo.png">
+      </button>
+    </div>
+    <div class="avatar" onclick="location.href='index.html'"><span id="avatarInitials">--</span></div>
+  </div>
+
+  <div class="page-head">
+    <div><h1>Payroll</h1><p>Runs, statutory deductions, payslips &amp; payouts</p></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn-ghost" onclick="exportCSV()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+        Export CSV
+      </button>
+      <button class="btn-add" onclick="generatePayrollRun()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        Generate Run
+      </button>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <input type="month" id="payrollPeriod">
+    <button class="btn-ghost" onclick="recalculateAll()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      Recalculate Statutory
+    </button>
+  </div>
+
+  <div class="period-chips" id="periodChips"></div>
+
+  <div class="rates-note">
+    <b>Statutory deductions</b> are estimated using PAYE, NSSF, SHIF and the Housing Levy. These rates change by law from time to time — <b>verify against the current KRA/NSSF/SHIF guidance</b> before relying on this for real payslips.
+    <button class="rates-toggle" onclick="toggleRatesDetail()">View current rates used</button>
+    <div class="rates-detail" id="ratesDetail">
+      <table>
+        <tr><td><b>PAYE bands (monthly)</b></td><td></td></tr>
+        <tr><td>Up to KSh 24,000</td><td>10%</td></tr>
+        <tr><td>24,001 – 32,333</td><td>25%</td></tr>
+        <tr><td>32,334 – 500,000</td><td>30%</td></tr>
+        <tr><td>500,001 – 800,000</td><td>32.5%</td></tr>
+        <tr><td>Above 800,000</td><td>35%</td></tr>
+        <tr><td>Personal relief</td><td>KSh 2,400 / month</td></tr>
+        <tr><td colspan="2" style="padding-top:6px;"><b>NSSF (employee, Tier I + II)</b></td></tr>
+        <tr><td>Tier I — up to KSh 8,000</td><td>6% (max 480)</td></tr>
+        <tr><td>Tier II — 8,000 to 72,000</td><td>6% (max 3,840)</td></tr>
+        <tr><td colspan="2" style="padding-top:6px;"><b>SHIF (Social Health Insurance Fund)</b></td></tr>
+        <tr><td>Of gross pay</td><td>2.75% (min KSh 300)</td></tr>
+        <tr><td colspan="2" style="padding-top:6px;"><b>Affordable Housing Levy</b></td></tr>
+        <tr><td>Employee share, of gross pay</td><td>1.5%</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="hr-stats" id="payrollStats"></div>
+
+  <div class="search-row">
+    <div class="search">
+      <input type="text" id="empSearch" placeholder="Search employee, department or position" oninput="renderPayroll()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    </div>
+    <select class="status-select" id="statusFilter" onchange="renderPayroll()">
+      <option value="all">All statuses</option>
+      <option value="Pending">Pending only</option>
+      <option value="Paid">Paid only</option>
+    </select>
+  </div>
+
+  <div class="bulk-bar">
+    <button class="btn-ghost" onclick="downloadAllPayslipsPDF()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+      Download All Payslips (PDF)
+    </button>
+    <button class="btn-ghost" onclick="markAllPaid()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+      Mark All Pending as Paid
+    </button>
+  </div>
+
+  <div class="table-wrap"><div class="table-scroll">
+    <table>
+      <thead><tr>
+        <th>Employee</th><th>Base</th><th>Allowances</th><th>Bonus</th><th>Gross</th>
+        <th>PAYE</th><th>NSSF</th><th>SHIF</th><th>Levy</th><th>Other Ded.</th>
+        <th>Net Pay</th><th>Status</th><th></th>
+      </tr></thead>
+      <tbody id="payrollTableBody"></tbody>
+    </table>
+  </div></div>
+
+  <div class="bottom-nav">
+    <button class="nav-item" onclick="location.href='index.html'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home
+    </button>
+    <button class="nav-item" onclick="location.href='stock-list.html'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Inventory
+    </button>
+    <button class="nav-item active" onclick="location.href='hr.html'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>HR
+    </button>
+    <button class="nav-item" onclick="location.href='index.html#reports'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Reports
+    </button>
+  </div>
+</div>
+
+<!-- EDIT PAYROLL LINE MODAL -->
+<div class="overlay" id="editOverlay">
+  <div class="modal">
+    <h3 id="editTitle">Edit Payroll Line</h3>
+    <p class="modal-sub" id="editSub"></p>
+    <div class="field-row">
+      <div class="field"><label>Base Salary (KSh)</label><input type="number" id="editBase"></div>
+      <div class="field"><label>Allowances (KSh)</label><input type="number" id="editAllowances"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Bonus (KSh)</label><input type="number" id="editBonus"></div>
+      <div class="field"><label>Other Deductions (KSh)</label><input type="number" id="editOtherDed"></div>
+    </div>
+    <div class="field"><label>Notes</label><textarea id="editNotes" placeholder="Loan repayment, advance recovery, etc."></textarea></div>
+    <div id="formError"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('editOverlay')">Cancel</button>
+      <button class="btn-submit" onclick="saveEditLine()">Save &amp; Recalculate</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAYSLIP MODAL -->
+<div class="overlay" id="payslipOverlay">
+  <div class="modal wide">
+    <div id="printArea">
+      <div class="payslip" id="payslipBody"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('payslipOverlay')">Close</button>
+      <button class="btn-ghost" onclick="window.print()" style="flex:1;justify-content:center;">Print</button>
+      <button class="btn-submit" onclick="downloadCurrentPayslipPDF()">Download PDF</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import {
+  db, loginAdmin, logoutAdmin, watchAdmin, initialsFromEmail,
+  collection, doc, addDoc, updateDoc, getDoc, getDocs, onSnapshot,
+  serverTimestamp, query, orderBy, canManage, fetchOrBootstrapRole, logAudit
+} from "./firebase-config.js";
+
+let myRole = null, myUid = "", myName = "";
+let employees = [];
+let allPayroll = [];
+let editingId = null;
+let currentPayslipId = null;
+
+/* ---------- Statutory calculation helpers (Kenya, approximate — verify current rates) ---------- */
+function calcPAYE(gross) {
+  const bands = [
+    { upTo: 24000, rate: 0.10 },
+    { upTo: 32333, rate: 0.25 },
+    { upTo: 500000, rate: 0.30 },
+    { upTo: 800000, rate: 0.325 },
+    { upTo: Infinity, rate: 0.35 }
+  ];
+  let tax = 0, lower = 0;
+  for (const b of bands) {
+    if (gross <= lower) break;
+    const taxable = Math.min(gross, b.upTo) - lower;
+    if (taxable > 0) tax += taxable * b.rate;
+    lower = b.upTo;
+  }
+  const relief = 2400;
+  return Math.max(0, Math.round(tax - relief));
+}
+function calcNSSF(gross) {
+  const tier1 = Math.min(gross, 8000) * 0.06;
+  const tier2 = Math.max(0, Math.min(gross, 72000) - 8000) * 0.06;
+  return Math.round(tier1 + tier2);
+}
+function calcSHIF(gross) {
+  return Math.round(Math.max(gross * 0.0275, gross > 0 ? 300 : 0));
+}
+function calcHousingLevy(gross) {
+  return Math.round(gross * 0.015);
+}
+function computeLine(base, allowances, bonus, otherDed) {
+  const gross = (Number(base) || 0) + (Number(allowances) || 0) + (Number(bonus) || 0);
+  const paye = calcPAYE(gross);
+  const nssf = calcNSSF(gross);
+  const shif = calcSHIF(gross);
+  const levy = calcHousingLevy(gross);
+  const net = gross - paye - nssf - shif - levy - (Number(otherDed) || 0);
+  return { gross, paye, nssf, shif, levy, net: Math.max(0, Math.round(net)) };
+}
+
+/* ---------- Access gate (owner/admin only) ---------- */
+watchAdmin(async (user) => {
+  const gate = document.getElementById("accessGate");
+  const gateErr = document.getElementById("gateError");
+  document.getElementById("avatarInitials").textContent = user ? initialsFromEmail(user.email) : "--";
+
+  if (!user) {
+    gate.style.display = "flex";
+    document.querySelector(".app-shell").classList.remove("ready");
+    return;
+  }
+  let roleDoc;
+  try { roleDoc = await fetchOrBootstrapRole(user); } catch (e) { roleDoc = null; }
+  if (!roleDoc || !canManage(roleDoc.role)) {
+    gateErr.textContent = "Payroll is restricted to owner and admin accounts.";
+    gateErr.style.display = "block";
+    gate.style.display = "flex";
+    document.querySelector(".app-shell").classList.remove("ready");
+    logoutAdmin();
+    return;
+  }
+  myRole = roleDoc.role;
+  myUid = user.uid;
+  myName = roleDoc.displayName || user.email;
+  gate.style.display = "none";
+  document.querySelector(".app-shell").classList.add("ready");
+  boot();
+});
+
+window.submitGateLogin = function () {
+  const email = document.getElementById("gateEmail").value.trim();
+  const password = document.getElementById("gatePassword").value;
+  const err = document.getElementById("gateError");
+  err.style.display = "none";
+  loginAdmin(email, password).catch(() => {
+    err.textContent = "Sign-in failed — check your email and password.";
+    err.style.display = "block";
+  });
+};
+
+window.closeModal = (id) => document.getElementById(id).classList.remove("open");
+function openModal(id) { document.getElementById(id).classList.add("open"); }
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+function fmt(n) { return "KSh " + Math.round(Number(n) || 0).toLocaleString(); }
+function toggleRatesDetail() { document.getElementById("ratesDetail").classList.toggle("open"); }
+window.toggleRatesDetail = toggleRatesDetail;
+
+function boot() {
+  document.getElementById("payrollPeriod").value = todayStr().slice(0, 7);
+  watchEmployees();
+  watchPayroll();
+  document.getElementById("payrollPeriod").addEventListener("change", () => { renderPeriodChips(); renderPayroll(); });
+}
+
+function watchEmployees() {
+  const q = query(collection(db, "hrEmployees"), orderBy("name", "asc"));
+  onSnapshot(q, (snap) => {
+    employees = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  });
+}
+
+function watchPayroll() {
+  onSnapshot(collection(db, "hrPayroll"), (snap) => {
+    allPayroll = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderPeriodChips();
+    renderPayroll();
+  });
+}
+
+function renderPeriodChips() {
+  const periods = [...new Set(allPayroll.map(r => r.period))].sort().reverse().slice(0, 8);
+  const current = document.getElementById("payrollPeriod").value;
+  const wrap = document.getElementById("periodChips");
+  if (!periods.length) { wrap.innerHTML = ""; return; }
+  wrap.innerHTML = periods.map(p => `
+    <button class="period-chip ${p === current ? "active" : ""}" onclick="jumpToPeriod('${p}')">${p}</button>
+  `).join("");
+}
+window.jumpToPeriod = function (p) {
+  document.getElementById("payrollPeriod").value = p;
+  renderPeriodChips();
+  renderPayroll();
+};
+
+function currentRows() {
+  const period = document.getElementById("payrollPeriod").value || todayStr().slice(0, 7);
+  const term = (document.getElementById("empSearch").value || "").toLowerCase();
+  const statusFilter = document.getElementById("statusFilter").value;
+  return allPayroll.filter(r => {
+    if (r.period !== period) return false;
+    if (statusFilter !== "all" && r.status !== statusFilter) return false;
+    if (term) {
+      const emp = employees.find(e => e.id === r.employeeId);
+      const hay = [r.employeeName, emp?.department, emp?.position].join(" ").toLowerCase();
+      if (!hay.includes(term)) return false;
+    }
+    return true;
+  }).sort((a, b) => (a.employeeName || "").localeCompare(b.employeeName || ""));
+}
+
+function renderPayroll() {
+  const rows = currentRows();
+
+  const totalGross = rows.reduce((s, r) => s + (Number(r.grossPay) || 0), 0);
+  const totalDed = rows.reduce((s, r) => s + (Number(r.paye) || 0) + (Number(r.nssf) || 0) + (Number(r.shif) || 0) + (Number(r.housingLevy) || 0) + (Number(r.otherDeductions) || 0), 0);
+  const totalNet = rows.reduce((s, r) => s + (Number(r.netPay) || 0), 0);
+  const paidCount = rows.filter(r => r.status === "Paid").length;
+  const pendingCount = rows.length - paidCount;
+
+  document.getElementById("payrollStats").innerHTML = `
+    <div class="hr-stat"><div class="n">${rows.length}</div><div class="l">In this run</div></div>
+    <div class="hr-stat"><div class="n">${fmt(totalGross)}</div><div class="l">Gross pay</div></div>
+    <div class="hr-stat warn"><div class="n">${fmt(totalDed)}</div><div class="l">Total deductions</div></div>
+    <div class="hr-stat good"><div class="n">${fmt(totalNet)}</div><div class="l">Total net pay</div></div>
+    <div class="hr-stat"><div class="n">${paidCount}</div><div class="l">Paid</div></div>
+    <div class="hr-stat warn"><div class="n">${pendingCount}</div><div class="l">Pending</div></div>
+  `;
+
+  const tbody = document.getElementById("payrollTableBody");
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="13" class="empty-state">No payroll lines match this period / filter yet — tap "Generate Run".</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r => {
+    const emp = employees.find(e => e.id === r.employeeId);
+    return `
+    <tr>
+      <td class="emp-cell"><div class="nm">${r.employeeName}</div><div class="sub">${emp?.position || "—"}${emp?.department ? " · " + emp.department : ""}</div></td>
+      <td>${fmt(r.baseSalary)}</td>
+      <td>${fmt(r.allowances)}</td>
+      <td>${fmt(r.bonuses)}</td>
+      <td><strong>${fmt(r.grossPay)}</strong></td>
+      <td>${fmt(r.paye)}</td>
+      <td>${fmt(r.nssf)}</td>
+      <td>${fmt(r.shif)}</td>
+      <td>${fmt(r.housingLevy)}</td>
+      <td>${fmt(r.otherDeductions)}</td>
+      <td><strong>${fmt(r.netPay)}</strong></td>
+      <td><span class="pill ${r.status === "Paid" ? "paid" : "pending"}">${r.status}</span></td>
+      <td>
+        <div class="row-actions">
+          <button class="btn-sm ghost" onclick="openPayslip('${r.id}')">Payslip</button>
+          <button class="btn-sm ghost" onclick="downloadPayslipPDF('${r.id}')">PDF</button>
+          <button class="btn-sm ghost" onclick="openEditLine('${r.id}')">Edit</button>
+          ${r.status !== "Paid" ? `<button class="btn-sm primary" onclick="markPaid('${r.id}','${r.employeeName}')">Mark Paid</button>` : ""}
+        </div>
+      </td>
+    </tr>
+  `;
+  }).join("");
+}
+window.renderPayroll = renderPayroll;
+
+/* ---------- Generate run ---------- */
+window.generatePayrollRun = async function () {
+  const period = document.getElementById("payrollPeriod").value;
+  if (!period) { alert("Pick a month first."); return; }
+  const existing = allPayroll.filter(r => r.period === period).map(r => r.employeeId);
+  const toCreate = employees.filter(e => e.status !== "Exited" && !existing.includes(e.id));
+  if (!toCreate.length) { alert("Every active employee already has a payroll line for this period."); return; }
+  try {
+    for (const e of toCreate) {
+      const base = Number(e.salaryAmount) || 0;
+      const calc = computeLine(base, 0, 0, 0);
+      await addDoc(collection(db, "hrPayroll"), {
+        employeeId: e.id, employeeName: e.name, period,
+        baseSalary: base, allowances: 0, bonuses: 0, otherDeductions: 0,
+        grossPay: calc.gross, paye: calc.paye, nssf: calc.nssf, shif: calc.shif, housingLevy: calc.levy,
+        netPay: calc.net, status: "Pending", createdAt: serverTimestamp()
+      });
+    }
+    await logAudit({ actorUid: myUid, actorName: myName, actorRole: myRole, action: "hr_payroll_run", entityType: "hrPayroll", entityId: period, entityLabel: period, summary: `Generated payroll run for ${period} (${toCreate.length} employees)` });
+  } catch (e) { alert("Could not generate payroll run — try again."); }
+};
+
+/* ---------- Recalculate statutory for all lines in current period (rates may have changed) ---------- */
+window.recalculateAll = async function () {
+  const rows = currentRows();
+  if (!rows.length) { alert("Nothing to recalculate for this period/filter."); return; }
+  if (!confirm(`Recalculate statutory deductions for ${rows.length} payroll line(s)? This won't change Base, Allowances or Bonus.`)) return;
+  try {
+    for (const r of rows) {
+      const calc = computeLine(r.baseSalary, r.allowances, r.bonuses, r.otherDeductions);
+      await updateDoc(doc(db, "hrPayroll", r.id), {
+        grossPay: calc.gross, paye: calc.paye, nssf: calc.nssf, shif: calc.shif, housingLevy: calc.levy,
+        netPay: calc.net, updatedAt: serverTimestamp()
+      });
+    }
+    await logAudit({ actorUid: myUid, actorName: myName, actorRole: myRole, action: "hr_payroll_recalc", entityType: "hrPayroll", entityId: document.getElementById("payrollPeriod").value, entityLabel: document.getElementById("payrollPeriod").value, summary: `Recalculated statutory deductions for ${rows.length} payroll line(s)` });
+  } catch (e) { alert("Could not recalculate — try again."); }
+};
+
+/* ---------- Edit a line ---------- */
+window.openEditLine = function (id) {
+  const r = allPayroll.find(x => x.id === id);
+  if (!r) return;
+  editingId = id;
+  document.getElementById("editTitle").textContent = "Edit Payroll Line";
+  document.getElementById("editSub").textContent = `${r.employeeName} — ${r.period}`;
+  document.getElementById("editBase").value = r.baseSalary || 0;
+  document.getElementById("editAllowances").value = r.allowances || 0;
+  document.getElementById("editBonus").value = r.bonuses || 0;
+  document.getElementById("editOtherDed").value = r.otherDeductions || 0;
+  document.getElementById("editNotes").value = r.notes || "";
+  document.getElementById("formError").style.display = "none";
+  openModal("editOverlay");
+};
+
+window.saveEditLine = async function () {
+  const r = allPayroll.find(x => x.id === editingId);
+  if (!r) return;
+  const base = Number(document.getElementById("editBase").value) || 0;
+  const allowances = Number(document.getElementById("editAllowances").value) || 0;
+  const bonus = Number(document.getElementById("editBonus").value) || 0;
+  const otherDed = Number(document.getElementById("editOtherDed").value) || 0;
+  const notes = document.getElementById("editNotes").value.trim();
+  const calc = computeLine(base, allowances, bonus, otherDed);
+  try {
+    await updateDoc(doc(db, "hrPayroll", editingId), {
+      baseSalary: base, allowances, bonuses: bonus, otherDeductions: otherDed, notes,
+      grossPay: calc.gross, paye: calc.paye, nssf: calc.nssf, shif: calc.shif, housingLevy: calc.levy,
+      netPay: calc.net, updatedAt: serverTimestamp()
+    });
+    await logAudit({ actorUid: myUid, actorName: myName, actorRole: myRole, action: "hr_payroll_edit", entityType: "hrPayroll", entityId: editingId, entityLabel: r.employeeName, summary: `Edited payroll line for ${r.employeeName} (${r.period})` });
+    closeModal("editOverlay");
+  } catch (e) {
+    const err = document.getElementById("formError");
+    err.textContent = "Could not save — try again.";
+    err.style.display = "block";
+  }
+};
+
+/* ---------- Mark paid ---------- */
+window.markPaid = async function (id, empName) {
+  try {
+    await updateDoc(doc(db, "hrPayroll", id), { status: "Paid", paidAt: serverTimestamp(), paidBy: myName });
+    await logAudit({ actorUid: myUid, actorName: myName, actorRole: myRole, action: "hr_payroll_paid", entityType: "hrPayroll", entityId: id, entityLabel: empName, summary: `Marked payroll as paid for ${empName}` });
+  } catch (e) { alert("Could not mark as paid — try again."); }
+};
+
+window.markAllPaid = async function () {
+  const rows = currentRows().filter(r => r.status !== "Paid");
+  if (!rows.length) { alert("No pending lines in this view."); return; }
+  if (!confirm(`Mark ${rows.length} pending payroll line(s) as Paid?`)) return;
+  try {
+    for (const r of rows) {
+      await updateDoc(doc(db, "hrPayroll", r.id), { status: "Paid", paidAt: serverTimestamp(), paidBy: myName });
+    }
+    await logAudit({ actorUid: myUid, actorName: myName, actorRole: myRole, action: "hr_payroll_bulk_paid", entityType: "hrPayroll", entityId: document.getElementById("payrollPeriod").value, entityLabel: document.getElementById("payrollPeriod").value, summary: `Marked ${rows.length} payroll line(s) as Paid` });
+  } catch (e) { alert("Could not complete bulk mark-paid — some lines may not have updated."); }
+};
+
+/* ---------- Payslip ---------- */
+window.openPayslip = function (id) {
+  const r = allPayroll.find(x => x.id === id);
+  if (!r) return;
+  currentPayslipId = id;
+  const emp = employees.find(e => e.id === r.employeeId);
+  const totalDed = (Number(r.paye) || 0) + (Number(r.nssf) || 0) + (Number(r.shif) || 0) + (Number(r.housingLevy) || 0) + (Number(r.otherDeductions) || 0);
+  document.getElementById("payslipBody").innerHTML = `
+    <div class="payslip-head">
+      <div>
+        <h4>${r.employeeName}</h4>
+        <div class="sub">${emp?.position || "—"}${emp?.department ? " · " + emp.department : ""}</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="sub">Cabro City — Payslip</div>
+        <div class="sub">Period: ${r.period}</div>
+        <div class="sub">Status: ${r.status}</div>
+      </div>
+    </div>
+    <div class="payslip-section-title">Earnings</div>
+    <div class="payslip-row"><span class="lbl">Base Salary</span><span>${fmt(r.baseSalary)}</span></div>
+    <div class="payslip-row"><span class="lbl">Allowances</span><span>${fmt(r.allowances)}</span></div>
+    <div class="payslip-row"><span class="lbl">Bonus</span><span>${fmt(r.bonuses)}</span></div>
+    <div class="payslip-row total"><span>Gross Pay</span><span>${fmt(r.grossPay)}</span></div>
+    <div class="payslip-section-title">Statutory Deductions</div>
+    <div class="payslip-row"><span class="lbl">PAYE</span><span class="neg">- ${fmt(r.paye)}</span></div>
+    <div class="payslip-row"><span class="lbl">NSSF</span><span class="neg">- ${fmt(r.nssf)}</span></div>
+    <div class="payslip-row"><span class="lbl">SHIF</span><span class="neg">- ${fmt(r.shif)}</span></div>
+    <div class="payslip-row"><span class="lbl">Housing Levy</span><span class="neg">- ${fmt(r.housingLevy)}</span></div>
+    ${Number(r.otherDeductions) ? `<div class="payslip-row"><span class="lbl">Other Deductions${r.notes ? " (" + r.notes + ")" : ""}</span><span class="neg">- ${fmt(r.otherDeductions)}</span></div>` : ""}
+    <div class="payslip-row total"><span>Total Deductions</span><span class="neg">- ${fmt(totalDed)}</span></div>
+    <div class="payslip-row total" style="font-size:15px;"><span>Net Pay</span><span>${fmt(r.netPay)}</span></div>
+  `;
+  openModal("payslipOverlay");
+};
+
+/* ---------- Company logo / name for the PDF header ----------
+   Prefers the custom logo/name set in Settings (already a data URL, so
+   it drops straight into jsPDF); falls back to the bundled Cabro City
+   logo/name, matching the pattern used in dispatch.html and issue.html. ---------- */
+let _bizCache = null;
+async function getBizInfo() {
+  if (_bizCache) return _bizCache;
+  let bizName = "Cabro City", logoUrl = null;
+  try {
+    const snap = await getDoc(doc(db, "settings", "app"));
+    if (snap.exists()) {
+      const s = snap.data();
+      if (s.bizName) bizName = s.bizName;
+      if (s.bizLogoDataUrl) logoUrl = s.bizLogoDataUrl;
+    }
+  } catch (e) { /* fall through to defaults */ }
+  if (!logoUrl) {
+    try {
+      const res = await fetch("/cabro-city-logo.png");
+      const blob = await res.blob();
+      logoUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (e) { console.error("logo load failed:", e); }
+  }
+  _bizCache = { bizName, logoUrl };
+  return _bizCache;
+}
+
+/* ---------- Draw one payslip into a jsPDF doc at the given start Y.
+   Returns the Y position after the slip, so callers can stack multiple
+   payslips on one page or decide to start a new page. ---------- */
+function drawPayslip(pdf, biz, r, emp, startY) {
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const marginX = 14;
+  let y = startY;
+
+  if (biz.logoUrl) {
+    try {
+      const logoW = 32, logoH = 32 * (385 / 1284);
+      pdf.addImage(biz.logoUrl, "PNG", marginX, y, logoW, logoH);
+    } catch (e) { console.error("addImage failed:", e); }
+  }
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(14);
+  pdf.text("PAYSLIP", pageWidth - marginX, y + 6, { align: "right" });
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(9.5);
+  pdf.setTextColor(90);
+  pdf.text(`${biz.bizName}`, pageWidth - marginX, y + 12, { align: "right" });
+  pdf.text(`Period: ${r.period}`, pageWidth - marginX, y + 17, { align: "right" });
+  pdf.setTextColor(0);
+
+  y += 24;
+  pdf.setDrawColor(220);
+  pdf.line(marginX, y, pageWidth - marginX, y);
+  y += 8;
+
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(11);
+  pdf.text(r.employeeName || "—", marginX, y);
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(9.5);
+  pdf.setTextColor(90);
+  const subLine = [emp?.position, emp?.department].filter(Boolean).join(" · ") || "—";
+  pdf.text(subLine, marginX, y + 5.5);
+  pdf.setTextColor(0);
+  pdf.text(`Status: ${r.status}`, pageWidth - marginX, y, { align: "right" });
+
+  const totalDed = (Number(r.paye) || 0) + (Number(r.nssf) || 0) + (Number(r.shif) || 0) + (Number(r.housingLevy) || 0) + (Number(r.otherDeductions) || 0);
+
+  pdf.autoTable({
+    startY: y + 10,
+    theme: "grid",
+    head: [["Earnings", "Amount (KSh)"]],
+    body: [
+      ["Base Salary", Number(r.baseSalary || 0).toLocaleString()],
+      ["Allowances", Number(r.allowances || 0).toLocaleString()],
+      ["Bonus", Number(r.bonuses || 0).toLocaleString()],
+      ["Gross Pay", Number(r.grossPay || 0).toLocaleString()]
+    ],
+    headStyles: { fillColor: [245, 89, 10] },
+    styles: { fontSize: 9.5 },
+    columnStyles: { 1: { halign: "right" } },
+    margin: { left: marginX, right: marginX },
+    didParseCell: (data) => {
+      if (data.row.index === 3 && data.section === "body") data.cell.styles.fontStyle = "bold";
+    }
+  });
+
+  const dedBody = [
+    ["PAYE", "- " + Number(r.paye || 0).toLocaleString()],
+    ["NSSF", "- " + Number(r.nssf || 0).toLocaleString()],
+    ["SHIF", "- " + Number(r.shif || 0).toLocaleString()],
+    ["Housing Levy", "- " + Number(r.housingLevy || 0).toLocaleString()]
+  ];
+  if (Number(r.otherDeductions)) {
+    dedBody.push(["Other Deductions" + (r.notes ? ` (${r.notes})` : ""), "- " + Number(r.otherDeductions).toLocaleString()]);
+  }
+  dedBody.push(["Total Deductions", "- " + totalDed.toLocaleString()]);
+
+  pdf.autoTable({
+    startY: pdf.lastAutoTable.finalY + 6,
+    theme: "grid",
+    head: [["Deductions", "Amount (KSh)"]],
+    body: dedBody,
+    headStyles: { fillColor: [245, 89, 10] },
+    styles: { fontSize: 9.5 },
+    columnStyles: { 1: { halign: "right" } },
+    margin: { left: marginX, right: marginX },
+    didParseCell: (data) => {
+      if (data.row.index === dedBody.length - 1 && data.section === "body") data.cell.styles.fontStyle = "bold";
+    }
+  });
+
+  y = pdf.lastAutoTable.finalY + 4;
+  pdf.setFillColor(246, 246, 248);
+  pdf.rect(marginX, y, pageWidth - marginX * 2, 12, "F");
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(11);
+  pdf.text("NET PAY", marginX + 4, y + 8);
+  pdf.text(`KSh ${Number(r.netPay || 0).toLocaleString()}`, pageWidth - marginX - 4, y + 8, { align: "right" });
+  pdf.setFont("helvetica", "normal");
+
+  y += 22;
+  pdf.setFontSize(9);
+  pdf.setTextColor(120);
+  pdf.text("Employee Signature: ____________________________", marginX, y);
+  pdf.text("Date: ______________", pageWidth - marginX - 40, y);
+  pdf.setTextColor(0);
+
+  return y + 10;
+}
+
+window.downloadCurrentPayslipPDF = async function () {
+  if (!currentPayslipId) return;
+  await downloadPayslipPDF(currentPayslipId);
+};
+
+async function downloadPayslipPDF(id) {
+  const r = allPayroll.find(x => x.id === id);
+  if (!r) return;
+  const emp = employees.find(e => e.id === r.employeeId);
+  const biz = await getBizInfo();
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF();
+  drawPayslip(pdf, biz, r, emp, 14);
+  const safeName = (r.employeeName || "employee").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+  pdf.save(`payslip-${safeName}-${r.period}.pdf`);
+  await logAudit({ actorUid: myUid, actorName: myName, actorRole: myRole, action: "hr_payslip_download", entityType: "hrPayroll", entityId: id, entityLabel: r.employeeName, summary: `Downloaded payslip PDF for ${r.employeeName} (${r.period})` });
+}
+window.downloadPayslipPDF = downloadPayslipPDF;
+
+window.downloadAllPayslipsPDF = async function () {
+  const rows = currentRows();
+  if (!rows.length) { alert("Nothing to export for this period/filter."); return; }
+  const biz = await getBizInfo();
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  rows.forEach((r, idx) => {
+    const emp = employees.find(e => e.id === r.employeeId);
+    if (idx > 0) pdf.addPage();
+    drawPayslip(pdf, biz, r, emp, 14);
+  });
+  const period = document.getElementById("payrollPeriod").value;
+  pdf.save(`payslips-${period}.pdf`);
+  await logAudit({ actorUid: myUid, actorName: myName, actorRole: myRole, action: "hr_payslip_bulk_download", entityType: "hrPayroll", entityId: period, entityLabel: period, summary: `Downloaded ${rows.length} payslip PDF(s) for ${period}` });
+};
+
+window.exportCSV = function () {
+  const rows = currentRows();
+  if (!rows.length) { alert("Nothing to export for this period/filter."); return; }
+  const headers = ["Employee", "Period", "Base Salary", "Allowances", "Bonus", "Gross Pay", "PAYE", "NSSF", "SHIF", "Housing Levy", "Other Deductions", "Net Pay", "Status"];
+  const lines = rows.map(r => [
+    r.employeeName, r.period, r.baseSalary, r.allowances, r.bonuses, r.grossPay,
+    r.paye, r.nssf, r.shif, r.housingLevy, r.otherDeductions, r.netPay, r.status
+  ].map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(","));
+  const csv = [headers.join(","), ...lines].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `payroll-${document.getElementById("payrollPeriod").value}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+</script>
+</body>
+</html>

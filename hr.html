@@ -195,11 +195,16 @@
 
   <!-- ===== PAYROLL ===== -->
   <div class="hr-pane" id="pane-payroll">
-    <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
-      <input type="month" id="payrollPeriod" style="padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:13.5px;">
-      <button class="btn-add" onclick="generatePayrollRun()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-        Generate Run
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;justify-content:space-between;">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <input type="month" id="payrollPeriod" style="padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:13.5px;">
+        <button class="btn-add" onclick="generatePayrollRun()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          Generate Run
+        </button>
+      </div>
+      <button class="btn-add" style="background:#fff;color:var(--oxide);border:1px solid var(--oxide);" onclick="location.href='payroll.html'">
+        Open Full Payroll Manager →
       </button>
     </div>
     <div class="hr-stats" id="payrollStats"></div>
