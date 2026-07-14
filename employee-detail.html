@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Employee — Cabro City</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#f5590a">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" href="/icon-192.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ffffff; --panel:#f6f6f8; --panel-alt:#eeeef1; --panel-raise:#ffffff;
+    --line:#e2e2e6; --line-soft:#ececf0; --text:#151517; --text-dim:#68686f; --text-faint:#9a9aa2;
+    --oxide:#f5590a; --oxide-dim:#b8420a; --amber:#b45309; --red:#e13a3a; --green:#16a34a; --blue:#2563eb;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  html,body{background:#f4f4f6;color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  button,input,select,textarea{font-family:inherit;}
+
+  .app-shell{max-width:1040px;margin:0 auto;min-height:100vh;background:var(--bg);position:relative;padding-bottom:40px;border-left:1px solid var(--line);border-right:1px solid var(--line);}
+  @media(max-width:1060px){ .app-shell{border-left:none;border-right:none;} }
+  .app-shell{display:none;} .app-shell.ready{display:block;}
+
+  .mobile-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#ffffff;z-index:30;}
+  .mh-left{display:flex;align-items:center;gap:14px;}
+  .back-btn{background:none;border:none;color:var(--text);cursor:pointer;padding:4px;display:flex;}
+  .back-btn svg{width:22px;height:22px;}
+  .mh-logo{display:flex;align-items:center;gap:10px;cursor:pointer;background:none;border:none;padding:0;}
+  .brand-logo-img{height:36px;width:auto;display:block;}
+  .avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#3a3a40,#1c1c1f);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;font-family:'Oswald',sans-serif;flex-shrink:0;border:1.5px solid #3a3a40;cursor:pointer;}
+
+  .profile-head{display:flex;align-items:center;gap:16px;padding:22px 20px 18px;border-bottom:1px solid var(--line);}
+  .profile-avatar{width:60px;height:60px;border-radius:50%;background:var(--panel-alt);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;font-family:'Oswald',sans-serif;flex-shrink:0;}
+  .profile-info{flex:1;min-width:0;}
+  .profile-info h1{margin:0 0 4px;font-size:21px;font-weight:800;letter-spacing:-0.01em;}
+  .profile-badges{display:flex;gap:7px;flex-wrap:wrap;align-items:center;}
+  .badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:4px 10px;border-radius:100px;background:var(--panel);color:var(--text-dim);font-family:'IBM Plex Mono',monospace;}
+  .pill{display:inline-flex;align-items:center;padding:5px 12px;border-radius:100px;font-size:11.5px;font-weight:700;white-space:nowrap;}
+  .pill.active{background:#dcfce7;color:var(--green);}
+  .pill.inactive{background:#fde2e2;color:var(--red);}
+
+  .section{margin:18px 20px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;}
+  .section-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+  .section-head h2{margin:0;font-size:14.5px;font-weight:800;}
+  .section-head p{margin:2px 0 0;font-size:11.5px;color:var(--text-dim);}
+  .btn-edit{display:flex;align-items:center;gap:6px;background:transparent;border:1px solid var(--line);color:var(--text-dim);padding:7px 12px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;}
+  .btn-edit:hover{border-color:var(--oxide);color:var(--oxide-dim);}
+  .btn-edit svg{width:13px;height:13px;}
+
+  .kv-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;}
+  @media(max-width:520px){ .kv-grid{grid-template-columns:1fr;} }
+  .kv .l{font-size:10.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.03em;margin-bottom:2px;}
+  .kv .v{font-size:13.5px;font-weight:600;color:var(--text);}
+  .kv .v.empty{color:var(--text-faint);font-weight:400;}
+  .exit-reason-box{margin-top:12px;padding:12px 14px;background:#fdf2e3;border:1px solid #f6dfb8;border-radius:10px;font-size:12.5px;color:#8a5a10;}
+  .exit-reason-box .l{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:4px;color:#a5670f;}
+
+  /* Documents */
+  .doc-slot{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line-soft);}
+  .doc-slot:last-child{border-bottom:none;}
+  .doc-ic{width:38px;height:38px;border-radius:9px;background:var(--panel);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text-dim);}
+  .doc-ic svg{width:18px;height:18px;}
+  .doc-ic.has-file{background:#fff3ec;color:var(--oxide-dim);}
+  .doc-body{flex:1;min-width:0;}
+  .doc-title{font-size:13px;font-weight:700;}
+  .doc-sub{font-size:11.5px;color:var(--text-dim);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .doc-actions{display:flex;gap:6px;flex-shrink:0;align-items:center;}
+  .btn-sm{padding:7px 12px;border-radius:8px;border:1px solid var(--line);background:#fff;font-size:11.5px;font-weight:700;cursor:pointer;color:var(--text);white-space:nowrap;}
+  .btn-sm.primary{background:var(--oxide);border-color:var(--oxide);color:#fff;}
+  .btn-sm.primary:hover{background:#ff6b1f;}
+  .btn-sm.danger{color:var(--red);border-color:#f3caca;}
+  .file-input-hidden{display:none;}
+  .progress-track{height:5px;background:var(--panel);border-radius:4px;overflow:hidden;margin-top:6px;width:100%;}
+  .progress-fill{height:100%;background:var(--oxide);width:0%;transition:width .15s;}
+
+  .cert-list{display:flex;flex-direction:column;gap:0;}
+  .cert-add-row{margin-top:10px;}
+
+  .empty-state{text-align:center;color:var(--text-faint);padding:24px 18px;font-size:12.5px;}
+
+  .danger-zone{margin:18px 20px 40px;padding:16px 18px;border:1px solid #f3caca;border-radius:14px;background:#fff6f6;}
+  .danger-zone h2{margin:0 0 4px;font-size:13.5px;font-weight:800;color:var(--red);}
+  .danger-zone p{margin:0 0 12px;font-size:12px;color:#a44;}
+  .btn-delete-employee{background:transparent;border:1px solid var(--red);color:var(--red);padding:10px 16px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;}
+
+  /* Modal */
+  .overlay{position:fixed;inset:0;background:rgba(10,10,11,0.55);display:none;align-items:center;justify-content:center;z-index:100;padding:20px;}
+  .overlay.open{display:flex;}
+  .modal{background:#fff;border:1px solid var(--line);border-radius:14px;width:100%;max-width:460px;padding:22px 22px 20px;max-height:88vh;overflow-y:auto;}
+  .modal h3{font-size:16px;margin:0 0 16px;color:var(--text);font-weight:800;}
+  .field{margin-bottom:13px;}
+  .field label{display:block;font-size:11.5px;color:var(--text-dim);font-weight:600;margin-bottom:6px;}
+  .field select,.field input,.field textarea{width:100%;background:var(--panel);border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:8px;font-size:13.5px;}
+  .field textarea{resize:vertical;min-height:70px;}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .modal-actions{display:flex;gap:10px;margin-top:18px;}
+  .btn-cancel{flex:1;padding:11px;border-radius:9px;border:1px solid var(--line);background:transparent;color:var(--text-dim);font-size:13px;font-weight:600;cursor:pointer;}
+  .btn-submit{flex:2;padding:11px;border-radius:9px;border:none;background:var(--oxide);color:#fff;font-size:13px;font-weight:700;cursor:pointer;}
+  .btn-submit:hover{background:#ff6b1f;}
+  #formError{display:none;color:var(--red);font-size:12.5px;margin:-4px 0 10px;}
+  .hint{font-size:11px;color:var(--text-faint);margin-top:4px;}
+
+  button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--oxide);outline-offset:2px;}
+
+  #accessGate{position:fixed;inset:0;z-index:9999;background:#fff;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .gate-card{width:100%;max-width:340px;text-align:center;}
+  .gate-card img{height:34px;width:auto;margin:0 auto 22px;display:block;}
+  .gate-card h2{font-size:17px;font-weight:700;margin-bottom:6px;}
+  .gate-card p{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-bottom:22px;}
+  .gate-card .field{margin-bottom:12px;text-align:left;}
+  .gate-card .field input{width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--line);font-size:13.5px;box-sizing:border-box;}
+  .gate-card .btn-submit{width:100%;padding:12px;border-radius:9px;border:1px solid var(--oxide);background:var(--oxide);color:#fff;font-weight:700;font-size:13px;cursor:pointer;margin-top:6px;}
+  .gate-error{color:var(--red);font-size:12px;margin:-4px 0 12px;text-align:left;}
+  .not-found{padding:60px 20px;text-align:center;color:var(--text-faint);}
+</style>
+</head>
+<body>
+
+<div id="accessGate" style="display:none;">
+  <div class="gate-card">
+    <img alt="Cabro City" class="cc-logo" src="/cabro-city-logo.png">
+    <h2>Sign in required</h2>
+    <p>Employee records are restricted to owner and admin accounts.</p>
+    <div class="field"><label>Email</label><input type="email" id="gateEmail" placeholder="you@cabrocity.co.ke"></div>
+    <div class="field"><label>Password</label><input type="password" id="gatePassword" placeholder="••••••••"></div>
+    <div id="gateError" class="gate-error" style="display:none;"></div>
+    <button class="btn-submit" onclick="submitGateLogin()">Sign In</button>
+  </div>
+</div>
+
+<div class="app-shell">
+  <div class="mobile-header">
+    <div class="mh-left">
+      <button class="back-btn" aria-label="Back to Employees" onclick="location.href='employees.html'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <button class="mh-logo" onclick="location.href='index.html'" aria-label="Cabro City home">
+        <img alt="Cabro City" class="brand-logo-img cc-logo" src="/cabro-city-logo.png">
+      </button>
+    </div>
+    <div class="avatar" onclick="location.href='index.html'"><span id="avatarInitials">--</span></div>
+  </div>
+
+  <div id="notFound" class="not-found" style="display:none;">Employee not found — it may have been removed.</div>
+
+  <div id="empContent" style="display:none;">
+    <div class="profile-head">
+      <div class="profile-avatar" id="profAvatar">--</div>
+      <div class="profile-info">
+        <h1 id="profName">—</h1>
+        <div class="profile-badges">
+          <span class="badge" id="profEmpNo">EMP-—</span>
+          <span class="pill active" id="profStatus">Active</span>
+        </div>
+      </div>
+      <button class="btn-edit" onclick="openBasicModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Edit
+      </button>
+    </div>
+
+    <!-- BASIC INFO -->
+    <div class="section">
+      <div class="section-head">
+        <div><h2>Basic Info</h2><p>Contact details &amp; role</p></div>
+      </div>
+      <div class="kv-grid">
+        <div class="kv"><div class="l">Position</div><div class="v" id="v-position">—</div></div>
+        <div class="kv"><div class="l">Department</div><div class="v" id="v-department">—</div></div>
+        <div class="kv"><div class="l">Phone</div><div class="v" id="v-phone">—</div></div>
+        <div class="kv"><div class="l">Email</div><div class="v" id="v-email">—</div></div>
+        <div class="kv"><div class="l">National ID Number</div><div class="v" id="v-idNumber">—</div></div>
+        <div class="kv"><div class="l">Emergency Contact</div><div class="v" id="v-emergencyContact">—</div></div>
+        <div class="kv"><div class="l">Salary</div><div class="v" id="v-salary">—</div></div>
+      </div>
+    </div>
+
+    <!-- EMPLOYMENT -->
+    <div class="section">
+      <div class="section-head">
+        <div><h2>Employment</h2><p>Dates &amp; status</p></div>
+        <button class="btn-edit" onclick="openEmploymentModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Edit
+        </button>
+      </div>
+      <div class="kv-grid">
+        <div class="kv"><div class="l">Date Employed</div><div class="v" id="v-dateJoined">—</div></div>
+        <div class="kv"><div class="l">Date Exited</div><div class="v" id="v-dateExited">—</div></div>
+      </div>
+      <div class="exit-reason-box" id="exitReasonBox" style="display:none;">
+        <div class="l">Reason for Exit</div>
+        <div id="v-exitReason">—</div>
+      </div>
+    </div>
+
+    <!-- PAYMENT & STATUTORY -->
+    <div class="section">
+      <div class="section-head">
+        <div><h2>Payment &amp; Statutory Details</h2><p>Payout method, SHA, NSSF &amp; KRA</p></div>
+        <button class="btn-edit" onclick="openPaymentModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Edit
+        </button>
+      </div>
+      <div class="kv-grid">
+        <div class="kv"><div class="l">Payment Method</div><div class="v" id="v-paymentMethod">—</div></div>
+        <div class="kv"><div class="l" id="l-paymentDetail">M-Pesa Number</div><div class="v" id="v-paymentDetail">—</div></div>
+        <div class="kv"><div class="l">SHA Number</div><div class="v" id="v-shaNumber">—</div></div>
+        <div class="kv"><div class="l">NSSF Number</div><div class="v" id="v-nssfNumber">—</div></div>
+        <div class="kv"><div class="l">KRA PIN</div><div class="v" id="v-kraPin">—</div></div>
+      </div>
+    </div>
+
+    <!-- DOCUMENTS -->
+    <div class="section">
+      <div class="section-head">
+        <div><h2>Documents</h2><p>ID scans, KRA PIN &amp; academic certificates</p></div>
+      </div>
+
+      <div class="doc-slot">
+        <div class="doc-ic" id="ic-idFront"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="12" r="2"/><path d="M14 10h4M14 14h4"/></svg></div>
+        <div class="doc-body">
+          <div class="doc-title">ID Picture — Front</div>
+          <div class="doc-sub" id="sub-idFront">No file uploaded</div>
+          <div class="progress-track" id="prog-idFront" style="display:none;"><div class="progress-fill"></div></div>
+        </div>
+        <div class="doc-actions" id="actions-idFront"></div>
+      </div>
+
+      <div class="doc-slot">
+        <div class="doc-ic" id="ic-idBack"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="12" r="2"/><path d="M14 10h4M14 14h4"/></svg></div>
+        <div class="doc-body">
+          <div class="doc-title">ID Picture — Back</div>
+          <div class="doc-sub" id="sub-idBack">No file uploaded</div>
+          <div class="progress-track" id="prog-idBack" style="display:none;"><div class="progress-fill"></div></div>
+        </div>
+        <div class="doc-actions" id="actions-idBack"></div>
+      </div>
+
+      <div class="doc-slot">
+        <div class="doc-ic" id="ic-kraPin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>
+        <div class="doc-body">
+          <div class="doc-title">KRA PIN Certificate (PDF)</div>
+          <div class="doc-sub" id="sub-kraPin">No file uploaded</div>
+          <div class="progress-track" id="prog-kraPin" style="display:none;"><div class="progress-fill"></div></div>
+        </div>
+        <div class="doc-actions" id="actions-kraPin"></div>
+      </div>
+
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line-soft);">
+        <div class="doc-title" style="margin-bottom:8px;">Academic Certificates</div>
+        <div class="cert-list" id="certList"></div>
+        <div class="cert-add-row">
+          <button class="btn-sm primary" onclick="document.getElementById('fileInput-academicCert').click()">+ Add Certificate</button>
+          <div class="progress-track" id="prog-academicCert" style="display:none;"><div class="progress-fill"></div></div>
+        </div>
+      </div>
+
+      <input type="file" class="file-input-hidden" id="fileInput-idFront" accept="image/*" onchange="handleFileSelected('idFront', this.files[0])">
+      <input type="file" class="file-input-hidden" id="fileInput-idBack" accept="image/*" onchange="handleFileSelected('idBack', this.files[0])">
+      <input type="file" class="file-input-hidden" id="fileInput-kraPin" accept="application/pdf" onchange="handleFileSelected('kraPin', this.files[0])">
+      <input type="file" class="file-input-hidden" id="fileInput-academicCert" accept="application/pdf,image/*" onchange="handleFileSelected('academicCert', this.files[0])">
+    </div>
+
+    <div class="danger-zone">
+      <h2>Remove Employee</h2>
+      <p>Deletes this employee's record and uploaded documents. This cannot be undone.</p>
+      <button class="btn-delete-employee" onclick="deleteEmployee()">Remove Employee</button>
+    </div>
+  </div>
+</div>
+
+<!-- BASIC INFO MODAL -->
+<div class="overlay" id="basicOverlay">
+  <div class="modal">
+    <h3>Edit Basic Info</h3>
+    <div class="field"><label>Full Name *</label><input type="text" id="f-name"></div>
+    <div class="field-row">
+      <div class="field"><label>Position *</label><input type="text" id="f-position"></div>
+      <div class="field"><label>Department</label><input type="text" id="f-department"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Phone *</label><input type="tel" id="f-phone"></div>
+      <div class="field"><label>Email</label><input type="email" id="f-email"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>National ID Number</label><input type="text" id="f-idNumber"></div>
+      <div class="field"><label>Emergency Contact</label><input type="text" id="f-emergencyContact"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Salary (KSh)</label><input type="number" id="f-salaryAmount"></div>
+      <div class="field"><label>Salary Type</label>
+        <select id="f-salaryType"><option value="monthly">Monthly</option><option value="daily">Daily</option></select>
+      </div>
+    </div>
+    <div id="formError"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('basicOverlay')">Cancel</button>
+      <button class="btn-submit" onclick="saveBasic()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- EMPLOYMENT MODAL -->
+<div class="overlay" id="employmentOverlay">
+  <div class="modal">
+    <h3>Edit Employment</h3>
+    <div class="field"><label>Date Employed</label><input type="date" id="f-dateJoined"></div>
+    <div class="field"><label>Status</label>
+      <select id="f-status" onchange="toggleExitFields()"><option value="Active">Active</option><option value="Exited">Exited</option></select>
+    </div>
+    <div id="exitFields" style="display:none;">
+      <div class="field"><label>Date Exited</label><input type="date" id="f-dateExited"></div>
+      <div class="field"><label>Reason for Exit</label><textarea id="f-exitReason" placeholder="e.g. Resigned, end of contract, dismissed for..."></textarea></div>
+    </div>
+    <div id="formErrorEmployment"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('employmentOverlay')">Cancel</button>
+      <button class="btn-submit" onclick="saveEmployment()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAYMENT & STATUTORY MODAL -->
+<div class="overlay" id="paymentOverlay">
+  <div class="modal">
+    <h3>Edit Payment &amp; Statutory Details</h3>
+    <div class="field"><label>Payment Method</label>
+      <select id="f-paymentMethod" onchange="togglePaymentFields()">
+        <option value="mpesa">M-Pesa</option>
+        <option value="bank">Bank Account</option>
+      </select>
+    </div>
+    <div id="mpesaFields">
+      <div class="field"><label>M-Pesa Phone Number</label><input type="tel" id="f-mpesaPhone" placeholder="0722 123 456"></div>
+    </div>
+    <div id="bankFields" style="display:none;">
+      <div class="field-row">
+        <div class="field"><label>Bank Name</label><input type="text" id="f-bankName" placeholder="e.g. Equity Bank"></div>
+        <div class="field"><label>Account Number</label><input type="text" id="f-bankAccountNumber"></div>
+      </div>
+    </div>
+    <div class="field"><label>SHA Number</label><input type="text" id="f-shaNumber" placeholder="Social Health Authority number"></div>
+    <div class="field"><label>NSSF Number</label><input type="text" id="f-nssfNumber"></div>
+    <div class="field"><label>KRA PIN</label><input type="text" id="f-kraPin" placeholder="e.g. A012345678Z"></div>
+    <div id="formErrorPayment"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('paymentOverlay')">Cancel</button>
+      <button class="btn-submit" onclick="savePayment()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import {
+  db, loginAdmin, logoutAdmin, watchAdmin, initialsFromEmail,
+  doc, updateDoc, deleteDoc, collection, addDoc,
+  onSnapshot, serverTimestamp, query, orderBy,
+  canManage, fetchOrBootstrapRole, logAudit,
+  uploadEmployeeDocument, deleteEmployeeDocument
+} from "./firebase-config.js";
+
+let myRole = null, myUid = "", myName = "";
+let employeeId = null;
+let employee = null;
+let documents = []; // live subcollection docs
+
+const params = new URLSearchParams(location.search);
+employeeId = params.get("id");
+
+/* ---------- Access gate (owner/admin only) ---------- */
+watchAdmin(async (user) => {
+  const gate = document.getElementById("accessGate");
+  const gateErr = document.getElementById("gateError");
+  document.getElementById("avatarInitials").textContent = user ? initialsFromEmail(user.email) : "--";
+
+  if (!user) {
+    gate.style.display = "flex";
+    document.querySelector(".app-shell").classList.remove("ready");
+    return;
+  }
+  let roleDoc;
+  try { roleDoc = await fetchOrBootstrapRole(user); } catch (e) { roleDoc = null; }
+  if (!roleDoc || !canManage(roleDoc.role)) {
+    gateErr.textContent = "Employee records are restricted to owner and admin accounts.";
+    gateErr.style.display = "block";
+    gate.style.display = "flex";
+    document.querySelector(".app-shell").classList.remove("ready");
+    logoutAdmin();
+    return;
+  }
+  myRole = roleDoc.role;
+  myUid = user.uid;
+  myName = roleDoc.displayName || user.email;
+  gate.style.display = "none";
+  document.querySelector(".app-shell").classList.add("ready");
+  boot();
+});
+
+window.submitGateLogin = function () {
+  const email = document.getElementById("gateEmail").value.trim();
+  const password = document.getElementById("gatePassword").value;
+  const err = document.getElementById("gateError");
+  err.style.display = "none";
+  loginAdmin(email, password).catch(() => {
+    err.textContent = "Sign-in failed — check your email and password.";
+    err.style.display = "block";
+  });
+};
+
+window.closeModal = (id) => document.getElementById(id).classList.remove("open");
+function openModal(id) { document.getElementById(id).classList.add("open"); }
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+function fmtDate(d) {
+  if (!d) return "—";
+  if (typeof d === "string") return d;
+  const dt = d.toDate ? d.toDate() : new Date(d);
+  return dt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+}
+function initials(name) {
+  const parts = (name || "").trim().split(/\s+/);
+  return ((parts[0]?.[0] || "") + (parts[1]?.[0] || "")).toUpperCase() || "?";
+}
+function fmtSize(bytes) {
+  if (!bytes) return "";
+  if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + " KB";
+  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+}
+
+async function boot() {
+  if (!employeeId) { showNotFound(); return; }
+  const ref = doc(db, "hrEmployees", employeeId);
+  onSnapshot(ref, (snap) => {
+    if (!snap.exists()) { showNotFound(); return; }
+    employee = { id: snap.id, ...snap.data() };
+    render();
+  });
+  const docsQ = query(collection(db, "hrEmployees", employeeId, "documents"), orderBy("uploadedAt", "desc"));
+  onSnapshot(docsQ, (snap) => {
+    documents = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderDocuments();
+  });
+}
+
+function showNotFound() {
+  document.getElementById("notFound").style.display = "block";
+  document.getElementById("empContent").style.display = "none";
+}
+
+function render() {
+  const e = employee;
+  document.getElementById("notFound").style.display = "none";
+  document.getElementById("empContent").style.display = "block";
+  document.title = `${e.name} — Cabro City`;
+
+  document.getElementById("profAvatar").textContent = initials(e.name);
+  document.getElementById("profName").textContent = e.name;
+  document.getElementById("profEmpNo").textContent = e.employeeNo || "EMP-—";
+  const statusPill = document.getElementById("profStatus");
+  statusPill.textContent = e.status || "Active";
+  statusPill.className = `pill ${e.status === "Exited" ? "inactive" : "active"}`;
+
+  const set = (id, val, isEmpty) => {
+    const el = document.getElementById(id);
+    el.textContent = val;
+    el.classList.toggle("empty", !!isEmpty);
+  };
+  set("v-position", e.position || "—", !e.position);
+  set("v-department", e.department || "—", !e.department);
+  set("v-phone", e.phone || "—", !e.phone);
+  set("v-email", e.email || "—", !e.email);
+  set("v-idNumber", e.idNumber || "—", !e.idNumber);
+  set("v-emergencyContact", e.emergencyContact || "—", !e.emergencyContact);
+  set("v-salary", e.salaryAmount ? "KSh " + Number(e.salaryAmount).toLocaleString() + " / " + (e.salaryType || "monthly") : "—", !e.salaryAmount);
+
+  set("v-dateJoined", fmtDate(e.dateJoined), !e.dateJoined);
+  set("v-dateExited", e.status === "Exited" ? fmtDate(e.dateExited) : "—", e.status !== "Exited");
+  const exitBox = document.getElementById("exitReasonBox");
+  if (e.status === "Exited" && e.exitReason) {
+    exitBox.style.display = "block";
+    document.getElementById("v-exitReason").textContent = e.exitReason;
+  } else {
+    exitBox.style.display = "none";
+  }
+
+  const method = e.paymentMethod || "mpesa";
+  set("v-paymentMethod", method === "bank" ? "Bank Account" : "M-Pesa", false);
+  document.getElementById("l-paymentDetail").textContent = method === "bank" ? "Bank Account" : "M-Pesa Number";
+  if (method === "bank") {
+    set("v-paymentDetail", e.bankName || e.bankAccountNumber ? `${e.bankName || "—"} · ${e.bankAccountNumber || "—"}` : "—", !e.bankName && !e.bankAccountNumber);
+  } else {
+    set("v-paymentDetail", e.mpesaPhone || "—", !e.mpesaPhone);
+  }
+  set("v-shaNumber", e.shaNumber || "—", !e.shaNumber);
+  set("v-nssfNumber", e.nssfNumber || "—", !e.nssfNumber);
+  set("v-kraPin", e.kraPin || "—", !e.kraPin);
+}
+
+/* ---------- Basic Info modal ---------- */
+window.openBasicModal = function () {
+  const e = employee;
+  document.getElementById("f-name").value = e.name || "";
+  document.getElementById("f-position").value = e.position || "";
+  document.getElementById("f-department").value = e.department || "";
+  document.getElementById("f-phone").value = e.phone || "";
+  document.getElementById("f-email").value = e.email || "";
+  document.getElementById("f-idNumber").value = e.idNumber || "";
+  document.getElementById("f-emergencyContact").value = e.emergencyContact || "";
+  document.getElementById("f-salaryAmount").value = e.salaryAmount || "";
+  document.getElementById("f-salaryType").value = e.salaryType || "monthly";
+  document.getElementById("formError").style.display = "none";
+  openModal("basicOverlay");
+};
+window.saveBasic = async function () {
+  const name = document.getElementById("f-name").value.trim();
+  const position = document.getElementById("f-position").value.trim();
+  const phone = document.getElementById("f-phone").value.trim();
+  const err = document.getElementById("formError");
+  if (!name || !position || !phone) {
+    err.textContent = "Name, position and phone are required."; err.style.display = "block"; return;
+  }
+  const payload = {
+    name, position,
+    department: document.getElementById("f-department").value.trim(),
+    phone, email: document.getElementById("f-email").value.trim(),
+    idNumber: document.getElementById("f-idNumber").value.trim(),
+    emergencyContact: document.getElementById("f-emergencyContact").value.trim(),
+    salaryAmount: Number(document.getElementById("f-salaryAmount").value) || 0,
+    salaryType: document.getElementById("f-salaryType").value,
+    updatedAt: serverTimestamp()
+  };
+  try {
+    await updateDoc(doc(db, "hrEmployees", employeeId), payload);
+    await logAudit({ actorUid: myUid, actorName: myName, actorRole: myRole, action: "hr_employee_update", entityType: "hrEmployee", entityId: employeeId, entityLabel: name, summary: `Updated basic info for ${name}` });
+    closeModal("basicOverlay");
+  } catch (e) {
+    err.textContent = "Could not save — try again."; err.style.display = "block";
+  }
+};
+
+/* ---------- Employment modal ---------- */
+window.toggleExitFields = function () {
+  document.getElementById("exitFields").style.display = document.getElementById("f-status").value === "Exited" ? "block" : "none";
+};
+window.openEmploymentModal = function () {
+  const e = employee;
+  document.getElementById("f-dateJoined").value = e.dateJoined || todayStr();
+  document.getElementById("f-status").value = e.status || "Active";
+  document.getElementById("f-dateExited").value = e.dateExited || "";
+  document.getElementById("f-exitReason").value = e.exitReason || "";
+  toggleExitFields();
+  document.getElementById("formErrorEmployment").style.display = "none";
+  openModal("employmentOverlay");
+};
+window.saveEmployment = async function () {
+  const status = document.getElementById("f-status").value;
+  const payload = {
+    dateJoined: document.getElementById("f-dateJoined").value,
+    status,
+    dateExited: status === "Exited" ? document.getElementById("f-dateExited").value : "",
+    exitReason: status === "Exited" ? document.getElementById("f-exitReason").value.trim() : "",
+    updatedAt: serverTimestamp()
+  };
+  try {
+    await updateDoc(doc(db, "hrEmployees", employeeId), payload);
+    await logAudit({ actorUid: myUid, actorName: myName, actorRole: myRole, action: "hr_employee_update", entityType: "hrEmployee", entityId: employeeId, entityLabel: employee.name, summary: `Updated employment details for ${employee.name}${status === "Exited" ? " (marked Exited)" : ""}` });
+    closeModal("employmentOverlay");
+  } catch (e) {
+    const err = document.getElementById("formErrorEmployment");
+    err.textContent = "Could not save — try again."; err.style.display = "block";
+  }
+};
+
+/* ---------- Payment & Statutory modal ---------- */
+window.togglePaymentFields = function () {
+  const isBank = document.getElementById("f-paymentMethod").value === "bank";
+  document.getElementById("mpesaFields").style.display = isBank ? "none" : "block";
+  document.getElementById("bankFields").style.display = isBank ? "block" : "none";
+};
+window.openPaymentModal = function () {
+  const e = employee;
+  document.getElementById("f-paymentMethod").value = e.paymentMethod || "mpesa";
+  document.getElementById("f-mpesaPhone").value = e.mpesaPhone || "";
+  document.getElementById("f-bankName").value = e.bankName || "";
+  document.getElementById("f-bankAccountNumber").value = e.bankAccountNumber || "";
+  document.getElementById("f-shaNumber").value = e.shaNumber || "";
+  document.getElementById("f-nssfNumber").value = e.nssfNumber || "";
+  document.getElementById("f-kraPin").value = e.kraPin || "";
+  togglePaymentFields();
+  document.getElementById("formErrorPayment").style.display = "none";
+  openModal("paymentOverlay");
+};
+window.savePayment = async function () {
+  const payload = {
+    paymentMethod: document.getElementById("f-paymentMethod").value,
+    mpesaPhone: document.getElementById("f-mpesaPhone").value.trim(),
+    bankName: document.getElementById("f-bankName").value.trim(),
+    bankAccountNumber: document.getElementById("f-bankAccountNumber").value.trim(),
+    shaNumber: document.getElementById("f-shaNumber").value.trim(),
+    nssfNumber: document.getElementById("f-nssfNumber").value.trim(),
+    kraPin: document.getElementById("f-kraPin").value.trim(),
+    updatedAt: serverTimestamp()
+  };
+  try {
+    await updateDoc(doc(db, "hrEmployees", employeeId), payload);
+    await logAudit({ actorUid: myUid, actorName: myName, actorRole: myRole, action: "hr_employee_update", entityType: "hrEmployee", entityId: employeeId, entityLabel: employee.name, summary: `Updated payment & statutory details for ${employee.name}` });
+    closeModal("paymentOverlay");
+  } catch (e) {
+    const err = document.getElementById("formErrorPayment");
+    err.textContent = "Could not save — try again."; err.style.display = "block";
+  }
+};
+
+/* ---------- Documents ----------
+   Single-slot types (idFront, idBack, kraPin): only one active document
+   per type — uploading a replacement deletes the old Storage file first.
+   academicCert is multi-slot: each upload adds a new subcollection doc,
+   shown as its own row with its own delete button. */
+const SINGLE_TYPES = ["idFront", "idBack", "kraPin"];
+const TYPE_LABELS = { idFront: "ID Picture — Front", idBack: "ID Picture — Back", kraPin: "KRA PIN Certificate (PDF)", academicCert: "Academic Certificate" };
+
+function docsOfType(type) { return documents.filter(d => d.type === type); }
+
+function renderDocuments() {
+  SINGLE_TYPES.forEach(type => {
+    const existing = docsOfType(type)[0];
+    const icEl = document.getElementById(`ic-${type}`);
+    const subEl = document.getElementById(`sub-${type}`);
+    const actionsEl = document.getElementById(`actions-${type}`);
+    icEl.classList.toggle("has-file", !!existing);
+    if (existing) {
+      subEl.textContent = `${existing.fileName}${existing.size ? " · " + fmtSize(existing.size) : ""}`;
+      actionsEl.innerHTML = `
+        <button class="btn-sm" onclick="window.open('${existing.url}','_blank')">View</button>
+        <button class="btn-sm" onclick="document.getElementById('fileInput-${type}').click()">Replace</button>
+        <button class="btn-sm danger" onclick="removeDocument('${existing.id}','${existing.storagePath.replace(/'/g, "\\'")}')">Delete</button>
+      `;
+    } else {
+      subEl.textContent = "No file uploaded";
+      actionsEl.innerHTML = `<button class="btn-sm primary" onclick="document.getElementById('fileInput-${type}').click()">Upload</button>`;
+    }
+  });
+
+  const certs = docsOfType("academicCert");
+  const certList = document.getElementById("certList");
+  if (!certs.length) {
+    certList.innerHTML = `<div class="empty-state">No academic certificates uploaded yet.</div>`;
+  } else {
+    certList.innerHTML = certs.map(c => `
+      <div class="doc-slot">
+        <div class="doc-ic has-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>
+        <div class="doc-body">
+          <div class="doc-title">${c.fileName}</div>
+          <div class="doc-sub">${fmtSize(c.size)}${c.uploadedAt ? " · " + fmtDate(c.uploadedAt) : ""}</div>
+        </div>
+        <div class="doc-actions">
+          <button class="btn-sm" onclick="window.open('${c.url}','_blank')">View</button>
+          <button class="btn-sm danger" onclick="removeDocument('${c.id}','${c.storagePath.replace(/'/g, "\\'")}')">Delete</button>
+        </div>
+      </div>
+    `).join("");
+  }
+}
+
+window.handleFileSelected = async function (type, file) {
+  if (!file) return;
+  const progTrack = document.getElementById(`prog-${type}`);
+  const progFill = progTrack.querySelector(".progress-fill");
+  progTrack.style.display = "block";
+  progFill.style.width = "0%";
+  try {
+    // Single-slot types: remove the previous file first so we don't
+    // accumulate orphaned uploads in Storage every time someone replaces one.
+    if (SINGLE_TYPES.includes(type)) {
+      const existing = docsOfType(type)[0];
+      if (existing) {
+        try { await deleteEmployeeDocument(existing.storagePath); } catch (e) { console.warn("old file cleanup failed:", e); }
+        try { await deleteDoc(doc(db, "hrEmployees", employeeId, "documents", existing.id)); } catch (e) { console.warn("old doc record cleanup failed:", e); }
+      }
+    }
+    const result = await uploadEmployeeDocument(employeeId, type, file, (pct) => { progFill.style.width = pct + "%"; });
+    await addDoc(collection(db, "hrEmployees", employeeId, "documents"), {
+      type, fileName: result.fileName, url: result.url, storagePath: result.storagePath,
+      size: result.size, uploadedAt: serverTimestamp(), uploadedBy: myName
+    });
+    await logAudit({ actorUid: myUid, actorName: myName, actorRole: myRole, action: "hr_employee_doc_upload", entityType: "hrEmployee", entityId: employeeId, entityLabel: employee.name, summary: `Uploaded ${TYPE_LABELS[type] || type} for ${employee.name} (${result.fileName})` });
+  } catch (e) {
+    console.error(e);
+    alert("Upload failed — check your connection and try again.");
+  } finally {
+    progTrack.style.display = "none";
+    document.getElementById(`fileInput-${type}`).value = "";
+  }
+};
+
+window.removeDocument = async function (docId, storagePath) {
+  if (!confirm("Delete this document? This cannot be undone.")) return;
+  try {
+    await deleteEmployeeDocument(storagePath);
+  } catch (e) { console.warn("storage delete failed (continuing to remove record):", e); }
+  try {
+    await deleteDoc(doc(db, "hrEmployees", employeeId, "documents", docId));
+    await logAudit({ actorUid: myUid, actorName: myName, actorRole: myRole, action: "hr_employee_doc_delete", entityType: "hrEmployee", entityId: employeeId, entityLabel: employee.name, summary: `Deleted a document for ${employee.name}` });
+  } catch (e) {
+    alert("Could not delete the record — try again.");
+  }
+};
+
+/* ---------- Delete employee ---------- */
+window.deleteEmployee = async function () {
+  if (!confirm(`Remove ${employee.name} (${employee.employeeNo || "no employee number"}) from employee records? This also deletes their uploaded documents and cannot be undone.`)) return;
+  try {
+    for (const d of documents) {
+      try { await deleteEmployeeDocument(d.storagePath); } catch (e) { console.warn("doc storage cleanup failed:", e); }
+      try { await deleteDoc(doc(db, "hrEmployees", employeeId, "documents", d.id)); } catch (e) { console.warn("doc record cleanup failed:", e); }
+    }
+    await deleteDoc(doc(db, "hrEmployees", employeeId));
+    await logAudit({ actorUid: myUid, actorName: myName, actorRole: myRole, action: "hr_employee_delete", entityType: "hrEmployee", entityId: employeeId, entityLabel: employee.name, summary: `Removed employee record for ${employee.name}` });
+    location.href = "employees.html";
+  } catch (e) {
+    alert("Could not remove — try again.");
+  }
+};
+</script>
+</body>
+</html>

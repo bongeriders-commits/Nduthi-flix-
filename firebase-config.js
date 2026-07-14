@@ -11,6 +11,9 @@ import {
   collection, doc, addDoc, updateDoc, deleteDoc, getDoc, getDocs, setDoc,
   onSnapshot, serverTimestamp, query, where, orderBy, limit, startAfter, runTransaction, increment
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 
 // ---------- 1. PASTE YOUR FIREBASE CONFIG BELOW ----------
@@ -38,6 +41,10 @@ export const auth = getAuth(app);
 export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
 });
+
+// Firebase Storage — used for employee document uploads (ID scans, KRA PIN
+// PDF, academic certificates). Nothing else in the app uses Storage yet.
+export const storage = getStorage(app);
 
 /* ---------- Auth helpers ---------- */
 export function loginAdmin(email, password) {
@@ -324,6 +331,38 @@ export async function reportMismatch({ itemId, itemName, uom, actualCount, reque
     createdAt: serverTimestamp(),
     branchId: branchId || ""
   });
+}
+
+/* ---------- Employee document uploads (Firebase Storage) ----------
+   Used by employee-detail.html for ID scans, KRA PIN PDF, and academic
+   certificates. Files live at employees/{employeeId}/{docType}/{filename},
+   and each upload's metadata (name, url, storage path, size) is written
+   to the hrEmployees/{employeeId}/documents subcollection by the caller
+   so it shows up in a live list without a second read of Storage itself.
+   onProgress(pct) is optional and fires 0–100 as the upload streams. */
+export function uploadEmployeeDocument(employeeId, docType, file, onProgress) {
+  const safeName = `${Date.now()}-${file.name}`.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const path = `employees/${employeeId}/${docType}/${safeName}`;
+  const ref = storageRef(storage, path);
+  const task = uploadBytesResumable(ref, file);
+  return new Promise((resolve, reject) => {
+    task.on(
+      "state_changed",
+      (snap) => {
+        if (onProgress) onProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100));
+      },
+      (err) => reject(err),
+      async () => {
+        try {
+          const url = await getDownloadURL(task.snapshot.ref);
+          resolve({ url, storagePath: path, fileName: file.name, size: file.size });
+        } catch (err) { reject(err); }
+      }
+    );
+  });
+}
+export async function deleteEmployeeDocument(storagePath) {
+  await deleteObject(storageRef(storage, storagePath));
 }
 
 /* ---------- Re-exported Firestore functions ---------- */

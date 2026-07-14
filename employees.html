@@ -65,6 +65,8 @@
   .hr-card .ic{width:40px;height:40px;border-radius:50%;background:var(--panel-alt);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;font-family:'Oswald',sans-serif;}
   .hr-card .body{flex:1;min-width:0;}
   .hr-card .name{font-weight:700;font-size:14px;}
+  .name-link{font-weight:700;font-size:14px;color:var(--oxide-dim);background:none;border:none;padding:0;cursor:pointer;text-align:left;text-decoration:underline;text-decoration-color:transparent;}
+  .name-link:hover{text-decoration-color:var(--oxide-dim);}
   .hr-card .sub{font-size:12px;color:var(--text-dim);margin-top:2px;}
   .hr-card .side{text-align:right;flex-shrink:0;}
   .pill{display:inline-flex;align-items:center;padding:5px 12px;border-radius:100px;font-size:11.5px;font-weight:700;white-space:nowrap;}
@@ -210,24 +212,12 @@
   </div>
 </div>
 
-<!-- EMPLOYEE DETAIL MODAL -->
-<div class="overlay" id="employeeDetailOverlay">
-  <div class="modal" style="max-width:520px;">
-    <h3 id="empDetailName">Employee</h3>
-    <div id="empDetailBody" style="font-size:13.5px;color:var(--text-dim);"></div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeModal('employeeDetailOverlay')">Close</button>
-      <button class="btn-delete" id="empDetailDeleteBtn">Remove</button>
-      <button class="btn-submit" id="empDetailEditBtn">Edit</button>
-    </div>
-  </div>
-</div>
 
 <script type="module">
 import {
   db, loginAdmin, logoutAdmin, watchAdmin, initialsFromEmail,
-  collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot,
-  serverTimestamp, query, orderBy, canManage, fetchOrBootstrapRole, logAudit
+  collection, doc, addDoc, updateDoc, onSnapshot,
+  serverTimestamp, query, orderBy, runTransaction, canManage, fetchOrBootstrapRole, logAudit
 } from "./firebase-config.js";
 
 let myRole = null, myUid = "", myName = "";
@@ -290,6 +280,26 @@ function initials(name) {
   return ((parts[0]?.[0] || "") + (parts[1]?.[0] || "")).toUpperCase() || "?";
 }
 
+/* ---------- Employee number — a real running sequence, stored in
+   Firestore, same pattern as generateGrnNo() in grn.html. ---------- */
+async function generateEmployeeNo() {
+  try {
+    const year = new Date().getFullYear();
+    const counterRef = doc(db, "counters", "employee");
+    const seq = await runTransaction(db, async (tx) => {
+      const snap = await tx.get(counterRef);
+      const cur = snap.exists() ? (snap.data().seq || 0) : 0;
+      const next = cur + 1;
+      tx.set(counterRef, { seq: next, year, updatedAt: serverTimestamp() }, { merge: true });
+      return next;
+    });
+    return `EMP-${year}-${String(seq).padStart(4, "0")}`;
+  } catch (err) {
+    console.error("Employee number generation failed:", err);
+    return `EMP-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`;
+  }
+}
+
 function boot() {
   watchEmployees();
   document.getElementById("empSearch").addEventListener("input", renderEmployees);
@@ -333,11 +343,11 @@ function renderEmployees() {
   const list = document.getElementById("employeeList");
   if (!rows.length) { list.innerHTML = `<div class="empty-state">No employees match — try adding one or adjusting your search.</div>`; return; }
   list.innerHTML = rows.map(e => `
-    <div class="hr-card" onclick="openEmployeeDetail('${e.id}')">
+    <div class="hr-card" onclick="location.href='employee-detail.html?id=${e.id}'">
       <div class="ic">${initials(e.name)}</div>
       <div class="body">
-        <div class="name">${e.name}</div>
-        <div class="sub">${e.position || "—"}${e.department ? " · " + e.department : ""} · ${e.phone || "—"}</div>
+        <button class="name-link" onclick="event.stopPropagation();location.href='employee-detail.html?id=${e.id}'">${e.name}</button>
+        <div class="sub">${e.employeeNo ? e.employeeNo + " · " : ""}${e.position || "—"}${e.department ? " · " + e.department : ""} · ${e.phone || "—"}</div>
       </div>
       <div class="side"><span class="pill ${e.status === "Exited" ? "inactive" : "active"}">${e.status || "Active"}</span></div>
     </div>
@@ -387,41 +397,20 @@ window.submitEmployee = async function () {
     if (editingEmployeeId) {
       await updateDoc(doc(db, "hrEmployees", editingEmployeeId), payload);
       await logAudit({ actorUid: myUid, actorName: myName, actorRole: myRole, action: "hr_employee_update", entityType: "hrEmployee", entityId: editingEmployeeId, entityLabel: name, summary: `Updated employee record for ${name}` });
+      closeModal("employeeOverlay");
     } else {
+      payload.employeeNo = await generateEmployeeNo();
       payload.createdAt = serverTimestamp();
       const ref = await addDoc(collection(db, "hrEmployees"), payload);
-      await logAudit({ actorUid: myUid, actorName: myName, actorRole: myRole, action: "hr_employee_create", entityType: "hrEmployee", entityId: ref.id, entityLabel: name, summary: `Added new employee ${name}` });
+      await logAudit({ actorUid: myUid, actorName: myName, actorRole: myRole, action: "hr_employee_create", entityType: "hrEmployee", entityId: ref.id, entityLabel: name, summary: `Added new employee ${name} (${payload.employeeNo})` });
+      closeModal("employeeOverlay");
+      location.href = `employee-detail.html?id=${ref.id}`;
     }
-    closeModal("employeeOverlay");
   } catch (e) {
     err.textContent = "Could not save — check your connection and try again."; err.style.display = "block";
   }
 };
 
-window.openEmployeeDetail = function (id) {
-  const e = employees.find(x => x.id === id);
-  if (!e) return;
-  document.getElementById("empDetailName").textContent = e.name;
-  document.getElementById("empDetailBody").innerHTML = `
-    <p><strong>Position:</strong> ${e.position || "—"}${e.department ? " · " + e.department : ""}</p>
-    <p><strong>Phone:</strong> ${e.phone || "—"} &nbsp; <strong>Email:</strong> ${e.email || "—"}</p>
-    <p><strong>ID Number:</strong> ${e.idNumber || "—"}</p>
-    <p><strong>Date Joined:</strong> ${fmtDate(e.dateJoined)}</p>
-    <p><strong>Salary:</strong> ${e.salaryAmount ? "KSh " + Number(e.salaryAmount).toLocaleString() + " / " + e.salaryType : "—"}</p>
-    <p><strong>Emergency Contact:</strong> ${e.emergencyContact || "—"}</p>
-    <p><strong>Status:</strong> <span class="pill ${e.status === "Exited" ? "inactive" : "active"}">${e.status || "Active"}</span></p>
-  `;
-  document.getElementById("empDetailEditBtn").onclick = () => { closeModal("employeeDetailOverlay"); openEmployeeModal(id); };
-  document.getElementById("empDetailDeleteBtn").onclick = async () => {
-    if (!confirm(`Remove ${e.name} from employee records? This cannot be undone.`)) return;
-    try {
-      await deleteDoc(doc(db, "hrEmployees", id));
-      await logAudit({ actorUid: myUid, actorName: myName, actorRole: myRole, action: "hr_employee_delete", entityType: "hrEmployee", entityId: id, entityLabel: e.name, summary: `Removed employee record for ${e.name}` });
-      closeModal("employeeDetailOverlay");
-    } catch (err) { alert("Could not remove — try again."); }
-  };
-  openModal("employeeDetailOverlay");
-};
 </script>
 </body>
 </html>
