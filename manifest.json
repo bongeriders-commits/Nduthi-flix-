@@ -18,6 +18,11 @@
   ],
   "shortcuts": [
     {
+      "name": "Cabro POS",
+      "url": "/cabro-pos/",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
       "name": "Stock List",
       "url": "/stock-list",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]

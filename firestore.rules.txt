@@ -29,6 +29,11 @@ service cloud.firestore {
     function canManage() {
       return isActiveUser() && myRole().role in ["owner", "admin"];
     }
+    // Cabro POS — owner/admin always have it; anyone else needs the
+    // per-person `posAccess: true` flag the owner grants from the Team panel.
+    function canAccessPOS() {
+      return isActiveUser() && (myRole().role in ["owner", "admin"] || myRole().posAccess == true);
+    }
     function affectedKeys() {
       return request.resource.data.diff(resource.data).affectedKeys();
     }
@@ -170,6 +175,25 @@ service cloud.firestore {
     match /auditLogs/{logId} {
       allow read: if canManage();
       allow create: if isActiveUser();
+      allow update, delete: if false;
+    }
+
+    // ---------------------------------------------------------------------
+    // Cabro POS — a separate, standalone product/price list and sales log.
+    // Deliberately independent of stockItems: a POS sale never touches
+    // quarry inventory balances. Only owner/admin maintain the product
+    // catalogue; any team member the owner has granted POS access to can
+    // read the catalogue and ring up sales. Sales are a write-once receipt
+    // log — once a sale is rung up it can never be edited or deleted.
+    // ---------------------------------------------------------------------
+    match /posProducts/{productId} {
+      allow read: if canAccessPOS();
+      allow create, update, delete: if canManage();
+    }
+
+    match /posSales/{saleId} {
+      allow read: if canAccessPOS();
+      allow create: if canAccessPOS() && request.resource.data.cashierUid == request.auth.uid;
       allow update, delete: if false;
     }
 

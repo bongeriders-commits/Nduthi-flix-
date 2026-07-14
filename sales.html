@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cabro POS — Sales History</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0e0e10">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" href="/icon-192.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ffffff; --panel:#f6f6f8; --panel-alt:#eeeef1; --panel-raise:#ffffff;
+    --line:#e2e2e6; --line-soft:#ececf0; --text:#151517; --text-dim:#68686f; --text-faint:#9a9aa2;
+    --oxide:#f5590a; --oxide-dim:#b8420a; --green:#1a9e5c; --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  html,body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  h1,h2,h3,.disp{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:0.04em;margin:0;}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#0e0e10,#0a0a0b);position:sticky;top:0;z-index:30;gap:10px;}
+  .brand{display:flex;align-items:center;gap:10px;min-width:0;}
+  .brand-mark{width:30px;height:30px;border:2px solid var(--oxide);border-radius:4px;display:flex;align-items:center;justify-content:center;color:var(--oxide);font-family:'Oswald',sans-serif;font-weight:700;font-size:13px;transform:rotate(45deg);flex-shrink:0;}
+  .brand-mark span{transform:rotate(-45deg);}
+  .brand-text h1{font-size:15px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .brand-text .sub{font-size:10px;color:#8a8a92;letter-spacing:0.08em;margin-top:1px;}
+
+  .tabs{display:flex;gap:2px;background:#0a0a0b;padding:0 12px;overflow-x:auto;}
+  .tab-link{padding:11px 14px;font-size:12px;letter-spacing:0.04em;color:#8a8a92;text-decoration:none;white-space:nowrap;border-bottom:2px solid transparent;font-weight:600;}
+  .tab-link.active{color:var(--oxide);border-bottom-color:var(--oxide);}
+
+  .wrap{padding:14px 14px 40px;max-width:760px;margin:0 auto;}
+
+  .summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin-bottom:18px;}
+  .summary-card{background:var(--panel);padding:14px 10px;text-align:center;}
+  .summary-card .val{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;color:var(--text);}
+  .summary-card .lbl{font-size:10px;color:var(--text-dim);letter-spacing:0.06em;text-transform:uppercase;margin-top:4px;}
+
+  .sale-row{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:9px;margin-bottom:8px;background:var(--panel-raise);cursor:pointer;}
+  .sale-row:active{background:var(--panel);}
+  .sr-info{flex:1;min-width:0;}
+  .sr-time{font-size:12.5px;font-weight:600;}
+  .sr-meta{font-size:11px;color:var(--text-faint);margin-top:2px;}
+  .sr-pay{font-size:10px;padding:3px 8px;border-radius:100px;font-weight:700;letter-spacing:0.03em;flex-shrink:0;}
+  .sr-pay.cash{background:#fff6f1;color:var(--oxide-dim);}
+  .sr-pay.mpesa{background:#eafaf1;color:var(--green);}
+  .sr-total{font-family:'IBM Plex Mono',monospace;font-size:13.5px;font-weight:700;width:80px;text-align:right;flex-shrink:0;}
+
+  .section-label{font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-faint);margin:18px 0 8px;}
+  .empty{padding:40px 16px;text-align:center;color:var(--text-dim);font-size:13px;}
+  #gate{position:fixed;inset:0;background:#fff;z-index:100;display:flex;align-items:center;justify-content:center;}
+  #gate .g{text-align:center;color:var(--text-dim);font-size:13px;}
+
+  .sheet-overlay{position:fixed;inset:0;background:rgba(10,10,11,0.5);z-index:50;display:none;align-items:flex-end;justify-content:center;}
+  .sheet-overlay.open{display:flex;}
+  .sheet{background:#fff;width:100%;max-width:520px;border-radius:16px 16px 0 0;max-height:88vh;display:flex;flex-direction:column;}
+  .sheet-handle{width:36px;height:4px;border-radius:100px;background:var(--line);margin:10px auto 0;}
+  .sheet-head{display:flex;align-items:center;justify-content:space-between;padding:12px 18px 6px;}
+  .sheet-head h3{font-size:15px;}
+  .sheet-close{border:none;background:none;color:var(--text-dim);font-size:20px;cursor:pointer;padding:4px;line-height:1;}
+  .sheet-body{padding:6px 18px 18px;overflow-y:auto;}
+  .receipt{background:#fff;border:1px dashed var(--line);border-radius:6px;padding:18px 16px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text);}
+  .receipt-head{text-align:center;margin-bottom:10px;}
+  .receipt-head .rn{font-family:'Oswald',sans-serif;font-size:15px;text-transform:uppercase;letter-spacing:0.06em;}
+  .receipt-head .rs{font-size:10px;color:var(--text-faint);margin-top:2px;}
+  .receipt-divider{border-top:1px dashed var(--line);margin:9px 0;}
+  .receipt-line{display:flex;justify-content:space-between;padding:2px 0;}
+  .receipt-line .rl-name{flex:1;min-width:0;padding-right:6px;}
+  .receipt-total{display:flex;justify-content:space-between;padding:5px 0;font-weight:700;font-size:13px;}
+  .receipt-meta{font-size:10.5px;color:var(--text-dim);margin-top:8px;line-height:1.6;}
+</style>
+</head>
+<body>
+
+<div id="gate"><div class="g">Loading…</div></div>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-mark"><span>C</span></div>
+    <div class="brand-text"><h1>Cabro POS</h1><div class="sub">Sales History</div></div>
+  </div>
+</div>
+<div class="tabs">
+  <a class="tab-link" href="index.html">Terminal</a>
+  <a class="tab-link active" href="sales.html">Sales History</a>
+  <a class="tab-link" id="productsTabLink" href="products.html" style="display:none;">Products</a>
+</div>
+
+<div class="wrap">
+  <div class="summary-grid">
+    <div class="summary-card"><div class="val mono" id="sumToday">KES 0</div><div class="lbl">Today</div></div>
+    <div class="summary-card"><div class="val mono" id="sumCash">KES 0</div><div class="lbl">Cash</div></div>
+    <div class="summary-card"><div class="val mono" id="sumMpesa">KES 0</div><div class="lbl">M-Pesa</div></div>
+  </div>
+  <div class="section-label">Recent Sales</div>
+  <div id="salesList"><div class="empty">Loading sales…</div></div>
+</div>
+
+<div class="sheet-overlay" id="receiptOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><h3>Receipt</h3><button class="sheet-close" onclick="document.getElementById('receiptOverlay').classList.remove('open')">×</button></div>
+    <div class="sheet-body"><div class="receipt" id="receiptBox"></div></div>
+  </div>
+</div>
+
+<script type="module">
+import {
+  db, watchAdmin, fetchOrBootstrapRole, canAccessPOS, canManage,
+  collection, onSnapshot, query, orderBy, limit
+} from "../firebase-config.js";
+
+let sales = [];
+
+function escapeHtml(str){
+  if(str === null || str === undefined) return "";
+  return String(str).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function money(n){
+  const v = Math.round((n||0)*100)/100;
+  return "KES " + v.toLocaleString("en-KE", { minimumFractionDigits: v % 1 === 0 ? 0 : 2 });
+}
+
+watchAdmin(async (user)=>{
+  if(!user){ window.location.replace("../index.html"); return; }
+  let roleDoc;
+  try{ roleDoc = await fetchOrBootstrapRole(user); }
+  catch(e){ roleDoc = null; }
+  if(!roleDoc || !canAccessPOS(roleDoc.role, roleDoc.posAccess)){ window.location.replace("../index.html"); return; }
+  if(canManage(roleDoc.role)) document.getElementById("productsTabLink").style.display = "";
+  document.getElementById("gate").style.display = "none";
+  startListener();
+});
+
+function startListener(){
+  const q = query(collection(db, "posSales"), orderBy("createdAt", "desc"), limit(200));
+  onSnapshot(q, (snap)=>{
+    sales = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    renderSummary();
+    renderList();
+  }, (err)=>{
+    document.getElementById("salesList").innerHTML = `<div class="empty">Couldn't load sales — ${escapeHtml(err.message)}</div>`;
+  });
+}
+function saleDate(s){
+  return s.createdAt && s.createdAt.toDate ? s.createdAt.toDate() : (s.createdAt ? new Date(s.createdAt) : null);
+}
+function renderSummary(){
+  const today = new Date(); today.setHours(0,0,0,0);
+  let cash = 0, mpesa = 0;
+  sales.forEach(s=>{
+    const d = saleDate(s);
+    if(!d || d < today) return;
+    if(s.paymentMethod === "cash") cash += (s.total||0);
+    else if(s.paymentMethod === "mpesa") mpesa += (s.total||0);
+  });
+  document.getElementById("sumToday").textContent = money(cash + mpesa);
+  document.getElementById("sumCash").textContent = money(cash);
+  document.getElementById("sumMpesa").textContent = money(mpesa);
+}
+function renderList(){
+  const box = document.getElementById("salesList");
+  if(sales.length === 0){ box.innerHTML = `<div class="empty">No sales recorded yet.</div>`; return; }
+  box.innerHTML = sales.map(s=>{
+    const d = saleDate(s);
+    const timeStr = d ? d.toLocaleString("en-KE", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" }) : "—";
+    const itemCount = (s.items||[]).reduce((sum,i)=>sum+(i.qty||0), 0);
+    return `
+    <div class="sale-row" onclick="viewReceipt('${s.id}')">
+      <div class="sr-info">
+        <div class="sr-time">${timeStr}</div>
+        <div class="sr-meta">${itemCount} item${itemCount===1?"":"s"} · ${escapeHtml(s.cashierName||"—")}</div>
+      </div>
+      <div class="sr-pay ${s.paymentMethod==="mpesa"?"mpesa":"cash"}">${s.paymentMethod==="mpesa"?"M-PESA":"CASH"}</div>
+      <div class="sr-total mono">${money(s.total)}</div>
+    </div>`;
+  }).join("");
+}
+window.viewReceipt = function(id){
+  const s = sales.find(x=>x.id===id);
+  if(!s) return;
+  const d = saleDate(s) || new Date();
+  const box = document.getElementById("receiptBox");
+  box.innerHTML = `
+    <div class="receipt-head">
+      <div class="rn">Cabro POS</div>
+      <div class="rs">${d.toLocaleString("en-KE")}</div>
+    </div>
+    <div class="receipt-divider"></div>
+    ${(s.items||[]).map(i=>`
+      <div class="receipt-line"><span class="rl-name">${escapeHtml(i.name)} ×${i.qty}</span><span>${money(i.lineTotal)}</span></div>
+    `).join("")}
+    <div class="receipt-divider"></div>
+    <div class="receipt-total"><span>TOTAL</span><span>${money(s.total)}</span></div>
+    ${s.paymentMethod === "cash" ? `
+      <div class="receipt-line"><span class="rl-name">Cash tendered</span><span>${money(s.amountTendered)}</span></div>
+      <div class="receipt-line"><span class="rl-name">Change</span><span>${money(s.change)}</span></div>
+    ` : `
+      <div class="receipt-line"><span class="rl-name">M-Pesa ref</span><span>${escapeHtml(s.mpesaRef)}</span></div>
+    `}
+    <div class="receipt-meta">
+      Served by ${escapeHtml(s.cashierName)}<br>
+      Sale #${s.id.slice(0,8).toUpperCase()}
+    </div>
+  `;
+  document.getElementById("receiptOverlay").classList.add("open");
+};
+</script>
+</body>
+</html>

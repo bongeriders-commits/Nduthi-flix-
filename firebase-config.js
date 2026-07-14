@@ -162,6 +162,16 @@ export function canViewInventory(role) {
   return !isIssueOnly(role) && !isReceiveIssueOnly(role);
 }
 
+/* ---------- Cabro POS access ----------
+   Owner/admin always have POS access. Every other role only gets in if the
+   owner has explicitly granted it via the `posAccess: true` flag on their
+   users/{uid} doc (set from the Team panel) — POS is opt-in per person,
+   not tied to a role tier. Anyone who has POS access sees the POS-or-Stores
+   gate right after login; everyone else goes straight into Stores as before. */
+export function canAccessPOS(role, posAccess) {
+  return canManage(role) || posAccess === true;
+}
+
 /* ---------- Multi-branch (multi-site) support ----------
    owner/admin are "all-branch" roles: after login they land on
    branch-select.html and pick which store's data to view. Every other
@@ -255,7 +265,7 @@ export async function updateTeamMember(uid, updates) {
 // Uses a throwaway secondary Firebase App so the *current* admin's session
 // is never disturbed (creating a user with the normal client SDK would
 // otherwise sign the browser in as that new user).
-export async function createTeamMember({ email, password, displayName, role, branchId, createdByUid }) {
+export async function createTeamMember({ email, password, displayName, role, branchId, createdByUid, posAccess }) {
   const secondaryApp = initializeApp(auth.app.options, "secondary-" + Date.now());
   const secondaryAuth = getAuth(secondaryApp);
   try {
@@ -264,6 +274,7 @@ export async function createTeamMember({ email, password, displayName, role, bra
     await setDoc(doc(db, "users", uid), {
       email, displayName: displayName || email.split("@")[0],
       role, branchId: isBranchLocked(role) ? (branchId || "") : "",
+      posAccess: !!posAccess,
       active: true, createdAt: serverTimestamp(), createdBy: createdByUid
     });
     await signOut(secondaryAuth);
